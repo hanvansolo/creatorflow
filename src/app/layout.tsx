@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CreatorFlow — Your Creator Workspace",
+  title: "JottrPad — Your Creator Workspace",
   description:
     "AI-powered workspace for creators. Capture ideas, write scripts, organize research, and ask AI questions across all your content.",
 };

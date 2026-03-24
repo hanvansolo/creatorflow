@@ -41,9 +41,9 @@ export default function LandingPage() {
       <header className="flex h-14 items-center justify-between border-b px-6">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">CF</span>
+            <span className="text-sm font-bold text-primary-foreground">JP</span>
           </div>
-          <span className="text-lg font-semibold">CreatorFlow</span>
+          <span className="text-lg font-semibold">JottrPad</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/sign-in" className={buttonVariants({ variant: "ghost" })}>
@@ -109,7 +109,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t px-6 py-6">
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>CreatorFlow</span>
+          <span>JottrPad</span>
           <span>&copy; {new Date().getFullYear()}</span>
         </div>
       </footer>
