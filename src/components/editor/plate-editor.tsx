@@ -13,7 +13,7 @@ import { ListPlugin, BulletedListPlugin, NumberedListPlugin } from "@udecode/pla
 import { BlockquotePlugin } from "@udecode/plate-block-quote/react";
 import { CodeBlockPlugin } from "@udecode/plate-code-block/react";
 import { LinkPlugin } from "@udecode/plate-link/react";
-import { insertLink } from "@udecode/plate-link";
+import { upsertLink } from "@udecode/plate-link";
 import { ImagePlugin } from "@udecode/plate-media/react";
 import { HighlightPlugin } from "@udecode/plate-highlight/react";
 import { HorizontalRulePlugin } from "@udecode/plate-horizontal-rule/react";
@@ -182,7 +182,15 @@ export function PlateEditor({
   const addLink = () => {
     const url = window.prompt("Link URL:");
     if (!url) return;
-    insertLink(editor, { url, text: url });
+    // Insert text first, then wrap with link
+    editor.tf.insertText(url);
+    // Select the text we just inserted
+    const point = editor.selection?.anchor;
+    if (point) {
+      const start = { ...point, offset: point.offset - url.length };
+      editor.tf.select({ anchor: start, focus: point });
+    }
+    upsertLink(editor, { url, text: url });
   };
 
   // Slash command state
@@ -303,9 +311,15 @@ export function PlateEditor({
         for (let i = 0; i < linkQuery.length + 2; i++) {
           editor.tf.deleteBackward("character");
         }
-        // Insert as a proper link using Plate's link API
+        // Insert text then wrap as link
         const href = typeHrefs[item.type]?.(item.id) || "#";
-        insertLink(editor, { url: href, text: item.title });
+        editor.tf.insertText(item.title);
+        const pt = editor.selection?.anchor;
+        if (pt) {
+          const start = { ...pt, offset: pt.offset - item.title.length };
+          editor.tf.select({ anchor: start, focus: pt });
+        }
+        upsertLink(editor, { url: href, text: item.title });
         setLinkMenuOpen(false);
         setLinkQuery("");
         setLinkIndex(0);
@@ -541,7 +555,13 @@ export function PlateEditor({
                       editor.tf.deleteBackward("character");
                     }
                     const href = typeHrefs[item.type]?.(item.id) || "#";
-                    insertLink(editor, { url: href, text: item.title });
+                    editor.tf.insertText(item.title);
+                    const pt = editor.selection?.anchor;
+                    if (pt) {
+                      const start = { ...pt, offset: pt.offset - item.title.length };
+                      editor.tf.select({ anchor: start, focus: pt });
+                    }
+                    upsertLink(editor, { url: href, text: item.title });
                     setLinkMenuOpen(false);
                     setLinkQuery("");
                     setLinkIndex(0);
