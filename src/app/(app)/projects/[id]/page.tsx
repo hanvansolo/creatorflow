@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronRight, Trash2, Sparkles, Search, Loader2 } from "lucide-react";
+import { ChevronRight, Trash2, Sparkles, Search, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { deleteProjectAction } from "../actions";
 import { AIActionMenu, projectActions } from "@/components/ai/ai-action-menu";
+import { AISwipeBoard } from "@/components/board/swipe-board";
 import { toast } from "sonner";
 
 const KanbanBoard = dynamic(
@@ -32,6 +33,7 @@ export default function ProjectDetailPage() {
   const [researchOpen, setResearchOpen] = useState(false);
   const [researchTopic, setResearchTopic] = useState("");
   const [researching, setResearching] = useState(false);
+  const [swipeMode, setSwipeMode] = useState(false);
   const boardRef = useRef<{ refresh: () => void } | null>(null);
 
   const fetchProject = () => {
@@ -110,6 +112,15 @@ export default function ProjectDetailPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setSwipeMode(true)}
+            className="gap-1.5 text-[#9B5DE5] border-[#9B5DE5]/30 hover:bg-[#9B5DE5]/10 hover:text-[#9B5DE5]"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Suggest
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setResearchOpen(true)}
             className="gap-1.5 text-[#F72585] border-[#F72585]/30 hover:bg-[#F72585]/10 hover:text-[#F72585]"
           >
@@ -122,8 +133,19 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <KanbanBoard projectId={id} />
+      {/* Main content */}
+      {swipeMode ? (
+        <AISwipeBoard
+          projectId={id}
+          projectTitle={project.title}
+          onComplete={() => {
+            setSwipeMode(false);
+            fetchProject();
+          }}
+        />
+      ) : (
+        <KanbanBoard projectId={id} />
+      )}
 
       {/* Research Dialog */}
       <Dialog open={researchOpen} onOpenChange={setResearchOpen}>

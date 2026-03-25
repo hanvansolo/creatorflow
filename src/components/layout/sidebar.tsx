@@ -32,7 +32,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex h-full w-60 flex-col bg-sidebar">
+    <aside className="fixed inset-y-0 left-0 z-30 flex h-full w-60 flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-5">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[#9B5DE5] to-[#F72585]">
