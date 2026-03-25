@@ -4,6 +4,7 @@ import { getOpenAI } from "@/lib/ai/provider";
 import { retrieveContext } from "@/lib/ai/retrieval";
 import { CHAT_SYSTEM_PROMPT, buildContextPrompt } from "@/lib/ai/prompts";
 import { addChatMessage, updateSessionTitle } from "@/lib/services/chat";
+import { checkAndIncrementUsage } from "@/lib/services/usage";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -13,6 +14,15 @@ export async function POST(req: NextRequest) {
 
   if (!process.env.OPENAI_API_KEY) {
     return new Response("OpenAI API key not configured", { status: 500 });
+  }
+
+  // Check usage limits
+  const usage = await checkAndIncrementUsage(userId);
+  if (!usage.allowed) {
+    return Response.json(
+      { error: `AI query limit reached (${usage.used}/${usage.limit}). Upgrade to Pro for more.` },
+      { status: 429 }
+    );
   }
 
   const { message, sessionId, isFirstMessage } = await req.json();
