@@ -1,29 +1,43 @@
-import { auth } from "@clerk/nextjs/server";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Lightbulb, StickyNote, FileText, Plus } from "lucide-react";
+import { Lightbulb, StickyNote, FileText, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ProjectForm } from "@/components/projects/project-form";
-import { getProjectById } from "@/lib/services/projects";
 import { updateProjectAction, deleteProjectAction } from "../actions";
 import { formatDistanceToNow } from "@/lib/utils";
-import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-export default async function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const { userId } = await auth();
-  if (!userId) return null;
+export default function ProjectDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const project = await getProjectById(userId, id);
-  if (!project) notFound();
+  useEffect(() => {
+    fetch(`/api/projects/${id}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("Not found");
+        return r.json();
+      })
+      .then((data) => { setProject(data); setLoading(false); })
+      .catch(() => { setLoading(false); router.push("/projects"); });
+  }, [id, router]);
+
+  if (loading || !project) return null;
 
   const updateAction = updateProjectAction.bind(null, id);
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this project? Ideas, notes, and scripts will be unlinked but not deleted.")) return;
+    await deleteProjectAction(id);
+  };
 
   return (
     <div className="space-y-8">
@@ -35,7 +49,14 @@ export default async function ProjectDetailPage({
             <p className="mt-0.5 text-sm text-muted-foreground">{project.description}</p>
           )}
         </div>
-        <DeleteProjectButton id={id} />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleDelete}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Linked content */}
@@ -46,7 +67,7 @@ export default async function ProjectDetailPage({
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <Lightbulb className="h-4 w-4 text-[#FFD60A]" />
-                Ideas ({project.ideas.length})
+                Ideas ({project.ideas?.length || 0})
               </CardTitle>
               <Link
                 href={`/ideas/new?projectId=${id}`}
@@ -58,24 +79,17 @@ export default async function ProjectDetailPage({
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5">
-            {project.ideas.length === 0 ? (
+            {!project.ideas?.length ? (
               <div className="py-4 text-center">
                 <p className="text-xs text-muted-foreground mb-2">No ideas yet</p>
-                <Link
-                  href={`/ideas/new?projectId=${id}`}
-                  className={buttonVariants({ size: "sm", variant: "outline" })}
-                >
-                  <Plus className="mr-1.5 h-3 w-3" />
-                  Add Idea
+                <Link href={`/ideas/new?projectId=${id}`} className={buttonVariants({ size: "sm", variant: "outline" })}>
+                  <Plus className="mr-1.5 h-3 w-3" /> Add Idea
                 </Link>
               </div>
             ) : (
-              project.ideas.map((idea) => (
-                <Link
-                  key={idea.id}
-                  href={`/ideas/${idea.id}`}
-                  className="flex items-center justify-between rounded-md border border-border/50 p-2.5 text-sm transition-all hover:bg-accent hover:shadow-sm"
-                >
+              project.ideas.map((idea: any) => (
+                <Link key={idea.id} href={`/ideas/${idea.id}`}
+                  className="flex items-center justify-between rounded-md border border-border/50 p-2.5 text-sm transition-all hover:bg-accent hover:shadow-sm">
                   <span className="font-medium text-[13px]">{idea.title}</span>
                   <StatusBadge status={idea.status} />
                 </Link>
@@ -90,7 +104,7 @@ export default async function ProjectDetailPage({
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <StickyNote className="h-4 w-4 text-[#30BCED]" />
-                Notes ({project.notes.length})
+                Notes ({project.notes?.length || 0})
               </CardTitle>
               <Link
                 href={`/notes/new?projectId=${id}`}
@@ -102,28 +116,19 @@ export default async function ProjectDetailPage({
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5">
-            {project.notes.length === 0 ? (
+            {!project.notes?.length ? (
               <div className="py-4 text-center">
                 <p className="text-xs text-muted-foreground mb-2">No notes yet</p>
-                <Link
-                  href={`/notes/new?projectId=${id}`}
-                  className={buttonVariants({ size: "sm", variant: "outline" })}
-                >
-                  <Plus className="mr-1.5 h-3 w-3" />
-                  Add Note
+                <Link href={`/notes/new?projectId=${id}`} className={buttonVariants({ size: "sm", variant: "outline" })}>
+                  <Plus className="mr-1.5 h-3 w-3" /> Add Note
                 </Link>
               </div>
             ) : (
-              project.notes.map((note) => (
-                <Link
-                  key={note.id}
-                  href={`/notes/${note.id}`}
-                  className="flex items-center justify-between rounded-md border border-border/50 p-2.5 text-sm transition-all hover:bg-accent hover:shadow-sm"
-                >
+              project.notes.map((note: any) => (
+                <Link key={note.id} href={`/notes/${note.id}`}
+                  className="flex items-center justify-between rounded-md border border-border/50 p-2.5 text-sm transition-all hover:bg-accent hover:shadow-sm">
                   <span className="font-medium text-[13px]">{note.title}</span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {formatDistanceToNow(note.updatedAt)}
-                  </span>
+                  <span className="text-[11px] text-muted-foreground">{formatDistanceToNow(note.updatedAt)}</span>
                 </Link>
               ))
             )}
@@ -136,7 +141,7 @@ export default async function ProjectDetailPage({
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <FileText className="h-4 w-4 text-[#2EC4B6]" />
-                Scripts ({project.scripts.length})
+                Scripts ({project.scripts?.length || 0})
               </CardTitle>
               <Link
                 href={`/scripts/new?projectId=${id}`}
@@ -148,24 +153,17 @@ export default async function ProjectDetailPage({
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5">
-            {project.scripts.length === 0 ? (
+            {!project.scripts?.length ? (
               <div className="py-4 text-center">
                 <p className="text-xs text-muted-foreground mb-2">No scripts yet</p>
-                <Link
-                  href={`/scripts/new?projectId=${id}`}
-                  className={buttonVariants({ size: "sm", variant: "outline" })}
-                >
-                  <Plus className="mr-1.5 h-3 w-3" />
-                  Add Script
+                <Link href={`/scripts/new?projectId=${id}`} className={buttonVariants({ size: "sm", variant: "outline" })}>
+                  <Plus className="mr-1.5 h-3 w-3" /> Add Script
                 </Link>
               </div>
             ) : (
-              project.scripts.map((script) => (
-                <Link
-                  key={script.id}
-                  href={`/scripts/${script.id}`}
-                  className="flex items-center justify-between rounded-md border border-border/50 p-2.5 text-sm transition-all hover:bg-accent hover:shadow-sm"
-                >
+              project.scripts.map((script: any) => (
+                <Link key={script.id} href={`/scripts/${script.id}`}
+                  className="flex items-center justify-between rounded-md border border-border/50 p-2.5 text-sm transition-all hover:bg-accent hover:shadow-sm">
                   <span className="font-medium text-[13px]">{script.title}</span>
                   <StatusBadge status={script.status} />
                 </Link>
