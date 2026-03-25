@@ -168,7 +168,8 @@ export function PlateEditor({
   const handleChange = useCallback(
     ({ value }: { value: any[] }) => {
       if (!onChange) return;
-      onChange(toHtml(value), toPlainText(value));
+      // Store as JSON for lossless round-trip, plain text for search
+      onChange(JSON.stringify(value), toPlainText(value));
     },
     [onChange]
   );
