@@ -20,6 +20,7 @@ interface NoteEditorPageProps {
     title: string;
     content?: string;
     contentPlain?: string;
+    projectId?: string | null;
     tags?: string[];
   }) => Promise<{ id: string }>;
   updateAction?: (
@@ -32,6 +33,7 @@ interface NoteEditorPageProps {
     }
   ) => Promise<void>;
   deleteAction?: (id: string) => Promise<void>;
+  defaultProjectId?: string;
 }
 
 export function NoteEditorPage({
@@ -40,6 +42,7 @@ export function NoteEditorPage({
   createAction,
   updateAction,
   deleteAction,
+  defaultProjectId,
 }: NoteEditorPageProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -73,6 +76,7 @@ export function NoteEditorPage({
           title,
           content,
           contentPlain,
+          projectId: defaultProjectId || null,
           tags: tagList,
         });
         toast.success("Note created");

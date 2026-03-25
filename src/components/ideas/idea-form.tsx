@@ -26,9 +26,10 @@ interface IdeaFormProps {
   idea?: Idea & { tags?: string[] };
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  defaultProjectId?: string;
 }
 
-export function IdeaForm({ idea, action, submitLabel }: IdeaFormProps) {
+export function IdeaForm({ idea, action, submitLabel, defaultProjectId }: IdeaFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
@@ -84,7 +85,7 @@ export function IdeaForm({ idea, action, submitLabel }: IdeaFormProps) {
         </div>
       </div>
 
-      <input type="hidden" name="projectId" value="" />
+      <input type="hidden" name="projectId" value={idea?.projectId || defaultProjectId || ""} />
 
       <div className="flex gap-3">
         <Button type="submit">{submitLabel}</Button>

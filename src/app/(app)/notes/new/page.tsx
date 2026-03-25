@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { createNoteAction } from "../actions";
 
 const NoteEditorPage = dynamic(
@@ -9,5 +10,8 @@ const NoteEditorPage = dynamic(
 );
 
 export default function NewNotePage() {
-  return <NoteEditorPage createAction={createNoteAction} />;
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") || undefined;
+
+  return <NoteEditorPage createAction={createNoteAction} defaultProjectId={projectId} />;
 }

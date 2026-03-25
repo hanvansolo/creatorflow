@@ -37,6 +37,7 @@ interface ScriptEditorPageProps {
     content?: string;
     contentPlain?: string;
     status?: string;
+    projectId?: string | null;
     tags?: string[];
   }) => Promise<{ id: string }>;
   updateAction?: (
@@ -50,6 +51,7 @@ interface ScriptEditorPageProps {
     }
   ) => Promise<void>;
   deleteAction?: (id: string) => Promise<void>;
+  defaultProjectId?: string;
 }
 
 export function ScriptEditorPage({
@@ -58,6 +60,7 @@ export function ScriptEditorPage({
   createAction,
   updateAction,
   deleteAction,
+  defaultProjectId,
 }: ScriptEditorPageProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -96,6 +99,7 @@ export function ScriptEditorPage({
           content,
           contentPlain,
           status,
+          projectId: defaultProjectId || null,
           tags: tagList,
         });
         toast.success("Script created");

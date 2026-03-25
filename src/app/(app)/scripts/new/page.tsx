@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { createScriptAction } from "../actions";
 
 const ScriptEditorPage = dynamic(
@@ -9,5 +10,8 @@ const ScriptEditorPage = dynamic(
 );
 
 export default function NewScriptPage() {
-  return <ScriptEditorPage createAction={createScriptAction} />;
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") || undefined;
+
+  return <ScriptEditorPage createAction={createScriptAction} defaultProjectId={projectId} />;
 }
