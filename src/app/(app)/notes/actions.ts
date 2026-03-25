@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createNoteSchema, updateNoteSchema } from "@/lib/validations/notes";
 import * as notesService from "@/lib/services/notes";
 import { syncItemTags } from "@/lib/services/tags";
+import { indexContent, removeContentEmbeddings } from "@/lib/ai/embeddings";
 
 export async function createNoteAction(data: {
   title: string;
@@ -23,6 +24,8 @@ export async function createNoteAction(data: {
   if (data.tags && data.tags.length > 0) {
     await syncItemTags(userId, note.id, "note", data.tags);
   }
+
+  indexContent(userId, note.id, "note", validated.contentPlain || "", validated.title).catch(console.error);
 
   revalidatePath("/notes");
   revalidatePath("/dashboard");
@@ -49,6 +52,8 @@ export async function updateNoteAction(
     await syncItemTags(userId, id, "note", data.tags);
   }
 
+  indexContent(userId, id, "note", data.contentPlain || "", data.title || "").catch(console.error);
+
   revalidatePath("/notes");
   revalidatePath(`/notes/${id}`);
   revalidatePath("/dashboard");
@@ -59,6 +64,7 @@ export async function deleteNoteAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   await notesService.deleteNote(userId, id);
+  removeContentEmbeddings(id, "note").catch(console.error);
 
   revalidatePath("/notes");
   revalidatePath("/dashboard");

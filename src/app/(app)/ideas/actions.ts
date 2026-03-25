@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createIdeaSchema, updateIdeaSchema } from "@/lib/validations/ideas";
 import * as ideasService from "@/lib/services/ideas";
 import { syncItemTags } from "@/lib/services/tags";
+import { indexContent, removeContentEmbeddings } from "@/lib/ai/embeddings";
 
 export async function createIdeaAction(formData: FormData) {
   const { userId } = await auth();
@@ -27,6 +28,9 @@ export async function createIdeaAction(formData: FormData) {
   if (validated.tags && validated.tags.length > 0) {
     await syncItemTags(userId, idea.id, "idea", validated.tags);
   }
+
+  // Index for AI search (non-blocking)
+  indexContent(userId, idea.id, "idea", validated.body || "", validated.title).catch(console.error);
 
   revalidatePath("/ideas");
   revalidatePath("/dashboard");
@@ -54,6 +58,9 @@ export async function updateIdeaAction(id: string, formData: FormData) {
     await syncItemTags(userId, id, "idea", validated.tags);
   }
 
+  // Re-index for AI search
+  indexContent(userId, id, "idea", validated.body || "", validated.title || "").catch(console.error);
+
   revalidatePath("/ideas");
   revalidatePath(`/ideas/${id}`);
   revalidatePath("/dashboard");
@@ -65,6 +72,7 @@ export async function deleteIdeaAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   await ideasService.deleteIdea(userId, id);
+  removeContentEmbeddings(id, "idea").catch(console.error);
 
   revalidatePath("/ideas");
   revalidatePath("/dashboard");

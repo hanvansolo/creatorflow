@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createScriptSchema, updateScriptSchema } from "@/lib/validations/scripts";
 import * as scriptsService from "@/lib/services/scripts";
 import { syncItemTags } from "@/lib/services/tags";
+import { indexContent, removeContentEmbeddings } from "@/lib/ai/embeddings";
 
 export async function createScriptAction(data: {
   title: string;
@@ -25,6 +26,8 @@ export async function createScriptAction(data: {
   if (data.tags && data.tags.length > 0) {
     await syncItemTags(userId, script.id, "script", data.tags);
   }
+
+  indexContent(userId, script.id, "script", validated.contentPlain || "", validated.title).catch(console.error);
 
   revalidatePath("/scripts");
   revalidatePath("/dashboard");
@@ -53,6 +56,8 @@ export async function updateScriptAction(
     await syncItemTags(userId, id, "script", data.tags);
   }
 
+  indexContent(userId, id, "script", data.contentPlain || "", data.title || "").catch(console.error);
+
   revalidatePath("/scripts");
   revalidatePath(`/scripts/${id}`);
   revalidatePath("/dashboard");
@@ -63,6 +68,7 @@ export async function deleteScriptAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   await scriptsService.deleteScript(userId, id);
+  removeContentEmbeddings(id, "script").catch(console.error);
 
   revalidatePath("/scripts");
   revalidatePath("/dashboard");
