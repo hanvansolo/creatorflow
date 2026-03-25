@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb, Star, FolderKanban, Pin } from "lucide-react";
+import { Lightbulb, Star, FolderKanban, Pin, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,16 +38,21 @@ export default function IdeasPage() {
     }
   };
 
+  const [converting, setConverting] = useState<string | null>(null);
+
   const convertToProject = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    setConverting(id);
+    toast.info("Converting idea to project... AI is generating tasks");
     const res = await fetch(`/api/ideas/${id}/convert`, { method: "POST" });
     if (res.ok) {
       const project = await res.json();
-      toast.success("Idea converted to project!");
+      toast.success("Project created with AI-suggested tasks!");
       router.push(`/projects/${project.id}`);
     } else {
       toast.error("Failed to convert");
     }
+    setConverting(null);
   };
 
   const sorted = [...ideas].sort((a, b) => {
@@ -92,6 +97,7 @@ export default function IdeasPage() {
                     idea={idea}
                     onPin={togglePin}
                     onConvert={convertToProject}
+                    converting={converting}
                     onClick={() => router.push(`/ideas/${idea.id}`)}
                   />
                 ))}
@@ -115,6 +121,7 @@ export default function IdeasPage() {
                     idea={idea}
                     onPin={togglePin}
                     onConvert={convertToProject}
+                    converting={converting}
                     onClick={() => router.push(`/ideas/${idea.id}`)}
                   />
                 ))}
@@ -131,11 +138,13 @@ function IdeaCard({
   idea,
   onPin,
   onConvert,
+  converting,
   onClick,
 }: {
   idea: any;
   onPin: (e: React.MouseEvent, id: string, pinned: boolean) => void;
   onConvert: (e: React.MouseEvent, id: string) => void;
+  converting: string | null;
   onClick: () => void;
 }) {
   const hasProject = !!idea.projectId || !!idea.project;
@@ -166,10 +175,15 @@ function IdeaCard({
             {!hasProject && (
               <button
                 onClick={(e) => onConvert(e, idea.id)}
+                disabled={converting === idea.id}
                 title="Convert to Project"
-                className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent transition-colors"
+                className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent transition-colors disabled:opacity-50"
               >
-                <FolderKanban className="h-3.5 w-3.5 text-[#9B5DE5]" />
+                {converting === idea.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#9B5DE5]" />
+                ) : (
+                  <FolderKanban className="h-3.5 w-3.5 text-[#9B5DE5]" />
+                )}
               </button>
             )}
           </div>

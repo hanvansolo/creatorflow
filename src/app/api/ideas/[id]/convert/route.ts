@@ -99,14 +99,14 @@ export async function POST(
       const openai = getOpenAI();
 
       const columns = await getOrCreateBoard(project.id);
-      const todoColumn = columns.find((c) => c.title === "To Do") || columns[1] || columns[0];
+      const backlogColumn = columns.find((c) => c.title === "Backlog") || columns[0];
 
       const aiResponse = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: 'You are a project manager. Break this idea into concrete, actionable tasks. Return a JSON array: [{"title": "task title", "priority": "high|medium|low"}]. Include 5-8 tasks. Return ONLY the JSON array.',
+            content: 'You are a project manager. Suggest tasks to explore and validate this idea. These are suggestions for the backlog, not commitments. Return a JSON array: [{"title": "task title", "priority": "high|medium|low", "description": "brief context"}]. Include 5-8 tasks. Return ONLY the JSON array.',
           },
           {
             role: "user",
@@ -120,9 +120,9 @@ export async function POST(
       const tasksJson = aiResponse.choices[0]?.message?.content || "[]";
       try {
         const generatedTasks = JSON.parse(tasksJson);
-        if (Array.isArray(generatedTasks) && todoColumn) {
+        if (Array.isArray(generatedTasks) && backlogColumn) {
           for (const t of generatedTasks) {
-            await createTask(userId, project.id, todoColumn.id, {
+            await createTask(userId, project.id, backlogColumn.id, {
               title: t.title,
               priority: t.priority || "medium",
               description: t.description,

@@ -25,6 +25,7 @@ interface AIAction {
 interface AIActionMenuProps {
   actions: AIAction[];
   context: string;
+  projectId?: string;
   onResult?: (action: string, result: string) => void;
   onTasksGenerated?: (tasks: { title: string; priority?: string; description?: string }[]) => void;
   buttonSize?: "sm" | "default";
@@ -34,6 +35,7 @@ interface AIActionMenuProps {
 export function AIActionMenu({
   actions,
   context,
+  projectId,
   onResult,
   onTasksGenerated,
   buttonSize = "sm",
@@ -148,19 +150,51 @@ export function AIActionMenu({
                   onClick={() => setResult(null)}
                   className="text-xs"
                 >
-                  ← Try another action
+                  ← Back
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(result);
-                    toast.success("Copied to clipboard");
-                  }}
-                  className="text-xs"
-                >
-                  Copy
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const actionLabel = actions.find((a) => a.id === currentAction)?.label || "AI Research";
+                        const res = await fetch("/api/notes", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            title: `${actionLabel}: ${context.split("\n")[0]?.replace(/^(Idea|Task): /, "").slice(0, 50)}`,
+                            content: result,
+                            contentPlain: result,
+                            projectId: projectId || null,
+                          }),
+                        });
+                        if (res.ok) {
+                          toast.success("Saved as note!");
+                        } else {
+                          toast.error("Failed to save");
+                        }
+                      } catch {
+                        toast.error("Failed to save");
+                      }
+                    }}
+                    className="text-xs text-[#30BCED] hover:text-[#30BCED]"
+                  >
+                    <FileText className="mr-1 h-3 w-3" />
+                    Save as Note
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(result);
+                      toast.success("Copied");
+                    }}
+                    className="text-xs"
+                  >
+                    Copy
+                  </Button>
+                </div>
               </div>
             </div>
           )}
