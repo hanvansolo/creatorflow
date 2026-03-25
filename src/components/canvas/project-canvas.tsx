@@ -175,7 +175,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
   };
 
   return (
-    <div className="h-[calc(100vh-16rem)] rounded-xl border border-border/50 overflow-hidden bg-[#0a0a0f]">
+    <div className="h-[calc(100vh-16rem)] rounded-xl border border-border/50 overflow-hidden bg-white dark:bg-[#0a0a0f]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -189,7 +189,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
         defaultEdgeOptions={{ animated: true, style: { stroke: "#444", strokeWidth: 1.5 } }}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#1a1a2e" />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} className="!bg-white dark:!bg-[#0a0a0f] [&>pattern>circle]:!fill-gray-200 dark:[&>pattern>circle]:!fill-[#1a1a2e]" />
         <Controls
           showInteractive={false}
           className="!bg-background !border-border !rounded-lg !shadow-lg [&>button]:!bg-background [&>button]:!border-border [&>button]:!text-foreground"
@@ -197,7 +197,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
         <MiniMap
           nodeColor={(node) => nodeColors[node.type || ""] || "#888"}
           className="!bg-background/80 !border-border !rounded-lg"
-          maskColor="rgba(0,0,0,0.7)"
+          maskColor="rgba(0,0,0,0.1)"
         />
 
         {/* Toolbar */}
