@@ -6,16 +6,13 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Lightbulb,
-  StickyNote,
-  FileText,
   FolderKanban,
-  Library,
   MessageSquare,
   Search,
   Settings,
   Sparkles,
   CreditCard,
-  Network,
+  Rocket,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -23,12 +20,10 @@ const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "" },
   { label: "Ideas", href: "/ideas", icon: Lightbulb, color: "text-[#FFD60A]" },
   { label: "Projects", href: "/projects", icon: FolderKanban, color: "text-[#9B5DE5]" },
-  { label: "Library", href: "/library", icon: Library, color: "text-[#FF6B35]" },
 ];
 
 const secondaryNavigation = [
-  { label: "Graph", href: "/graph", icon: Network, color: "text-[#30BCED]" },
-  { label: "AI Chat", href: "/chat", icon: MessageSquare, color: "text-[#F72585]" },
+  { label: "AI Co-pilot", href: "/chat", icon: Sparkles, color: "text-[#F72585]" },
   { label: "Search", href: "/search", icon: Search, color: "" },
   { label: "Settings", href: "/settings", icon: Settings, color: "" },
 ];
@@ -40,8 +35,8 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 flex h-full w-60 flex-col bg-sidebar">
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-purple-600">
-          <Sparkles className="h-3.5 w-3.5 text-white" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[#9B5DE5] to-[#F72585]">
+          <Rocket className="h-3.5 w-3.5 text-white" />
         </div>
         <span className="text-base font-semibold tracking-tight">JottrPad</span>
       </div>
@@ -50,7 +45,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-3 pt-2">
         <div className="mb-2 px-3">
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50">
-            Workspace
+            Build
           </span>
         </div>
         <nav className="flex flex-col gap-0.5">
@@ -119,8 +114,8 @@ export function Sidebar() {
           href="/settings/billing"
           className="flex items-center gap-2.5 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs transition-colors hover:bg-muted/60"
         >
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-blue-500/20 to-purple-600/20">
-            <CreditCard className="h-3 w-3 text-blue-400" />
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-[#9B5DE5]/20 to-[#F72585]/20">
+            <CreditCard className="h-3 w-3 text-[#9B5DE5]" />
           </div>
           <div className="flex flex-col">
             <span className="font-medium text-foreground">Free Plan</span>

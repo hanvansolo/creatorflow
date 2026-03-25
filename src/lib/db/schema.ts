@@ -52,6 +52,59 @@ export const projects = pgTable(
 );
 
 // ============================================
+// BOARD COLUMNS (per project)
+// ============================================
+export const boardColumns = pgTable(
+  "board_columns",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    position: integer("position").default(0).notNull(),
+    color: text("color"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("board_columns_project_idx").on(table.projectId, table.position),
+  ]
+);
+
+// ============================================
+// TASKS
+// ============================================
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    columnId: uuid("column_id")
+      .notNull()
+      .references(() => boardColumns.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    priority: text("priority").default("medium").notNull(), // low, medium, high, urgent
+    dueDate: timestamp("due_date", { withTimezone: true }),
+    assignee: text("assignee"), // user ID or name
+    labels: jsonb("labels").default([]), // string[]
+    position: integer("position").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("tasks_project_idx").on(table.projectId),
+    index("tasks_column_idx").on(table.columnId, table.position),
+    index("tasks_user_idx").on(table.userId),
+  ]
+);
+
+// ============================================
 // IDEAS
 // ============================================
 export const ideas = pgTable(
@@ -322,6 +375,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   scripts: many(scripts),
   files: many(files),
   tags: many(tags),
+  tasks: many(tasks),
   chatSessions: many(chatSessions),
 }));
 
@@ -331,6 +385,19 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   notes: many(notes),
   scripts: many(scripts),
   files: many(files),
+  columns: many(boardColumns),
+  tasks: many(tasks),
+}));
+
+export const boardColumnsRelations = relations(boardColumns, ({ one, many }) => ({
+  project: one(projects, { fields: [boardColumns.projectId], references: [projects.id] }),
+  tasks: many(tasks),
+}));
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  user: one(users, { fields: [tasks.userId], references: [users.id] }),
+  project: one(projects, { fields: [tasks.projectId], references: [projects.id] }),
+  column: one(boardColumns, { fields: [tasks.columnId], references: [boardColumns.id] }),
 }));
 
 export const ideasRelations = relations(ideas, ({ one, many }) => ({
