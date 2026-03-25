@@ -27,16 +27,24 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Compact node with handles and color
+// Compact node with handles, color, and click/context handlers
 function ContentNode({ data, color, icon: Icon, label }: { data: any; color: string; icon: any; label: string }) {
   return (
-    <div className="relative group">
+    <div
+      className="relative group cursor-pointer"
+      onDoubleClick={() => data.onOpen?.()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        data.onContext?.(e.clientX, e.clientY);
+      }}
+    >
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
       <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
       <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
       <div
-        className="rounded-md border bg-background px-2.5 py-1.5 shadow-sm max-w-[180px] text-left"
+        className="rounded-md border bg-background px-2.5 py-1.5 shadow-sm max-w-[180px] text-left transition-shadow hover:shadow-md"
         style={{ borderColor: color, borderLeftWidth: 3 }}
       >
         <div className="flex items-center gap-1 mb-0.5">
@@ -66,7 +74,14 @@ function TextCardNode({ data }: { data: any }) {
 }
 function TextBlockNode({ data }: { data: any }) {
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        data.onContext?.(e.clientX, e.clientY);
+      }}
+    >
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
       <div className="rounded-md border border-border bg-muted/20 px-2.5 py-1.5 shadow-sm max-w-[180px]">
@@ -124,17 +139,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
     }).catch(() => {});
   }, []);
 
-  // Load canvas
-  useEffect(() => {
-    fetch(`/api/canvas/${projectId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.nodes?.length) setNodes(data.nodes);
-        if (data?.edges?.length) setEdges(data.edges);
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, [projectId]);
+  // Load canvas — needs to run after enrichData is defined, so moved below
 
   // Auto-save on changes
   const saveCanvas = useCallback(() => {
@@ -145,7 +150,13 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
       await fetch(`/api/canvas/${projectId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodes, edges }),
+        body: JSON.stringify({
+          nodes: nodes.map((n) => ({
+            ...n,
+            data: { ...n.data, onOpen: undefined, onContext: undefined },
+          })),
+          edges,
+        }),
       });
       setSaving(false);
     }, 1000);
@@ -160,13 +171,45 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
     [setEdges]
   );
 
+  const typeHrefsForNav: Record<string, (id: string) => string> = {
+    idea: (id) => `/ideas/${id}`,
+    note: (id) => `/notes/${id}`,
+    script: (id) => `/scripts/${id}`,
+  };
+
+  // Inject handlers into node data
+  const enrichData = (nodeId: string, type: string, data: any) => ({
+    ...data,
+    onOpen: data.contentId && typeHrefsForNav[type]
+      ? () => router.push(typeHrefsForNav[type](data.contentId))
+      : undefined,
+    onContext: (x: number, y: number) => setContextMenu({ x, y, nodeId }),
+  });
+
+  // Load canvas
+  useEffect(() => {
+    fetch(`/api/canvas/${projectId}`)
+      .then((r) => r.json())
+      .then((canvasData) => {
+        if (canvasData?.nodes?.length) {
+          setNodes(canvasData.nodes.map((n: any) => ({
+            ...n,
+            data: enrichData(n.id, n.type || "", n.data || {}),
+          })));
+        }
+        if (canvasData?.edges?.length) setEdges(canvasData.edges);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, [projectId]);
+
   const addNode = (type: string, data: any) => {
     const id = `${type}-${Date.now()}`;
     const newNode: Node = {
       id,
       type,
       position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
-      data,
+      data: enrichData(id, type, data),
     };
     setNodes((nds) => [...nds, newNode]);
   };
@@ -242,8 +285,6 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
         fitView
         snapToGrid
         snapGrid={[16, 16]}
-        onNodeContextMenu={onNodeContextMenu}
-        onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={onPaneClick}
         deleteKeyCode="Delete"
         defaultEdgeOptions={{ animated: true, style: { stroke: "#999", strokeWidth: 1 } }}
