@@ -10,7 +10,7 @@ export interface AnnotatedTerm {
 }
 
 export function findTechnicalTerms(_text: string): { term: string; start: number; end: number; info: AnnotatedTerm }[] {
-  return [];
+  return [] as any[];
 }
 
 export async function getDeepDiveMatches(_terms: string[]): Promise<Map<string, string>> {

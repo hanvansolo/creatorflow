@@ -60,7 +60,7 @@ export interface LiveIncident {
 }
 
 export async function getArticleRegulations(_articleId: string): Promise<RegulationPreview[]> {
-  return [];
+  return [] as any[];
 }
 
 export async function getRegulationByArticleNumber(_articleNumber: string, _seasonYear?: number): Promise<F1Regulation | null> {
@@ -72,19 +72,19 @@ export async function getRegulationById(_id: string): Promise<F1Regulation | nul
 }
 
 export async function getRegulationsByCategory(_category: string, _seasonYear?: number): Promise<F1Regulation[]> {
-  return [];
+  return [] as any[];
 }
 
 export async function getAllRegulations(_seasonYear?: number): Promise<F1Regulation[]> {
-  return [];
+  return [] as any[];
 }
 
 export async function searchRegulations(_query: string, _category?: string, _limit?: number): Promise<F1Regulation[]> {
-  return [];
+  return [] as any[];
 }
 
 export async function getArticlesForRegulation(_regulationId: string, _limit?: number): Promise<Array<{ id: string; title: string; slug: string; publishedAt: Date | null }>> {
-  return [];
+  return [] as any[];
 }
 
 export async function extractRegulationReferences(
@@ -92,11 +92,11 @@ export async function extractRegulationReferences(
   _articleContent: string,
   _availableRegulations: Array<{ id: string; articleNumber: string; articleTitle: string; keywords: string[]; simplifiedExplanation: string }>
 ): Promise<{ matches: RegulationMatch[]; processingNotes: string }> {
-  return { matches: [], processingNotes: 'Stubbed during migration' };
+  return { matches: [] as any[], processingNotes: 'Stubbed during migration' };
 }
 
 export async function processArticlesForRegulations(_limit?: number): Promise<{ processed: number; matched: number; results: Array<{ articleId: string; title: string; matchCount: number }> }> {
-  return { processed: 0, matched: 0, results: [] };
+  return { processed: 0, matched: 0, results: [] as any[] };
 }
 
 export async function detectIncidentFromArticle(_articleTitle: string, _articleContent: string, _publishedAt: Date): Promise<{ isIncident: boolean; incident?: Partial<LiveIncident> }> {
@@ -108,11 +108,11 @@ export async function createLiveIncident(_raceId: string, _sessionType: string, 
 }
 
 export async function findRegulationsForIncident(_incidentType: string, _description: string, _penaltyType: string | null): Promise<Array<{ regulationId: string; articleNumber: string; relevance: number }>> {
-  return [];
+  return [] as any[];
 }
 
 export async function getLiveIncidents(_raceId: string, _sessionType?: string): Promise<LiveIncident[]> {
-  return [];
+  return [] as any[];
 }
 
 export async function getCurrentRaceSession(): Promise<{ raceId: string; raceName: string; isLive: boolean } | null> {
@@ -120,5 +120,5 @@ export async function getCurrentRaceSession(): Promise<{ raceId: string; raceNam
 }
 
 export async function smartRegulationLookup(_query: string): Promise<{ regulations: F1Regulation[]; explanation: string }> {
-  return { regulations: [], explanation: '' };
+  return { regulations: [] as any[], explanation: '' };
 }

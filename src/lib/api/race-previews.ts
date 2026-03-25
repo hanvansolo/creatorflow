@@ -1,7 +1,7 @@
 // TODO: Rewrite for Footy Feed (stubbed during F1→Soccer migration)
 
 export async function getUpcomingRacesWithoutPreviews(_daysAhead?: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function generateRacePreview(..._args: unknown[]) {
@@ -13,7 +13,7 @@ export async function saveRacePreview(_raceId: string, _content: unknown) {
 }
 
 export async function generateUpcomingPreviews(_daysAhead?: number) {
-  return { generated: 0, results: [] };
+  return { generated: 0, results: [] as any[] };
 }
 
 export async function getRacePreviewByRaceId(_raceId: string) {
@@ -25,7 +25,7 @@ export async function getRacePreviewBySlug(_raceSlug: string) {
 }
 
 export async function getPublishedPreviews(_limit?: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function getOrGeneratePreview(_raceId: string, _raceName: string, _circuitId: string | null, _raceDatetime: Date | null) {
@@ -37,9 +37,9 @@ export async function getNextRacePreview() {
 }
 
 export async function updatePreviewsAfterSessions() {
-  return { updated: 0, results: [] };
+  return { updated: 0, results: [] as any[] };
 }
 
 export async function getPreviewUpdates(_raceId: string) {
-  return [];
+  return [] as any[];
 }

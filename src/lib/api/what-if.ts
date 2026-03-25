@@ -17,11 +17,11 @@ export async function getOrGenerateWhatIf(_question: string) {
 }
 
 export async function getPopularScenarios(_limit?: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function getRecentScenarios(_limit?: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function getScenarioBySlug(_slug: string) {
@@ -29,7 +29,7 @@ export async function getScenarioBySlug(_slug: string) {
 }
 
 export async function getScenariosByType(_type: string, _limit?: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function markAsPopular(_id: string, _isPopular?: boolean) {
@@ -37,5 +37,5 @@ export async function markAsPopular(_id: string, _isPopular?: boolean) {
 }
 
 export async function preGeneratePopularScenarios() {
-  return [];
+  return [] as any[];
 }

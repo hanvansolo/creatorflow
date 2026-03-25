@@ -54,35 +54,35 @@ export interface SectorData {
 }
 
 export function buildGapHistory(_allLaps: unknown[]): GapDataPoint[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildPositionHistory(_allLaps: unknown[]): PositionHistoryPoint[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildLapTimeHistory(_allLaps: unknown[]): LapTimeData[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildStintHistory(_stints: unknown[]): StintHistoryItem[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildBattleData(_intervals: unknown[], _positions: unknown[]): BattleData[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildFastestLaps(_allLaps: unknown[]): FastestLapData[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildSpeedTrapData(_allLaps: unknown[]): SpeedTrapData[] {
-  return [];
+  return [] as any[];
 }
 
 export function buildSectorData(_allLaps: unknown[]): SectorData[] {
-  return [];
+  return [] as any[];
 }
 
 export function deriveCurrentLap(_allLaps: unknown[]): number {

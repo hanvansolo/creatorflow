@@ -1,7 +1,7 @@
 // TODO: Rewrite for Footy Feed (stubbed during F1→Soccer migration)
 
 export async function fetchSeasonResults(_year: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function fetchMultipleSeasonResults(_years: number[]) {
@@ -9,25 +9,25 @@ export async function fetchMultipleSeasonResults(_years: number[]) {
 }
 
 export async function fetchCurrentDriverStandings() {
-  return [];
+  return [] as any[];
 }
 
 export async function fetchCurrentConstructorStandings() {
-  return [];
+  return [] as any[];
 }
 
 export async function fetchAllDrivers() {
-  return [];
+  return [] as any[];
 }
 
 export async function fetchAllConstructors() {
-  return [];
+  return [] as any[];
 }
 
 export async function fetchSeasonSchedule(_year: number) {
-  return [];
+  return [] as any[];
 }
 
 export async function fetchAllCircuits() {
-  return [];
+  return [] as any[];
 }

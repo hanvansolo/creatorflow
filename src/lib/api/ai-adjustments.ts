@@ -9,5 +9,5 @@ export async function ensureAIAdjustmentsLoaded(): Promise<Record<string, number
 }
 
 export async function getRecentAIAnalysisSummary() {
-  return [];
+  return [] as any[];
 }

@@ -12,7 +12,17 @@ export async function extractTechnicalDeepDives(..._args: unknown[]) {
   return { created: 0, results: [] };
 }
 
-export async function getDeepDives(_category?: string, _limit?: number) {
+export async function getDeepDives(_category?: string, _limit?: number): Promise<Array<{
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  difficulty: string | null;
+  summary: string;
+  viewCount: number | null;
+  tags: string[] | null;
+  createdAt: Date | null;
+}>> {
   return [];
 }
 
@@ -33,6 +43,6 @@ export async function getDeepDiveBySlug(_slug: string): Promise<{
   return null;
 }
 
-export async function getDeepDiveCategories() {
+export async function getDeepDiveCategories(): Promise<Array<{ category: string; count: number }>> {
   return [];
 }
