@@ -470,11 +470,10 @@ export function PlateEditor({
       </div>
 
       {/* Editor */}
-      <div className="relative">
+      <div className="relative" onKeyDownCapture={handleEditorKeyDown}>
         <Plate editor={editor} onValueChange={handleChange}>
           <PlateContent
             placeholder={placeholder}
-            onKeyDown={handleEditorKeyDown}
             className="prose prose-base dark:prose-invert max-w-none min-h-[500px] px-8 py-6 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:leading-relaxed [&_blockquote]:border-l-primary/30 [&_pre]:bg-muted/50 [&_pre]:rounded-lg [&_code]:text-[13px]"
           />
         </Plate>
