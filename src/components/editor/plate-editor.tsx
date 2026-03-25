@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Plate,
   PlateContent,
@@ -13,7 +13,6 @@ import { ListPlugin, BulletedListPlugin, NumberedListPlugin } from "@udecode/pla
 import { BlockquotePlugin } from "@udecode/plate-block-quote/react";
 import { CodeBlockPlugin } from "@udecode/plate-code-block/react";
 import { LinkPlugin } from "@udecode/plate-link/react";
-import { upsertLink } from "@udecode/plate-link";
 import { ImagePlugin } from "@udecode/plate-media/react";
 import { HighlightPlugin } from "@udecode/plate-highlight/react";
 import { HorizontalRulePlugin } from "@udecode/plate-horizontal-rule/react";
@@ -37,16 +36,11 @@ import {
   Minus,
   Image as ImageIcon,
   Link as LinkIcon,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Lightbulb,
-  StickyNote,
-  FileText,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ContentLinkDialog } from "./content-link-dialog";
 
 interface PlateEditorProps {
   content?: string;
@@ -55,7 +49,6 @@ interface PlateEditorProps {
   className?: string;
 }
 
-// Serialize Plate value to plain text
 function toPlainText(value: any[]): string {
   return value
     .map((node: any) => {
@@ -67,12 +60,12 @@ function toPlainText(value: any[]): string {
     .trim();
 }
 
-// Serialize Plate value to simple HTML
 function toHtml(value: any[]): string {
   return value
     .map((node: any) => {
       if (node.text !== undefined) {
         let text = node.text;
+        if (!text) return "";
         if (node.bold) text = `<strong>${text}</strong>`;
         if (node.italic) text = `<em>${text}</em>`;
         if (node.underline) text = `<u>${text}</u>`;
@@ -103,17 +96,12 @@ function toHtml(value: any[]): string {
     .join("");
 }
 
-// Parse HTML back to Plate value (basic)
 function fromHtml(html: string): any[] {
   if (!html || html.trim() === "") {
     return [{ type: "p", children: [{ text: "" }] }];
   }
-  // For now, treat stored HTML as a paragraph with text
-  // Full HTML parsing would require a DOM parser
   const text = html.replace(/<[^>]*>/g, "");
-  if (!text.trim()) {
-    return [{ type: "p", children: [{ text: "" }] }];
-  }
+  if (!text.trim()) return [{ type: "p", children: [{ text: "" }] }];
   return [{ type: "p", children: [{ text }] }];
 }
 
@@ -126,11 +114,9 @@ export function PlateEditor({
   const initialValue = useMemo(() => {
     if (!content) return [{ type: "p", children: [{ text: "" }] }];
     try {
-      // Try parsing as JSON (Plate native format)
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      // Fall back to HTML conversion
       return fromHtml(content);
     }
     return [{ type: "p", children: [{ text: "" }] }];
@@ -162,42 +148,43 @@ export function PlateEditor({
   const handleChange = useCallback(
     ({ value }: { value: any[] }) => {
       if (!onChange) return;
-      const html = toHtml(value);
-      const plain = toPlainText(value);
-      onChange(html, plain);
+      onChange(toHtml(value), toPlainText(value));
     },
     [onChange]
   );
 
+  // Dialogs
+  const [contentLinkOpen, setContentLinkOpen] = useState(false);
+
+  const handleContentLink = (title: string, href: string) => {
+    // Insert as a link node directly in the Plate document
+    editor.tf.insertNodes(
+      {
+        type: "a",
+        url: href,
+        children: [{ text: title }],
+      },
+      { at: editor.selection || undefined }
+    );
+  };
+
   const addImage = () => {
     const url = window.prompt("Image URL:");
     if (!url) return;
-    editor.tf.insertNodes({
-      type: "img",
-      url,
-      children: [{ text: "" }],
-    });
+    editor.tf.insertNodes({ type: "img", url, children: [{ text: "" }] });
   };
 
   const addLink = () => {
-    const url = window.prompt("Link URL:");
+    const url = window.prompt("URL:");
     if (!url) return;
-    // Insert text first, then wrap with link
-    editor.tf.insertText(url);
-    // Select the text we just inserted
-    const point = editor.selection?.anchor;
-    if (point) {
-      const start = { ...point, offset: point.offset - url.length };
-      editor.tf.select({ anchor: start, focus: point });
-    }
-    upsertLink(editor, { url, text: url });
+    const text = window.prompt("Link text:", url) || url;
+    editor.tf.insertNodes({ type: "a", url, children: [{ text }] });
   };
 
-  // Slash command state
+  // Slash commands
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashFilter, setSlashFilter] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
-  const slashRef = useRef<HTMLDivElement>(null);
 
   const slashCommands = [
     { label: "Heading 1", icon: Heading1, action: () => editor.tf.toggleBlock("h1") },
@@ -208,288 +195,109 @@ export function PlateEditor({
     { label: "Quote", icon: Quote, action: () => editor.tf.toggleBlock("blockquote") },
     { label: "Code Block", icon: Code2, action: () => editor.tf.toggleBlock("code_block") },
     { label: "Divider", icon: Minus, action: () => editor.tf.insertNodes({ type: "hr", children: [{ text: "" }] }) },
-    { label: "Image", icon: ImageIcon, action: () => { const url = window.prompt("Image URL:"); if (url) editor.tf.insertNodes({ type: "img", url, children: [{ text: "" }] }); } },
-    { label: "Link", icon: LinkIcon, action: () => { const url = window.prompt("Link URL:"); if (url) editor.tf.insertNodes({ type: "a", url, children: [{ text: url }] }); } },
+    { label: "Image", icon: ImageIcon, action: addImage },
+    { label: "Link to Content", icon: Link2, action: () => setContentLinkOpen(true) },
   ];
 
   const filteredCommands = slashCommands.filter((cmd) =>
     cmd.label.toLowerCase().includes(slashFilter.toLowerCase())
   );
 
-  const handleSlashKeyDown = useCallback(
+  const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (!slashOpen) return;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSlashIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSlashIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === "Enter" && filteredCommands[slashIndex]) {
-        e.preventDefault();
-        // Delete the slash and filter text
-        editor.tf.deleteBackward("character");
-        for (let i = 0; i < slashFilter.length; i++) {
+      if (slashOpen) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSlashIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSlashIndex((prev) => Math.max(prev - 1, 0));
+        } else if (e.key === "Enter" && filteredCommands[slashIndex]) {
+          e.preventDefault();
+          e.stopPropagation();
           editor.tf.deleteBackward("character");
-        }
-        filteredCommands[slashIndex].action();
-        setSlashOpen(false);
-        setSlashFilter("");
-        setSlashIndex(0);
-      } else if (e.key === "Escape") {
-        setSlashOpen(false);
-        setSlashFilter("");
-        setSlashIndex(0);
-      } else if (e.key === "Backspace") {
-        if (slashFilter.length === 0) {
+          for (let i = 0; i < slashFilter.length; i++) {
+            editor.tf.deleteBackward("character");
+          }
+          filteredCommands[slashIndex].action();
           setSlashOpen(false);
-        } else {
-          setSlashFilter((prev) => prev.slice(0, -1));
+          setSlashFilter("");
+          setSlashIndex(0);
+        } else if (e.key === "Escape") {
+          setSlashOpen(false);
+          setSlashFilter("");
+          setSlashIndex(0);
+        } else if (e.key === "Backspace") {
+          if (slashFilter.length === 0) setSlashOpen(false);
+          else { setSlashFilter((prev) => prev.slice(0, -1)); setSlashIndex(0); }
+        } else if (e.key === " ") {
+          setSlashOpen(false);
+          setSlashFilter("");
+        } else if (e.key.length === 1) {
+          setSlashFilter((prev) => prev + e.key);
           setSlashIndex(0);
         }
-      } else if (e.key === " ") {
-        setSlashOpen(false);
-        setSlashFilter("");
-      } else if (e.key.length === 1) {
-        setSlashFilter((prev) => prev + e.key);
-        setSlashIndex(0);
-      }
-    },
-    [slashOpen, slashFilter, slashIndex, filteredCommands, editor]
-  );
-
-  // Internal link state
-  const [linkMenuOpen, setLinkMenuOpen] = useState(false);
-  const [linkQuery, setLinkQuery] = useState("");
-  const [linkResults, setLinkResults] = useState<{ id: string; title: string; type: string }[]>([]);
-  const [linkIndex, setLinkIndex] = useState(0);
-  const lastKeyRef = useRef("");
-  const linkSearchTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  // Search for linkable items when query changes
-  useEffect(() => {
-    if (!linkMenuOpen || linkQuery.length < 1) {
-      setLinkResults([]);
-      return;
-    }
-    if (linkSearchTimeout.current) clearTimeout(linkSearchTimeout.current);
-    linkSearchTimeout.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/links?q=${encodeURIComponent(linkQuery)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setLinkResults(data);
-          setLinkIndex(0);
-        }
-      } catch {}
-    }, 150);
-    return () => { if (linkSearchTimeout.current) clearTimeout(linkSearchTimeout.current); };
-  }, [linkQuery, linkMenuOpen]);
-
-  const typeHrefs: Record<string, (id: string) => string> = {
-    idea: (id) => `/ideas/${id}`,
-    note: (id) => `/notes/${id}`,
-    script: (id) => `/scripts/${id}`,
-  };
-
-  const handleLinkKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!linkMenuOpen) return;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setLinkIndex((prev) => Math.min(prev + 1, linkResults.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setLinkIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === "Enter" && linkResults[linkIndex]) {
-        e.preventDefault();
-        e.stopPropagation();
-        const item = linkResults[linkIndex];
-        // Delete [[ and the query
-        for (let i = 0; i < linkQuery.length + 2; i++) {
-          editor.tf.deleteBackward("character");
-        }
-        // Insert text then wrap as link
-        const href = typeHrefs[item.type]?.(item.id) || "#";
-        editor.tf.insertText(item.title);
-        const pt = editor.selection?.anchor;
-        if (pt) {
-          const start = { ...pt, offset: pt.offset - item.title.length };
-          editor.tf.select({ anchor: start, focus: pt });
-        }
-        upsertLink(editor, { url: href, text: item.title });
-        setLinkMenuOpen(false);
-        setLinkQuery("");
-        setLinkIndex(0);
-      } else if (e.key === "Escape" || e.key === "]") {
-        setLinkMenuOpen(false);
-        setLinkQuery("");
-        setLinkIndex(0);
-      } else if (e.key === "Backspace") {
-        if (linkQuery.length === 0) {
-          setLinkMenuOpen(false);
-        } else {
-          setLinkQuery((prev) => prev.slice(0, -1));
-          setLinkIndex(0);
-        }
-      } else if (e.key.length === 1 && e.key !== "[") {
-        setLinkQuery((prev) => prev + e.key);
-        setLinkIndex(0);
-      }
-    },
-    [linkMenuOpen, linkQuery, linkIndex, linkResults, editor]
-  );
-
-  const handleEditorKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (linkMenuOpen) {
-        handleLinkKeyDown(e);
         return;
       }
-      if (slashOpen) {
-        handleSlashKeyDown(e);
-        return;
-      }
-      // Detect [[
-      if (e.key === "[" && lastKeyRef.current === "[") {
-        setLinkMenuOpen(true);
-        setLinkQuery("");
-        setLinkIndex(0);
-        lastKeyRef.current = "";
-        return;
-      }
-      lastKeyRef.current = e.key;
+
       if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
         setSlashOpen(true);
         setSlashFilter("");
         setSlashIndex(0);
       }
     },
-    [slashOpen, linkMenuOpen, handleSlashKeyDown, handleLinkKeyDown]
+    [slashOpen, slashFilter, slashIndex, filteredCommands, editor]
   );
 
   return (
     <div className={cn("relative rounded-xl border border-border/50 bg-background shadow-sm", className)}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-border/40 px-3 py-1.5 bg-muted/20">
-        <ToolbarButton
-          onClick={() => editor.tf.toggleMark("bold")}
-          icon={Bold}
-          tooltip="Bold"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleMark("italic")}
-          icon={Italic}
-          tooltip="Italic"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleMark("underline")}
-          icon={UnderlineIcon}
-          tooltip="Underline"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleMark("strikethrough")}
-          icon={Strikethrough}
-          tooltip="Strikethrough"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleMark("highlight")}
-          icon={Highlighter}
-          tooltip="Highlight"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleMark("code")}
-          icon={Code}
-          tooltip="Inline code"
-        />
+        <ToolbarButton onClick={() => editor.tf.toggleMark("bold")} icon={Bold} tooltip="Bold" />
+        <ToolbarButton onClick={() => editor.tf.toggleMark("italic")} icon={Italic} tooltip="Italic" />
+        <ToolbarButton onClick={() => editor.tf.toggleMark("underline")} icon={UnderlineIcon} tooltip="Underline" />
+        <ToolbarButton onClick={() => editor.tf.toggleMark("strikethrough")} icon={Strikethrough} tooltip="Strikethrough" />
+        <ToolbarButton onClick={() => editor.tf.toggleMark("highlight")} icon={Highlighter} tooltip="Highlight" />
+        <ToolbarButton onClick={() => editor.tf.toggleMark("code")} icon={Code} tooltip="Inline code" />
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("h1")}
-          icon={Heading1}
-          tooltip="Heading 1"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("h2")}
-          icon={Heading2}
-          tooltip="Heading 2"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("h3")}
-          icon={Heading3}
-          tooltip="Heading 3"
-        />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("h1")} icon={Heading1} tooltip="Heading 1" />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("h2")} icon={Heading2} tooltip="Heading 2" />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("h3")} icon={Heading3} tooltip="Heading 3" />
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("ul")}
-          icon={List}
-          tooltip="Bullet list"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("ol")}
-          icon={ListOrdered}
-          tooltip="Numbered list"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("blockquote")}
-          icon={Quote}
-          tooltip="Quote"
-        />
-        <ToolbarButton
-          onClick={() => editor.tf.toggleBlock("code_block")}
-          icon={Code2}
-          tooltip="Code block"
-        />
-        <ToolbarButton
-          onClick={() =>
-            editor.tf.insertNodes({
-              type: "hr",
-              children: [{ text: "" }],
-            })
-          }
-          icon={Minus}
-          tooltip="Divider"
-        />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("ul")} icon={List} tooltip="Bullet list" />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("ol")} icon={ListOrdered} tooltip="Numbered list" />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("blockquote")} icon={Quote} tooltip="Quote" />
+        <ToolbarButton onClick={() => editor.tf.toggleBlock("code_block")} icon={Code2} tooltip="Code block" />
+        <ToolbarButton onClick={() => editor.tf.insertNodes({ type: "hr", children: [{ text: "" }] })} icon={Minus} tooltip="Divider" />
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 
         <ToolbarButton onClick={addImage} icon={ImageIcon} tooltip="Insert image" />
-        <ToolbarButton onClick={addLink} icon={LinkIcon} tooltip="Insert link" />
+        <ToolbarButton onClick={addLink} icon={LinkIcon} tooltip="Insert URL link" />
+        <ToolbarButton onClick={() => setContentLinkOpen(true)} icon={Link2} tooltip="Link to content" />
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        <ToolbarButton
-          onClick={() => editor.undo()}
-          icon={Undo}
-          tooltip="Undo"
-        />
-        <ToolbarButton
-          onClick={() => editor.redo()}
-          icon={Redo}
-          tooltip="Redo"
-        />
+        <ToolbarButton onClick={() => editor.undo()} icon={Undo} tooltip="Undo" />
+        <ToolbarButton onClick={() => editor.redo()} icon={Redo} tooltip="Redo" />
       </div>
 
       {/* Editor */}
-      <div className="relative" onKeyDownCapture={handleEditorKeyDown}>
+      <div className="relative" onKeyDownCapture={handleKeyDown}>
         <Plate editor={editor} onValueChange={handleChange}>
           <PlateContent
             placeholder={placeholder}
-            className="prose prose-base dark:prose-invert max-w-none min-h-[500px] px-8 py-6 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:leading-relaxed [&_blockquote]:border-l-primary/30 [&_pre]:bg-muted/50 [&_pre]:rounded-lg [&_code]:text-[13px]"
+            className="prose prose-base dark:prose-invert max-w-none min-h-[500px] px-8 py-6 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:leading-relaxed [&_blockquote]:border-l-primary/30 [&_pre]:bg-muted/50 [&_pre]:rounded-lg [&_code]:text-[13px] [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
           />
         </Plate>
 
         {/* Slash command menu */}
         {slashOpen && filteredCommands.length > 0 && (
-          <div
-            ref={slashRef}
-            className="absolute left-8 top-12 z-50 max-h-64 w-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95"
-          >
+          <div className="absolute left-8 top-12 z-50 max-h-64 w-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95">
             {filteredCommands.map((cmd, i) => {
               const Icon = cmd.icon;
               return (
@@ -520,66 +328,14 @@ export function PlateEditor({
             })}
           </div>
         )}
-
-        {/* Internal link menu */}
-        {linkMenuOpen && (
-          <div className="absolute left-8 top-12 z-50 w-64 rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95">
-            <div className="px-2 py-1.5 border-b mb-1">
-              <p className="text-[11px] font-medium text-muted-foreground">
-                Link to — type to search
-              </p>
-            </div>
-            {linkResults.length === 0 && linkQuery.length > 0 && (
-              <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                No results for &ldquo;{linkQuery}&rdquo;
-              </p>
-            )}
-            {linkResults.length === 0 && linkQuery.length === 0 && (
-              <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                Start typing to search...
-              </p>
-            )}
-            {linkResults.map((item, i) => {
-              const typeIcons: Record<string, typeof Lightbulb> = {
-                idea: Lightbulb,
-                note: StickyNote,
-                script: FileText,
-              };
-              const ItemIcon = typeIcons[item.type] || FileText;
-              return (
-                <button
-                  key={`${item.type}-${item.id}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    for (let j = 0; j < linkQuery.length + 2; j++) {
-                      editor.tf.deleteBackward("character");
-                    }
-                    const href = typeHrefs[item.type]?.(item.id) || "#";
-                    editor.tf.insertText(item.title);
-                    const pt = editor.selection?.anchor;
-                    if (pt) {
-                      const start = { ...pt, offset: pt.offset - item.title.length };
-                      editor.tf.select({ anchor: start, focus: pt });
-                    }
-                    upsertLink(editor, { url: href, text: item.title });
-                    setLinkMenuOpen(false);
-                    setLinkQuery("");
-                    setLinkIndex(0);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
-                    i === linkIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-                  )}
-                >
-                  <ItemIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-[13px]">{item.title}</span>
-                  <span className="ml-auto text-[10px] text-muted-foreground capitalize shrink-0">{item.type}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
+
+      {/* Content link dialog */}
+      <ContentLinkDialog
+        open={contentLinkOpen}
+        onOpenChange={setContentLinkOpen}
+        onSelect={handleContentLink}
+      />
     </div>
   );
 }
