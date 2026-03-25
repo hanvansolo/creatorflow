@@ -6,7 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
   Lightbulb, StickyNote, FileText, Plus, Trash2,
-  Settings2, ChevronRight,
+  Settings2, ChevronRight, Layout,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,10 @@ import { deleteProjectAction } from "../actions";
 import { createNoteAction } from "../../notes/actions";
 import { createScriptAction } from "../../scripts/actions";
 
+const ProjectCanvas = dynamic(
+  () => import("@/components/canvas/project-canvas").then((m) => m.ProjectCanvas),
+  { ssr: false }
+);
 const NoteEditorPage = dynamic(
   () => import("@/components/notes/note-editor-page").then((m) => m.NoteEditorPage),
   { ssr: false }
@@ -27,7 +31,7 @@ const ScriptEditorPage = dynamic(
   { ssr: false }
 );
 
-type Tab = "overview" | "notes" | "scripts" | "new-note" | "new-script";
+type Tab = "overview" | "notes" | "scripts" | "canvas" | "new-note" | "new-script";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -60,6 +64,7 @@ export default function ProjectDetailPage() {
     { key: "overview" as Tab, label: "Overview" },
     { key: "notes" as Tab, label: `Notes (${project.notes?.length || 0})`, icon: StickyNote, color: "text-[#30BCED]" },
     { key: "scripts" as Tab, label: `Scripts (${project.scripts?.length || 0})`, icon: FileText, color: "text-[#2EC4B6]" },
+    { key: "canvas" as Tab, label: "Canvas", icon: Layout, color: "text-[#9B5DE5]" },
   ];
 
   return (
@@ -258,6 +263,16 @@ export default function ProjectDetailPage() {
           </Button>
           <ScriptEditorPage createAction={createScriptAction} defaultProjectId={id} />
         </div>
+      )}
+
+      {/* Canvas */}
+      {tab === "canvas" && (
+        <ProjectCanvas
+          projectId={id}
+          projectNotes={project.notes || []}
+          projectIdeas={project.ideas || []}
+          projectScripts={project.scripts || []}
+        />
       )}
     </div>
   );

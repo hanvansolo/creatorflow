@@ -289,6 +289,30 @@ export const chatMessages = pgTable(
 );
 
 // ============================================
+// CANVAS (per project)
+// ============================================
+export const canvases = pgTable(
+  "canvases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" })
+      .unique(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    nodes: jsonb("nodes").default([]).notNull(), // React Flow nodes
+    edges: jsonb("edges").default([]).notNull(), // React Flow edges
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("canvases_project_id_idx").on(table.projectId),
+  ]
+);
+
+// ============================================
 // RELATIONS
 // ============================================
 export const usersRelations = relations(users, ({ many }) => ({

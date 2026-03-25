@@ -25,6 +25,7 @@
     "@udecode/plate-media": "^48.0.0",
     "@udecode/plate-mention": "^48.0.0",
     "@udecode/plate-slash-command": "^48.0.0",
+    "@xyflow/react": "^12.10.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
