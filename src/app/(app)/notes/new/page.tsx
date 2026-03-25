@@ -1,8 +1,13 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { createNoteAction } from "../actions";
+
+const NoteEditorPage = dynamic(
+  () => import("@/components/notes/note-editor-page").then((m) => m.NoteEditorPage),
+  { ssr: false }
+);
+
 export default function NewNotePage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">New Note</h1>
-      <p className="text-muted-foreground">Editor loading test...</p>
-    </div>
-  );
+  return <NoteEditorPage createAction={createNoteAction} />;
 }

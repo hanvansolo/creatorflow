@@ -1,15 +1,30 @@
-import { auth } from "@clerk/nextjs/server";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FolderKanban } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { ProjectCard } from "@/components/projects/project-card";
-import { getProjects } from "@/lib/services/projects";
+import { Card, CardContent } from "@/components/ui/card";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { formatDistanceToNow } from "@/lib/utils";
 
-export default async function ProjectsPage() {
-  const { userId } = await auth();
-  if (!userId) return null;
+const colorMap: Record<string, string> = {
+  blue: "bg-blue-500", purple: "bg-purple-500", green: "bg-green-500",
+  orange: "bg-orange-500", pink: "bg-pink-500", yellow: "bg-yellow-500",
+};
 
-  const allProjects = await getProjects(userId);
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => { setProjects(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -20,7 +35,7 @@ export default async function ProjectsPage() {
         actionHref="/projects/new"
       />
 
-      {allProjects.length === 0 ? (
+      {!loading && projects.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
           title="No projects yet"
@@ -30,8 +45,28 @@ export default async function ProjectsPage() {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {allProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+          {projects.map((project: any) => (
+            <Card
+              key={project.id}
+              className="group cursor-pointer transition-colors hover:bg-accent"
+              onClick={() => router.push(`/projects/${project.id}`)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 h-3 w-3 shrink-0 rounded-full ${colorMap[project.color] || "bg-blue-500"}`} />
+                  <div className="min-w-0">
+                    <h3 className="font-medium truncate">{project.title}</h3>
+                    {project.description && (
+                      <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                    )}
+                    <div className="mt-2 flex items-center justify-between">
+                      <StatusBadge status={project.status} />
+                      <span className="text-xs text-muted-foreground">{formatDistanceToNow(project.updatedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

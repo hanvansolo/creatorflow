@@ -1,8 +1,13 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { createScriptAction } from "../actions";
+
+const ScriptEditorPage = dynamic(
+  () => import("@/components/scripts/script-editor-page").then((m) => m.ScriptEditorPage),
+  { ssr: false }
+);
+
 export default function NewScriptPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">New Script</h1>
-      <p className="text-muted-foreground">Editor loading test...</p>
-    </div>
-  );
+  return <ScriptEditorPage createAction={createScriptAction} />;
 }
