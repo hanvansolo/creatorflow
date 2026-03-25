@@ -20,15 +20,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "" },
-  { label: "Ideas", href: "/ideas", icon: Lightbulb, color: "text-amber-500" },
-  { label: "Notes", href: "/notes", icon: StickyNote, color: "text-blue-500" },
-  { label: "Scripts", href: "/scripts", icon: FileText, color: "text-emerald-500" },
-  { label: "Projects", href: "/projects", icon: FolderKanban, color: "text-purple-500" },
-  { label: "Library", href: "/library", icon: Library, color: "text-orange-500" },
+  { label: "Ideas", href: "/ideas", icon: Lightbulb, color: "text-yellow-400" },
+  { label: "Notes", href: "/notes", icon: StickyNote, color: "text-cyan-400" },
+  { label: "Scripts", href: "/scripts", icon: FileText, color: "text-green-400" },
+  { label: "Projects", href: "/projects", icon: FolderKanban, color: "text-violet-400" },
+  { label: "Library", href: "/library", icon: Library, color: "text-orange-400" },
 ];
 
 const secondaryNavigation = [
-  { label: "AI Chat", href: "/chat", icon: MessageSquare, color: "text-pink-500" },
+  { label: "AI Chat", href: "/chat", icon: MessageSquare, color: "text-rose-400" },
   { label: "Search", href: "/search", icon: Search, color: "" },
   { label: "Settings", href: "/settings", icon: Settings, color: "" },
 ];
