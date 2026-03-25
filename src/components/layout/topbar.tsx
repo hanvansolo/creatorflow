@@ -4,6 +4,7 @@ import { UserButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { Moon, Sun, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HelpButton } from "@/components/shared/help-button";
 
 export function Topbar() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -31,6 +32,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-3">
+        <HelpButton />
         <Button
           variant="ghost"
           size="icon"
