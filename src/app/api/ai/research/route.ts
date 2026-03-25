@@ -115,7 +115,7 @@ Be specific, data-informed, and actionable. Format in markdown.`,
 
     // Position: find the rightmost existing node and offset
     const maxX = existingNodes.reduce((max, n) => Math.max(max, n.position?.x || 0), 0);
-    const baseX = maxX > 0 ? maxX + 350 : 200;
+    const baseX = maxX > 0 ? maxX + 250 : 150;
     const baseY = 150;
 
     // Research node (center)
@@ -126,8 +126,8 @@ Be specific, data-informed, and actionable. Format in markdown.`,
       position: { x: baseX, y: baseY },
       data: {
         contentId: note.id,
-        title: topic,
-        description: researchText.slice(0, 300),
+        title: topic.slice(0, 60),
+        description: researchText.slice(0, 150),
       },
     };
 
@@ -141,8 +141,8 @@ Be specific, data-informed, and actionable. Format in markdown.`,
         id: taskNodeId,
         type: "task",
         position: {
-          x: baseX + angle * 280,
-          y: baseY + 280 + (i % 2) * 60,
+          x: baseX + angle * 200,
+          y: baseY + 200 + (i % 2) * 40,
         },
         data: {
           title: t.title,

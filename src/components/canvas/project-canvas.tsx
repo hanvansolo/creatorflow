@@ -427,14 +427,27 @@ export function ProjectCanvas({ projectId }: ProjectCanvasProps) {
           </div>
         </Panel>
 
-        {/* Save indicator */}
+        {/* Bottom bar */}
         <Panel position="bottom-left">
-          <div className="flex items-center gap-1.5 glass-card px-2 py-1 text-[10px] text-muted-foreground">
-            {saving ? (
-              <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
-            ) : (
-              <><Save className="h-3 w-3" /> Auto-saved</>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 glass-card px-2 py-1 text-[10px] text-muted-foreground">
+              {saving ? (
+                <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="h-3 w-3" /> Auto-saved</>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                if (!confirm("Clear the entire canvas? This cannot be undone.")) return;
+                setNodes([]);
+                setEdges([]);
+                toast.success("Canvas cleared");
+              }}
+              className="glass-card px-2 py-1 text-[10px] text-red-400 hover:text-red-300 transition-colors"
+            >
+              Clear Canvas
+            </button>
           </div>
         </Panel>
       </ReactFlow>
