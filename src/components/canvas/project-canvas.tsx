@@ -349,7 +349,7 @@ export function ProjectCanvas({ projectId }: ProjectCanvasProps) {
   const onPaneClick = useCallback(() => setContextMenu(null), []);
 
   return (
-    <div className="h-[calc(100vh-14rem)] rounded-xl border border-border/30 overflow-hidden bg-[#080d1a]">
+    <div className="h-[calc(100vh-11rem)] w-full rounded-xl border border-border/30 overflow-hidden bg-[#080d1a]">
       <ReactFlow
         nodes={nodes}
         edges={edges}

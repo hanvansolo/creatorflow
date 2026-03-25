@@ -449,3 +449,8 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
     references: [chatSessions.id],
   }),
 }));
+
+export const canvasesRelations = relations(canvases, ({ one }) => ({
+  project: one(projects, { fields: [canvases.projectId], references: [projects.id] }),
+  user: one(users, { fields: [canvases.userId], references: [users.id] }),
+}));
