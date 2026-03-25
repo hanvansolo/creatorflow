@@ -131,7 +131,7 @@ async function getFixtures(competitionSlug?: string) {
     ORDER BY m.kickoff ASC
   `);
 
-  return (matchRows.rows || []) as unknown as Array<{
+  return (matchRows as any[]) as Array<{
     id: string;
     kickoff: string;
     status: string | null;

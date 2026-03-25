@@ -51,7 +51,7 @@ async function getLiveMatches() {
     ORDER BY comp.name ASC, m.kickoff ASC
   `);
 
-  return (liveMatchRows.rows || []) as unknown as Array<{
+  return (liveMatchRows as any[]) as Array<{
     id: string;
     kickoff: string;
     status: string;
@@ -129,7 +129,7 @@ async function getNextMatch() {
     LIMIT 1
   `);
 
-  const rows = (nextRows.rows || []) as unknown as Array<{
+  const rows = (nextRows as any[]) as Array<{
     id: string;
     kickoff: string;
     slug: string;
