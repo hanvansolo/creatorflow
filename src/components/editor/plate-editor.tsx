@@ -39,6 +39,9 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Lightbulb,
+  StickyNote,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -251,19 +254,114 @@ export function PlateEditor({
     [slashOpen, slashFilter, slashIndex, filteredCommands, editor]
   );
 
+  // Internal link state
+  const [linkMenuOpen, setLinkMenuOpen] = useState(false);
+  const [linkQuery, setLinkQuery] = useState("");
+  const [linkResults, setLinkResults] = useState<{ id: string; title: string; type: string }[]>([]);
+  const [linkIndex, setLinkIndex] = useState(0);
+  const lastKeyRef = useRef("");
+  const linkSearchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Search for linkable items when query changes
+  useEffect(() => {
+    if (!linkMenuOpen || linkQuery.length < 1) {
+      setLinkResults([]);
+      return;
+    }
+    if (linkSearchTimeout.current) clearTimeout(linkSearchTimeout.current);
+    linkSearchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/links?q=${encodeURIComponent(linkQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLinkResults(data);
+          setLinkIndex(0);
+        }
+      } catch {}
+    }, 150);
+    return () => { if (linkSearchTimeout.current) clearTimeout(linkSearchTimeout.current); };
+  }, [linkQuery, linkMenuOpen]);
+
+  const typeHrefs: Record<string, (id: string) => string> = {
+    idea: (id) => `/ideas/${id}`,
+    note: (id) => `/notes/${id}`,
+    script: (id) => `/scripts/${id}`,
+  };
+
+  const handleLinkKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!linkMenuOpen) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setLinkIndex((prev) => Math.min(prev + 1, linkResults.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setLinkIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === "Enter" && linkResults[linkIndex]) {
+        e.preventDefault();
+        const item = linkResults[linkIndex];
+        // Delete [[ and the query
+        for (let i = 0; i < linkQuery.length + 2; i++) {
+          editor.tf.deleteBackward("character");
+        }
+        // Insert as a link
+        const href = typeHrefs[item.type]?.(item.id) || "#";
+        editor.tf.insertNodes({
+          type: "a",
+          url: href,
+          children: [{ text: item.title }],
+        });
+        // Move cursor after the link
+        editor.tf.move({ distance: 1 });
+        setLinkMenuOpen(false);
+        setLinkQuery("");
+        setLinkIndex(0);
+      } else if (e.key === "Escape" || e.key === "]") {
+        setLinkMenuOpen(false);
+        setLinkQuery("");
+        setLinkIndex(0);
+      } else if (e.key === "Backspace") {
+        if (linkQuery.length === 0) {
+          setLinkMenuOpen(false);
+        } else {
+          setLinkQuery((prev) => prev.slice(0, -1));
+          setLinkIndex(0);
+        }
+      } else if (e.key.length === 1 && e.key !== "[") {
+        setLinkQuery((prev) => prev + e.key);
+        setLinkIndex(0);
+      }
+    },
+    [linkMenuOpen, linkQuery, linkIndex, linkResults, editor]
+  );
+
   const handleEditorKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (linkMenuOpen) {
+        handleLinkKeyDown(e);
+        return;
+      }
       if (slashOpen) {
         handleSlashKeyDown(e);
         return;
       }
+      // Detect [[
+      if (e.key === "[" && lastKeyRef.current === "[") {
+        setLinkMenuOpen(true);
+        setLinkQuery("");
+        setLinkIndex(0);
+        lastKeyRef.current = "";
+        return;
+      }
+      lastKeyRef.current = e.key;
       if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
         setSlashOpen(true);
         setSlashFilter("");
         setSlashIndex(0);
       }
     },
-    [slashOpen, handleSlashKeyDown]
+    [slashOpen, linkMenuOpen, handleSlashKeyDown, handleLinkKeyDown]
   );
 
   return (
@@ -412,6 +510,64 @@ export function PlateEditor({
                     <Icon className="h-3.5 w-3.5" />
                   </div>
                   <span className="text-[13px]">{cmd.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Internal link menu */}
+        {linkMenuOpen && (
+          <div className="absolute left-8 top-12 z-50 w-64 rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95">
+            <div className="px-2 py-1.5 border-b mb-1">
+              <p className="text-[11px] font-medium text-muted-foreground">
+                Link to — type to search
+              </p>
+            </div>
+            {linkResults.length === 0 && linkQuery.length > 0 && (
+              <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                No results for &ldquo;{linkQuery}&rdquo;
+              </p>
+            )}
+            {linkResults.length === 0 && linkQuery.length === 0 && (
+              <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                Start typing to search...
+              </p>
+            )}
+            {linkResults.map((item, i) => {
+              const typeIcons: Record<string, typeof Lightbulb> = {
+                idea: Lightbulb,
+                note: StickyNote,
+                script: FileText,
+              };
+              const ItemIcon = typeIcons[item.type] || FileText;
+              return (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    for (let j = 0; j < linkQuery.length + 2; j++) {
+                      editor.tf.deleteBackward("character");
+                    }
+                    const href = typeHrefs[item.type]?.(item.id) || "#";
+                    editor.tf.insertNodes({
+                      type: "a",
+                      url: href,
+                      children: [{ text: item.title }],
+                    });
+                    try { editor.tf.move({ distance: 1 }); } catch {}
+                    setLinkMenuOpen(false);
+                    setLinkQuery("");
+                    setLinkIndex(0);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+                    i === linkIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                  )}
+                >
+                  <ItemIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-[13px]">{item.title}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground capitalize shrink-0">{item.type}</span>
                 </button>
               );
             })}
