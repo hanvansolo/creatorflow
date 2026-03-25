@@ -44,7 +44,7 @@ function ResearchNode({ data }: { data: any }) {
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-[#F72585]/50 !border-0" />
       <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-[#F72585]/50 !border-0" />
       <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-[#F72585]/50 !border-0" />
-      <div className="w-[200px] rounded-xl border border-[#F72585]/20 bg-[#111b2e]/95 backdrop-blur-sm shadow-lg shadow-[#F72585]/5 overflow-hidden">
+      <div className="w-[140px] rounded-xl border border-[#F72585]/20 bg-[#111b2e]/95 backdrop-blur-sm shadow-lg shadow-[#F72585]/5 overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-2 border-b border-[#F72585]/10 bg-[#F72585]/5">
           <Search className="h-3 w-3 text-[#F72585]" />
@@ -63,9 +63,9 @@ function ResearchNode({ data }: { data: any }) {
         </div>
         {/* Content */}
         <div className="px-3 py-2 max-h-[100px] overflow-y-auto">
-          <p className="text-[12px] font-semibold leading-tight mb-1">{data.title}</p>
+          <p className="text-[10px] font-semibold leading-tight mb-1">{data.title}</p>
           {data.description && (
-            <p className="text-[10px] text-muted-foreground leading-relaxed whitespace-pre-wrap">{data.description}</p>
+            <p className="text-[8px] text-muted-foreground leading-relaxed whitespace-pre-wrap">{data.description}</p>
           )}
         </div>
         {data.image && (
@@ -89,7 +89,7 @@ function IdeaNode({ data }: { data: any }) {
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-[#FFD60A]/50 !border-0" />
       <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-[#FFD60A]/50 !border-0" />
       <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-[#FFD60A]/50 !border-0" />
-      <div className="w-[180px] rounded-xl border border-[#FFD60A]/20 bg-[#111b2e]/95 backdrop-blur-sm shadow-lg shadow-[#FFD60A]/5 overflow-hidden">
+      <div className="w-[130px] rounded-xl border border-[#FFD60A]/20 bg-[#111b2e]/95 backdrop-blur-sm shadow-lg shadow-[#FFD60A]/5 overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-[#FFD60A]/10 bg-[#FFD60A]/5">
           <Lightbulb className="h-3 w-3 text-[#FFD60A]" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#FFD60A]">Idea</span>
@@ -105,9 +105,9 @@ function IdeaNode({ data }: { data: any }) {
           </div>
         </div>
         <div className="px-3 py-2">
-          <p className="text-[12px] font-semibold leading-tight">{data.title}</p>
+          <p className="text-[10px] font-semibold leading-tight">{data.title}</p>
           {data.description && (
-            <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed line-clamp-3">{data.description}</p>
+            <p className="text-[8px] text-muted-foreground mt-1 leading-relaxed line-clamp-3">{data.description}</p>
           )}
         </div>
       </div>
@@ -125,7 +125,7 @@ function TaskNode({ data }: { data: any }) {
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-[#a855f7]/50 !border-0" />
       <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-[#a855f7]/50 !border-0" />
       <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-[#a855f7]/50 !border-0" />
-      <div className="w-[180px] rounded-xl border border-[#a855f7]/20 bg-[#111b2e]/95 backdrop-blur-sm shadow-lg shadow-[#a855f7]/5 overflow-hidden">
+      <div className="w-[130px] rounded-xl border border-[#a855f7]/20 bg-[#111b2e]/95 backdrop-blur-sm shadow-lg shadow-[#a855f7]/5 overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-[#a855f7]/10 bg-[#a855f7]/5">
           <FileText className="h-3 w-3 text-[#a855f7]" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#a855f7]">Task</span>
@@ -137,9 +137,9 @@ function TaskNode({ data }: { data: any }) {
           </div>
         </div>
         <div className="px-3 py-2">
-          <p className="text-[12px] font-semibold leading-tight">{data.title}</p>
+          <p className="text-[10px] font-semibold leading-tight">{data.title}</p>
           {data.description && (
-            <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed line-clamp-3">{data.description}</p>
+            <p className="text-[8px] text-muted-foreground mt-1 leading-relaxed line-clamp-3">{data.description}</p>
           )}
         </div>
       </div>
@@ -155,7 +155,7 @@ function TextNode({ data }: { data: any }) {
     >
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-white/20 !border-0" />
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-white/20 !border-0" />
-      <div className="w-[200px] rounded-xl border border-border/30 bg-[#111b2e]/80 backdrop-blur-sm p-3">
+      <div className="w-[140px] rounded-xl border border-border/30 bg-[#111b2e]/80 backdrop-blur-sm p-3">
         <p className="text-[11px] whitespace-pre-wrap leading-relaxed">{data.text || "Text block"}</p>
       </div>
     </div>
@@ -171,7 +171,7 @@ function ImageNode({ data }: { data: any }) {
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-white/20 !border-0" />
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-white/20 !border-0" />
       <div className="rounded-xl border border-border/30 bg-[#111b2e]/80 backdrop-blur-sm overflow-hidden shadow-lg">
-        <img src={data.url} alt={data.title || ""} className="w-[200px] max-h-[100px] object-cover" />
+        <img src={data.url} alt={data.title || ""} className="w-[140px] max-h-[100px] object-cover" />
         {data.title && (
           <div className="px-3 py-2">
             <p className="text-[11px] font-medium">{data.title}</p>
@@ -359,6 +359,9 @@ export function ProjectCanvas({ projectId }: ProjectCanvasProps) {
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
+        minZoom={0.3}
+        maxZoom={2}
         snapToGrid
         snapGrid={[16, 16]}
         deleteKeyCode="Delete"
@@ -430,7 +433,7 @@ export function ProjectCanvas({ projectId }: ProjectCanvasProps) {
         {/* Bottom bar */}
         <Panel position="bottom-left">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 glass-card px-2 py-1 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 glass-card px-2 py-1 text-[8px] text-muted-foreground">
               {saving ? (
                 <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
               ) : (
