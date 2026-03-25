@@ -321,9 +321,9 @@ export default async function ClubPage({ params }: ClubPageProps) {
                           />
                         </div>
                         {/* Form */}
-                        {standing.form &&
+                        {standing.form != null &&
                           Array.isArray(standing.form) &&
-                          (standing.form as string[]).length > 0 && (
+                          (standing.form as string[]).length > 0 ? (
                             <div className="mt-3 flex items-center gap-1">
                               <span className="mr-2 text-xs text-zinc-500">
                                 Form:
@@ -343,7 +343,7 @@ export default async function ClubPage({ params }: ClubPageProps) {
                                 </span>
                               ))}
                             </div>
-                          )}
+                          ) : null}
                       </CardContent>
                     </Card>
                   ))}
