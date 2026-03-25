@@ -39,7 +39,7 @@ export default function ProjectDetailPage() {
   const [researchTopic, setResearchTopic] = useState("");
   const [researching, setResearching] = useState(false);
   const [swipeMode, setSwipeMode] = useState(false);
-  const [view, setView] = useState<"board" | "canvas">("board");
+  const [view, setView] = useState<"board" | "canvas">("canvas");
   const boardRef = useRef<{ refresh: () => void } | null>(null);
 
   const fetchProject = () => {

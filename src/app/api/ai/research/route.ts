@@ -104,42 +104,67 @@ Be specific, data-informed, and actionable. Format in markdown.`,
     }
   }
 
-  // Step 4: Add to canvas
+  // Step 4: Add research + task nodes to canvas with connections
   try {
     let canvas = await db.query.canvases.findFirst({
       where: and(eq(canvases.projectId, projectId), eq(canvases.userId, userId)),
     });
 
-    const newNode = {
-      id: `research-${Date.now()}`,
-      type: "note",
-      position: {
-        x: 100 + Math.random() * 300,
-        y: 100 + Math.random() * 200,
-      },
+    const existingNodes = (canvas?.nodes as any[]) || [];
+    const existingEdges = (canvas?.edges as any[]) || [];
+
+    // Position: find the rightmost existing node and offset
+    const maxX = existingNodes.reduce((max, n) => Math.max(max, n.position?.x || 0), 0);
+    const baseX = maxX > 0 ? maxX + 350 : 200;
+    const baseY = 150;
+
+    // Research node (center)
+    const researchNodeId = `research-${Date.now()}`;
+    const researchNode = {
+      id: researchNodeId,
+      type: "research",
+      position: { x: baseX, y: baseY },
       data: {
         contentId: note.id,
-        title: `Research: ${topic.slice(0, 40)}`,
-        description: researchText.slice(0, 150) + "...",
+        title: topic,
+        description: researchText.slice(0, 300),
       },
     };
 
-    if (canvas) {
-      const existingNodes = (canvas.nodes as any[]) || [];
-      await db
-        .update(canvases)
-        .set({
-          nodes: [...existingNodes, newNode],
-          updatedAt: new Date(),
-        })
-        .where(eq(canvases.id, canvas.id));
-    } else {
-      await db.insert(canvases).values({
-        projectId,
-        userId,
-        nodes: [newNode],
-        edges: [],
+    // Task nodes (fanning out below)
+    const taskNodes: any[] = [];
+    const taskEdges: any[] = [];
+    generatedTasks.forEach((t: any, i: number) => {
+      const taskNodeId = `task-${Date.now()}-${i}`;
+      const angle = ((i - (generatedTasks.length - 1) / 2) * 0.6);
+      taskNodes.push({
+        id: taskNodeId,
+        type: "task",
+        position: {
+          x: baseX + angle * 280,
+          y: baseY + 280 + (i % 2) * 60,
+        },
+        data: {
+          title: t.title,
+          description: t.description,
+          priority: t.priority || "medium",
+        },
       });
+      taskEdges.push({
+        id: `edge-${researchNodeId}-${taskNodeId}`,
+        source: researchNodeId,
+        target: taskNodeId,
+        animated: true,
+      });
+    });
+
+    const allNodes = [...existingNodes, researchNode, ...taskNodes];
+    const allEdges = [...existingEdges, ...taskEdges];
+
+    if (canvas) {
+      await db.update(canvases).set({ nodes: allNodes, edges: allEdges, updatedAt: new Date() }).where(eq(canvases.id, canvas.id));
+    } else {
+      await db.insert(canvases).values({ projectId, userId, nodes: allNodes, edges: allEdges });
     }
   } catch {}
 
