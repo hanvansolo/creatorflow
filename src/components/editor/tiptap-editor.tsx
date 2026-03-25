@@ -1,7 +1,6 @@
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Image from "@tiptap/extension-image";
@@ -11,8 +10,6 @@ import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Typography from "@tiptap/extension-typography";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { common, createLowlight } from "lowlight";
 import { cn } from "@/lib/utils";
 import {
   Bold,
@@ -44,8 +41,6 @@ import { Separator } from "@/components/ui/separator";
 import { useCallback, useState } from "react";
 import { ImageDialog, LinkDialog, YoutubeDialog } from "./editor-dialogs";
 
-const lowlight = createLowlight(common);
-
 interface TiptapEditorProps {
   content?: string;
   onChange?: (html: string, plainText: string) => void;
@@ -61,9 +56,7 @@ export function TiptapEditor({
 }: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        codeBlock: false, // replaced by CodeBlockLowlight
-      }),
+      StarterKit,
       Placeholder.configure({ placeholder }),
       Image.configure({
         HTMLAttributes: { class: "rounded-lg max-w-full" },
@@ -84,8 +77,8 @@ export function TiptapEditor({
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Typography,
-      CodeBlockLowlight.configure({ lowlight }),
     ],
+    immediatelyRender: false,
     content,
     editorProps: {
       attributes: {
@@ -306,43 +299,6 @@ export function TiptapEditor({
           tooltip="Redo"
         />
       </div>
-
-      {/* Bubble menu for inline formatting */}
-      <BubbleMenu
-        editor={editor}
-        className="flex items-center gap-0.5 rounded-lg border bg-background p-1 shadow-lg"
-      >
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          active={editor.isActive("bold")}
-          icon={Bold}
-          tooltip="Bold"
-        />
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          active={editor.isActive("italic")}
-          icon={Italic}
-          tooltip="Italic"
-        />
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          active={editor.isActive("underline")}
-          icon={UnderlineIcon}
-          tooltip="Underline"
-        />
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHighlight().run()}
-          active={editor.isActive("highlight")}
-          icon={Highlighter}
-          tooltip="Highlight"
-        />
-        <ToolbarButton
-          onClick={() => setLinkOpen(true)}
-          active={editor.isActive("link")}
-          icon={LinkIcon}
-          tooltip="Link"
-        />
-      </BubbleMenu>
 
       {/* Editor */}
       <EditorContent editor={editor} />
