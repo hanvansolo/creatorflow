@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Lightbulb, StickyNote, FileText, Search, Loader2 } from "lucide-react";
+import { contentColors } from "@/lib/colors";
 
 const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   idea: Lightbulb,
@@ -104,9 +105,9 @@ export function ContentLinkDialog({ open, onOpenChange, onSelect }: ContentLinkD
                 onClick={() => handleSelect(item)}
                 className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent"
               >
-                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Icon className={`h-4 w-4 shrink-0 ${contentColors[item.type as keyof typeof contentColors]?.icon || "text-muted-foreground"}`} />
                 <span className="truncate font-medium">{item.title}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground capitalize shrink-0">
+                <span className={`ml-auto text-[10px] capitalize shrink-0 ${contentColors[item.type as keyof typeof contentColors]?.text || "text-muted-foreground"}`}>
                   {item.type}
                 </span>
               </button>

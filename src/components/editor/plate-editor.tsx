@@ -41,6 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ContentLinkDialog } from "./content-link-dialog";
+import { contentColors, getContentTypeFromUrl } from "@/lib/colors";
 
 interface PlateEditorProps {
   content?: string;
@@ -140,22 +141,30 @@ export function PlateEditor({
       LinkPlugin.configure({
         options: { forceSubmit: true },
         render: {
-          node: ({ children, element }: any) => (
-            <a
-              href={element.url}
-              className="text-violet-500 dark:text-violet-400 underline decoration-violet-500/30 underline-offset-2 cursor-pointer hover:decoration-violet-500/60 hover:text-violet-600 dark:hover:text-violet-300 font-medium transition-colors"
-              target={element.url?.startsWith("/") ? undefined : "_blank"}
-              rel={element.url?.startsWith("/") ? undefined : "noopener noreferrer"}
-              onClick={(e) => {
-                if (element.url?.startsWith("/")) {
-                  e.preventDefault();
-                  window.location.href = element.url;
-                }
-              }}
-            >
-              {children}
-            </a>
-          ),
+          node: ({ children, element }: any) => {
+            const url = element.url || "";
+            const contentType = getContentTypeFromUrl(url);
+            const colorClass = contentType
+              ? contentColors[contentType].link
+              : "text-violet-500 dark:text-violet-400 decoration-violet-500/30 hover:decoration-violet-500/60";
+
+            return (
+              <a
+                href={url}
+                className={`underline underline-offset-2 cursor-pointer font-medium transition-colors ${colorClass}`}
+                target={url.startsWith("/") ? undefined : "_blank"}
+                rel={url.startsWith("/") ? undefined : "noopener noreferrer"}
+                onClick={(e) => {
+                  if (url.startsWith("/")) {
+                    e.preventDefault();
+                    window.location.href = url;
+                  }
+                }}
+              >
+                {children}
+              </a>
+            );
+          },
         },
       }),
       ImagePlugin,

@@ -19,18 +19,18 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navigation = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Ideas", href: "/ideas", icon: Lightbulb },
-  { label: "Notes", href: "/notes", icon: StickyNote },
-  { label: "Scripts", href: "/scripts", icon: FileText },
-  { label: "Projects", href: "/projects", icon: FolderKanban },
-  { label: "Library", href: "/library", icon: Library },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "" },
+  { label: "Ideas", href: "/ideas", icon: Lightbulb, color: "text-amber-500" },
+  { label: "Notes", href: "/notes", icon: StickyNote, color: "text-blue-500" },
+  { label: "Scripts", href: "/scripts", icon: FileText, color: "text-emerald-500" },
+  { label: "Projects", href: "/projects", icon: FolderKanban, color: "text-purple-500" },
+  { label: "Library", href: "/library", icon: Library, color: "text-orange-500" },
 ];
 
 const secondaryNavigation = [
-  { label: "AI Chat", href: "/chat", icon: MessageSquare },
-  { label: "Search", href: "/search", icon: Search },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "AI Chat", href: "/chat", icon: MessageSquare, color: "text-pink-500" },
+  { label: "Search", href: "/search", icon: Search, color: "" },
+  { label: "Settings", href: "/settings", icon: Settings, color: "" },
 ];
 
 export function Sidebar() {
@@ -71,9 +71,7 @@ export function Sidebar() {
                 <item.icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-colors",
-                    isActive
-                      ? "text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
+                    item.color || (isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70")
                   )}
                 />
                 {item.label}
@@ -105,9 +103,7 @@ export function Sidebar() {
                 <item.icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-colors",
-                    isActive
-                      ? "text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
+                    item.color || (isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70")
                   )}
                 />
                 {item.label}
