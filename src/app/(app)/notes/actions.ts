@@ -6,7 +6,13 @@ import { redirect } from "next/navigation";
 import { createNoteSchema, updateNoteSchema } from "@/lib/validations/notes";
 import * as notesService from "@/lib/services/notes";
 import { syncItemTags } from "@/lib/services/tags";
-import { indexContent, removeContentEmbeddings } from "@/lib/ai/embeddings";
+
+async function tryIndex(userId: string, itemId: string, text: string, title: string) {
+  try {
+    const { indexContent } = await import("@/lib/ai/embeddings");
+    await indexContent(userId, itemId, "note", text, title);
+  } catch {}
+}
 
 export async function createNoteAction(data: {
   title: string;
@@ -25,7 +31,7 @@ export async function createNoteAction(data: {
     await syncItemTags(userId, note.id, "note", data.tags);
   }
 
-  indexContent(userId, note.id, "note", validated.contentPlain || "", validated.title).catch(console.error);
+  tryIndex(userId, note.id, validated.contentPlain || "", validated.title).catch(() => {});
 
   revalidatePath("/notes");
   revalidatePath("/dashboard");
@@ -52,7 +58,7 @@ export async function updateNoteAction(
     await syncItemTags(userId, id, "note", data.tags);
   }
 
-  indexContent(userId, id, "note", data.contentPlain || "", data.title || "").catch(console.error);
+  tryIndex(userId, id, data.contentPlain || "", data.title || "").catch(() => {});
 
   revalidatePath("/notes");
   revalidatePath(`/notes/${id}`);
@@ -64,7 +70,11 @@ export async function deleteNoteAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   await notesService.deleteNote(userId, id);
-  removeContentEmbeddings(id, "note").catch(console.error);
+
+  try {
+    const { removeContentEmbeddings } = await import("@/lib/ai/embeddings");
+    await removeContentEmbeddings(id, "note");
+  } catch {}
 
   revalidatePath("/notes");
   revalidatePath("/dashboard");

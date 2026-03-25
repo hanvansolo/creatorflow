@@ -6,7 +6,13 @@ import { redirect } from "next/navigation";
 import { createScriptSchema, updateScriptSchema } from "@/lib/validations/scripts";
 import * as scriptsService from "@/lib/services/scripts";
 import { syncItemTags } from "@/lib/services/tags";
-import { indexContent, removeContentEmbeddings } from "@/lib/ai/embeddings";
+
+async function tryIndex(userId: string, itemId: string, text: string, title: string) {
+  try {
+    const { indexContent } = await import("@/lib/ai/embeddings");
+    await indexContent(userId, itemId, "script", text, title);
+  } catch {}
+}
 
 export async function createScriptAction(data: {
   title: string;
@@ -27,7 +33,7 @@ export async function createScriptAction(data: {
     await syncItemTags(userId, script.id, "script", data.tags);
   }
 
-  indexContent(userId, script.id, "script", validated.contentPlain || "", validated.title).catch(console.error);
+  tryIndex(userId, script.id, validated.contentPlain || "", validated.title).catch(() => {});
 
   revalidatePath("/scripts");
   revalidatePath("/dashboard");
@@ -56,7 +62,7 @@ export async function updateScriptAction(
     await syncItemTags(userId, id, "script", data.tags);
   }
 
-  indexContent(userId, id, "script", data.contentPlain || "", data.title || "").catch(console.error);
+  tryIndex(userId, id, data.contentPlain || "", data.title || "").catch(() => {});
 
   revalidatePath("/scripts");
   revalidatePath(`/scripts/${id}`);
@@ -68,7 +74,11 @@ export async function deleteScriptAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   await scriptsService.deleteScript(userId, id);
-  removeContentEmbeddings(id, "script").catch(console.error);
+
+  try {
+    const { removeContentEmbeddings } = await import("@/lib/ai/embeddings");
+    await removeContentEmbeddings(id, "script");
+  } catch {}
 
   revalidatePath("/scripts");
   revalidatePath("/dashboard");

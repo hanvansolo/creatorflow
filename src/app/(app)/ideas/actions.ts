@@ -6,7 +6,13 @@ import { redirect } from "next/navigation";
 import { createIdeaSchema, updateIdeaSchema } from "@/lib/validations/ideas";
 import * as ideasService from "@/lib/services/ideas";
 import { syncItemTags } from "@/lib/services/tags";
-import { indexContent, removeContentEmbeddings } from "@/lib/ai/embeddings";
+
+async function tryIndex(userId: string, itemId: string, text: string, title: string) {
+  try {
+    const { indexContent } = await import("@/lib/ai/embeddings");
+    await indexContent(userId, itemId, "idea", text, title);
+  } catch {}
+}
 
 export async function createIdeaAction(formData: FormData) {
   const { userId } = await auth();
@@ -29,8 +35,7 @@ export async function createIdeaAction(formData: FormData) {
     await syncItemTags(userId, idea.id, "idea", validated.tags);
   }
 
-  // Index for AI search (non-blocking)
-  indexContent(userId, idea.id, "idea", validated.body || "", validated.title).catch(console.error);
+  tryIndex(userId, idea.id, validated.body || "", validated.title).catch(() => {});
 
   revalidatePath("/ideas");
   revalidatePath("/dashboard");
@@ -58,8 +63,7 @@ export async function updateIdeaAction(id: string, formData: FormData) {
     await syncItemTags(userId, id, "idea", validated.tags);
   }
 
-  // Re-index for AI search
-  indexContent(userId, id, "idea", validated.body || "", validated.title || "").catch(console.error);
+  tryIndex(userId, id, validated.body || "", validated.title || "").catch(() => {});
 
   revalidatePath("/ideas");
   revalidatePath(`/ideas/${id}`);
@@ -72,7 +76,11 @@ export async function deleteIdeaAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   await ideasService.deleteIdea(userId, id);
-  removeContentEmbeddings(id, "idea").catch(console.error);
+
+  try {
+    const { removeContentEmbeddings } = await import("@/lib/ai/embeddings");
+    await removeContentEmbeddings(id, "idea");
+  } catch {}
 
   revalidatePath("/ideas");
   revalidatePath("/dashboard");
