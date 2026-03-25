@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { TiptapEditor } from "@/components/editor/tiptap-editor";
+import dynamic from "next/dynamic";
+const TiptapEditor = dynamic(
+  () => import("@/components/editor/tiptap-editor").then((m) => m.TiptapEditor),
+  { ssr: false, loading: () => <div className="h-[400px] rounded-lg border border-input bg-background animate-pulse" /> }
+);
 import { Trash2, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Note } from "@/types";
