@@ -186,9 +186,9 @@ export function PlateEditor({
   };
 
   return (
-    <div className={cn("rounded-lg border border-input bg-background", className)}>
+    <div className={cn("rounded-xl border border-border/50 bg-background shadow-sm", className)}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-border/40 px-3 py-1.5 bg-muted/20">
         <ToolbarButton
           onClick={() => editor.tf.toggleMark("bold")}
           icon={Bold}
@@ -294,7 +294,7 @@ export function PlateEditor({
       <Plate editor={editor} onValueChange={handleChange}>
         <PlateContent
           placeholder={placeholder}
-          className="prose prose-sm dark:prose-invert max-w-none min-h-[400px] px-4 py-3 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full"
+          className="prose prose-base dark:prose-invert max-w-none min-h-[500px] px-8 py-6 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:leading-relaxed [&_blockquote]:border-l-primary/30 [&_pre]:bg-muted/50 [&_pre]:rounded-lg [&_code]:text-[13px]"
         />
       </Plate>
     </div>
@@ -311,14 +311,13 @@ function ToolbarButton({
   tooltip: string;
 }) {
   return (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="icon-xs"
       onClick={onClick}
       title={tooltip}
+      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/70 transition-all hover:bg-background hover:text-foreground hover:shadow-sm"
     >
       <Icon className="h-3.5 w-3.5" />
-    </Button>
+    </button>
   );
 }

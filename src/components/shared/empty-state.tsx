@@ -20,16 +20,16 @@ export function EmptyState({
   actionHref,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-        <Icon className="h-6 w-6 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/60">
+        <Icon className="h-5 w-5 text-muted-foreground/60" />
       </div>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+      <h3 className="mt-4 text-sm font-semibold">{title}</h3>
+      <p className="mt-1 max-w-xs text-[13px] text-muted-foreground">
         {description}
       </p>
       {actionLabel && actionHref && (
-        <Link href={actionHref} className={buttonVariants({ className: "mt-6" })}>
+        <Link href={actionHref} className={buttonVariants({ size: "sm", className: "mt-5" })}>
           {actionLabel}
         </Link>
       )}

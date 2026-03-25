@@ -97,8 +97,8 @@ export function NoteEditorPage({
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Note title..."
-          className="border-none bg-transparent text-2xl font-bold shadow-none focus-visible:ring-0 px-0 h-auto"
+          placeholder="Untitled note..."
+          className="border-none bg-transparent text-xl font-semibold shadow-none focus-visible:ring-0 px-0 h-auto placeholder:text-muted-foreground/40"
         />
         <div className="flex items-center gap-2 shrink-0">
           {note && deleteAction && (
