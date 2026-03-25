@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <defs>
+    <style>
+      .sector1 { stroke: #ef4444; }
+      .sector2 { stroke: #3b82f6; }
+      .sector3 { stroke: #eab308; }
+      .track { stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .corner-num { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; fill: #ffffff; }
+      .start-finish { stroke: #ffffff; stroke-width: 3; }
+    </style>
+  </defs>
+
+  <!-- Track Background -->
+  <rect width="800" height="600" fill="#18181b"/>
+
+  <!-- Sector 1 - Red -->
+  <path class="track sector1" d="M 397.2,328.9 L 464.0,319.9 L 467.5,318.7 L 470.1,315.9 L 472.0,312.1 L 472.3,308.3 L 471.3,304.4 L 460.6,258.9 L 458.8,254.0 L 456.3,250.3 L 452.1,246.8 L 448.6,245.1 L 429.7,239.2 L 423.4,236.0 L 418.7,232.8 L 414.5,228.8 L 411.3,225.1 L 408.9,221.9 L 406.1,215.1 L 405.0,209.8 L 404.9,204.1 L 406.1,197.4 L 408.2,190.3 L 412.9,172.2 L 414.6,158.8 L 414.8,149.3 L 413.9,141.1 L 408.7,98.7 L 405.2,72.0 L 404.6,68.9 L 403.9,66.4 L 401.9,63.8 L 398.5,61.0 L 396.4,60.2 L 394.1,60.0 L 391.8,60.4 L 389.4,61.3 L 387.6,63.2 L 386.5,64.9 L 385.1,67.7 L 381.0,80.0 L 377.0,97.9 L 343.6,197.5 L 330.6,236.0"/>
+
+  <!-- Sector 2 - Blue -->
+  <path class="track sector2" d="M 330.6,236.0 L 323.4,257.5 L 318.0,274.2 L 312.3,294.9 L 300.4,333.0 L 289.0,367.3 L 287.7,370.7 L 287.4,373.2 L 287.7,374.6 L 289.0,376.1 L 291.8,376.2 L 302.5,374.9 L 304.8,374.9 L 306.7,377.2 L 312.7,400.1 L 314.0,404.4 L 317.8,413.9 L 321.3,420.8 L 328.7,431.6 L 337.2,441.6 L 348.0,450.8 L 393.4,486.6 L 403.8,495.0 L 411.9,500.8 L 422.8,507.9 L 432.1,513.3 L 447.2,520.5 L 461.0,526.7 L 481.5,536.4 L 490.3,540.0 L 495.2,540.0 L 500.4,538.9 L 505.2,536.2 L 507.7,533.7 L 509.4,531.3 L 511.1,527.8 L 512.1,524.3 L 512.6,521.1 L 512.2,515.7 L 511.1,511.9 L 509.6,508.1 L 507.4,504.8 L 504.2,501.7 L 500.3,499.1 L 496.1,497.3 L 490.1,496.4 L 442.3,492.6"/>
+
+  <!-- Sector 3 - Yellow -->
+  <path class="track sector3" d="M 442.3,492.6 L 436.4,491.8 L 433.8,491.2 L 431.2,490.3 L 405.5,474.2 L 402.9,472.3 L 401.1,470.0 L 399.3,465.3 L 393.3,437.3 L 393.7,435.1 L 395.1,433.6 L 397.2,433.0 L 418.5,429.8 L 421.0,428.8 L 422.6,427.9 L 424.3,426.2 L 426.0,423.0 L 426.4,419.1 L 426.4,399.7 L 424.9,396.4 L 423.0,394.4 L 420.1,393.3 L 416.1,392.4 L 412.6,391.9 L 408.0,391.8 L 403.4,392.1 L 358.9,399.0 L 355.1,399.3 L 350.2,399.1 L 345.4,398.2 L 342.2,397.1 L 340.0,395.2 L 337.7,392.7 L 325.5,370.6 L 319.2,360.4 L 317.9,357.4 L 316.9,353.4 L 316.6,350.0 L 316.6,345.9 L 317.2,343.1 L 318.9,341.1 L 320.9,340.0 L 325.6,339.2 L 397.2,328.9 L 397.2,328.9"/>
+
+  <!-- Start/Finish Line -->
+  <circle cx="397.2" cy="328.9" r="8" fill="#ffffff"/>
+
+  <!-- Corner Numbers -->
+  
+    <!-- Turn 1 -->
+    <circle cx="471.3" cy="304.4" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="471.3" y="309.4" text-anchor="middle" class="corner-num">1</text>
+
+    <!-- Turn 2 -->
+    <circle cx="423.4" cy="236.0" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="423.4" y="241.0" text-anchor="middle" class="corner-num">2</text>
+
+    <!-- Turn 3 -->
+    <circle cx="406.1" cy="197.4" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="406.1" y="202.4" text-anchor="middle" class="corner-num">3</text>
+
+    <!-- Turn 4 -->
+    <circle cx="404.6" cy="68.9" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="404.6" y="73.9" text-anchor="middle" class="corner-num">4</text>
+
+    <!-- Turn 5 -->
+    <circle cx="385.1" cy="67.7" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="385.1" y="72.7" text-anchor="middle" class="corner-num">5</text>
+
+    <!-- Turn 6 -->
+    <circle cx="287.4" cy="373.2" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="287.4" y="378.2" text-anchor="middle" class="corner-num">6</text>
+
+    <!-- Turn 7 -->
+    <circle cx="321.3" cy="420.8" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="321.3" y="425.8" text-anchor="middle" class="corner-num">7</text>
+
+    <!-- Turn 8 -->
+    <circle cx="432.1" cy="513.3" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="432.1" y="518.3" text-anchor="middle" class="corner-num">8</text>
+
+    <!-- Turn 9 -->
+    <circle cx="507.7" cy="533.7" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="507.7" y="538.7" text-anchor="middle" class="corner-num">9</text>
+
+    <!-- Turn 10 -->
+    <circle cx="507.4" cy="504.8" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="507.4" y="509.8" text-anchor="middle" class="corner-num">10</text>
+
+    <!-- Turn 11 -->
+    <circle cx="431.2" cy="490.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="431.2" y="495.3" text-anchor="middle" class="corner-num">11</text>
+
+    <!-- Turn 12 -->
+    <circle cx="397.2" cy="433.0" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="397.2" y="438.0" text-anchor="middle" class="corner-num">12</text>
+
+    <!-- Turn 13 -->
+    <circle cx="424.9" cy="396.4" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="424.9" y="401.4" text-anchor="middle" class="corner-num">13</text>
+
+    <!-- Turn 14 -->
+    <circle cx="355.1" cy="399.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="355.1" y="404.3" text-anchor="middle" class="corner-num">14</text>
+
+    <!-- Turn 15 -->
+    <circle cx="337.7" cy="392.7" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="337.7" y="397.7" text-anchor="middle" class="corner-num">15</text>
+
+    <!-- Turn 16 -->
+    <circle cx="317.2" cy="343.1" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="317.2" y="348.1" text-anchor="middle" class="corner-num">16</text>
+
+  <!-- Circuit Name -->
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">Yas Marina Circuit</text>
+  <text x="400" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#71717a">Abu Dhabi • 5.281 km • 16 Turns</text>
+</svg>

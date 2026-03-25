@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <defs>
+    <style>
+      .sector1 { stroke: #ef4444; }
+      .sector2 { stroke: #3b82f6; }
+      .sector3 { stroke: #eab308; }
+      .track { stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .corner-num { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; fill: #ffffff; }
+      .start-finish { stroke: #ffffff; stroke-width: 3; }
+    </style>
+  </defs>
+
+  <!-- Track Background -->
+  <rect width="800" height="600" fill="#18181b"/>
+
+  <!-- Sector 1 - Red -->
+  <path class="track sector1" d="M 513.2,469.9 L 466.4,482.3 L 350.4,513.9 L 342.4,514.5 L 337.0,509.7 L 328.0,492.3 L 299.6,453.9 L 268.8,410.0 L 244.5,371.3 L 222.4,333.2 L 186.2,254.3 L 176.3,233.3 L 161.0,208.5 L 137.4,179.7 L 98.3,140.4 L 62.2,104.3 L 60.0,99.4 L 60.2,94.3 L 64.4,91.8 L 73.9,90.1 L 103.5,86.6 L 133.1,85.5 L 163.7,85.8 L 192.8,88.6 L 226.6,94.1 L 329.7,114.0 L 376.8,120.2"/>
+
+  <!-- Sector 2 - Blue -->
+  <path class="track sector2" d="M 376.8,120.2 L 478.5,124.5 L 486.8,127.3 L 491.9,133.0 L 493.8,139.3 L 493.3,145.9 L 490.7,152.1 L 480.5,166.7 L 472.5,176.3 L 457.6,189.4 L 441.4,198.2 L 421.7,204.8 L 400.3,208.2 L 378.0,206.8 L 291.4,192.8 L 279.7,194.3 L 270.2,197.6 L 262.0,203.4 L 254.7,211.0 L 250.1,220.2 L 247.6,230.1 L 247.2,239.2 L 248.6,249.2 L 251.3,256.6 L 293.3,330.0 L 300.4,337.7 L 311.5,344.8 L 324.4,347.7 L 336.8,346.6"/>
+
+  <!-- Sector 3 - Yellow -->
+  <path class="track sector3" d="M 336.8,346.6 L 349.9,341.1 L 357.9,334.6 L 366.1,324.3 L 373.9,314.4 L 382.2,305.9 L 392.1,299.0 L 403.8,292.1 L 420.0,286.2 L 437.0,282.5 L 571.5,279.6 L 674.9,277.1 L 685.9,277.4 L 696.5,281.1 L 705.3,287.6 L 712.3,296.4 L 717.6,308.1 L 738.8,379.3 L 740.0,385.8 L 738.8,390.6 L 736.3,394.4 L 728.1,400.9 L 717.2,407.4 L 703.1,414.6 L 687.1,421.4 L 668.1,427.7 L 513.2,469.9 L 513.2,469.9"/>
+
+  <!-- Start/Finish Line -->
+  <circle cx="513.2" cy="469.9" r="8" fill="#ffffff"/>
+
+  <!-- Corner Numbers -->
+  
+    <!-- Turn 1 -->
+    <circle cx="299.6" cy="453.9" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="299.6" y="458.9" text-anchor="middle" class="corner-num">1</text>
+
+    <!-- Turn 2 -->
+    <circle cx="98.3" cy="140.4" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="98.3" y="145.4" text-anchor="middle" class="corner-num">2</text>
+
+    <!-- Turn 3 -->
+    <circle cx="329.7" cy="114.0" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="329.7" y="119.0" text-anchor="middle" class="corner-num">3</text>
+
+    <!-- Turn 4 -->
+    <circle cx="400.3" cy="208.2" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="400.3" y="213.2" text-anchor="middle" class="corner-num">4</text>
+
+    <!-- Turn 5 -->
+    <circle cx="247.6" cy="230.1" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="247.6" y="235.1" text-anchor="middle" class="corner-num">5</text>
+
+    <!-- Turn 6 -->
+    <circle cx="336.8" cy="346.6" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="336.8" y="351.6" text-anchor="middle" class="corner-num">6</text>
+
+    <!-- Turn 7 -->
+    <circle cx="392.1" cy="299.0" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="392.1" y="304.0" text-anchor="middle" class="corner-num">7</text>
+
+    <!-- Turn 8 -->
+    <circle cx="696.5" cy="281.1" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="696.5" y="286.1" text-anchor="middle" class="corner-num">8</text>
+
+    <!-- Turn 9 -->
+    <circle cx="740.0" cy="385.8" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="740.0" y="390.8" text-anchor="middle" class="corner-num">9</text>
+
+    <!-- Turn 10 -->
+    <circle cx="717.2" cy="407.4" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="717.2" y="412.4" text-anchor="middle" class="corner-num">10</text>
+
+  <!-- Circuit Name -->
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">Red Bull Ring</text>
+  <text x="400" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#71717a">Spielberg • 4.318 km • 10 Turns</text>
+</svg>

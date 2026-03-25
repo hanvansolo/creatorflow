@@ -1,0 +1,100 @@
+import { Metadata } from 'next';
+import { MessageCircleQuestion, TrendingUp, Clock, Sparkles } from 'lucide-react';
+import { getPopularScenarios, getRecentScenarios } from '@/lib/api/what-if';
+import { WhatIfSearch, ScenarioCard, SuggestedQuestions } from '@/components/what-if';
+import { createPageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = createPageMetadata(
+  'Football What If Simulator - Explore Hypothetical Scenarios',
+  'Explore hypothetical football scenarios with AI analysis. What if Mbappe stayed at PSG? What if VAR was removed? Player transfers, rule changes, and alternate histories.',
+  '/what-if',
+  ['football what if', 'hypothetical football', 'football scenarios', 'alternate football history', 'football simulator', 'football transfers', 'football rule changes']
+);
+
+export const dynamic = 'force-dynamic';
+
+export default async function WhatIfPage() {
+  const [popularScenarios, recentScenarios] = await Promise.all([
+    getPopularScenarios(6),
+    getRecentScenarios(6),
+  ]);
+
+  const suggestedQuestions = [
+    "What if Max Verstappen had joined Ferrari in 2020?",
+    "What if the 2021 Abu Dhabi safety car had not been deployed?",
+    "What if ground effect cars never returned to F1?",
+    "What if there were 25 races per season?",
+  ];
+
+  return (
+    <div className="min-h-screen">
+      {/* Header */}
+      <div className="border-b border-zinc-800 bg-gradient-to-br from-purple-500/10 via-zinc-900/50 to-zinc-900/50">
+        <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20">
+              <Sparkles className="h-6 w-6 text-purple-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white sm:text-3xl">What If Simulator</h1>
+              <p className="text-sm text-zinc-400">Explore alternate F1 realities</p>
+            </div>
+          </div>
+
+          <p className="text-zinc-300 max-w-2xl mb-8">
+            Ever wondered what could have been? Ask any hypothetical F1 question and our AI
+            will analyze the scenario, considering team dynamics, driver strengths, and
+            historical precedents.
+          </p>
+
+          <WhatIfSearch />
+
+          <SuggestedQuestions questions={suggestedQuestions} />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Popular Scenarios */}
+        {popularScenarios.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="h-5 w-5 text-purple-500" />
+              <h2 className="text-lg font-semibold text-white">Popular Scenarios</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {popularScenarios.map((scenario) => (
+                <ScenarioCard key={scenario.id} scenario={scenario} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recent Scenarios */}
+        {recentScenarios.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-zinc-500" />
+              <h2 className="text-lg font-semibold text-white">Recent Scenarios</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {recentScenarios.map((scenario) => (
+                <ScenarioCard key={scenario.id} scenario={scenario} variant="compact" />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {popularScenarios.length === 0 && recentScenarios.length === 0 && (
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-12 text-center">
+            <MessageCircleQuestion className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No Scenarios Yet</h3>
+            <p className="text-zinc-400 max-w-md mx-auto">
+              Be the first to ask a What If question! Our AI will analyze your hypothetical
+              scenario and provide detailed insights.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

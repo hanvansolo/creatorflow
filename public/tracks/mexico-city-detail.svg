@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <defs>
+    <style>
+      .sector1 { stroke: #ef4444; }
+      .sector2 { stroke: #3b82f6; }
+      .sector3 { stroke: #eab308; }
+      .track { stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .corner-num { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; fill: #ffffff; }
+      .start-finish { stroke: #ffffff; stroke-width: 3; }
+    </style>
+  </defs>
+
+  <!-- Track Background -->
+  <rect width="800" height="600" fill="#18181b"/>
+
+  <!-- Sector 1 - Red -->
+  <path class="track sector1" d="M 189.0,69.4 L 354.0,92.3 L 407.5,99.4 L 463.8,104.4 L 491.0,107.8 L 561.1,117.7 L 683.2,135.8 L 708.4,140.9 L 712.7,142.6 L 715.0,144.6 L 716.2,147.7 L 716.5,150.6 L 711.9,180.8 L 712.4,183.5 L 713.9,185.9 L 726.7,192.8 L 730.5,194.8 L 732.5,197.9 L 732.5,200.8 L 729.9,219.7 L 725.9,236.6 L 719.6,253.0 L 712.4,267.8 L 656.4,362.9 L 589.1,468.5 L 584.8,475.7 L 584.2,480.1 L 585.1,483.7 L 587.1,486.4 L 607.2,498.7 L 609.1,500.6 L 609.4,503.8 L 608.0,506.4 L 604.6,509.6"/>
+
+  <!-- Sector 2 - Blue -->
+  <path class="track sector2" d="M 604.6,509.6 L 567.1,537.8 L 563.4,539.5 L 560.2,540.0 L 557.4,539.0 L 550.5,534.7 L 549.3,531.8 L 549.3,526.0 L 566.5,392.1 L 566.3,388.0 L 564.5,384.2 L 562.0,381.0 L 557.9,378.2 L 537.9,365.8 L 530.8,359.3 L 526.5,354.9 L 522.2,346.7 L 517.6,334.6 L 513.0,327.4 L 507.9,322.3 L 502.2,318.7 L 494.4,315.3 L 432.6,305.9 L 425.7,303.7 L 421.5,300.1 L 419.5,297.7 L 417.8,294.3 L 409.7,269.5 L 407.2,264.6 L 403.2,260.0 L 393.2,254.0 L 347.4,229.3 L 334.2,223.8 L 315.0,219.2 L 161.7,196.9"/>
+
+  <!-- Sector 3 - Yellow -->
+  <path class="track sector3" d="M 161.7,196.9 L 158.5,195.8 L 156.8,193.8 L 155.4,190.7 L 155.1,186.6 L 152.5,147.2 L 149.4,119.9 L 148.2,116.8 L 146.0,114.6 L 142.8,113.1 L 138.8,113.6 L 134.5,117.5 L 129.0,125.7 L 125.9,128.1 L 122.2,129.5 L 117.9,129.3 L 113.0,127.1 L 107.3,124.5 L 101.9,122.8 L 75.9,119.9 L 71.6,118.5 L 69.5,116.8 L 67.8,113.6 L 67.5,110.5 L 69.2,103.0 L 73.0,93.1 L 77.8,84.9 L 85.0,75.0 L 93.3,68.2 L 103.9,62.9 L 113.6,60.3 L 123.0,60.0 L 136.8,61.7 L 189.0,69.4 L 189.0,69.4"/>
+
+  <!-- Start/Finish Line -->
+  <circle cx="189.0" cy="69.4" r="8" fill="#ffffff"/>
+
+  <!-- Corner Numbers -->
+  
+    <!-- Turn 1 -->
+    <circle cx="561.1" cy="117.7" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="561.1" y="122.7" text-anchor="middle" class="corner-num">1</text>
+
+    <!-- Turn 2 -->
+    <circle cx="716.2" cy="147.7" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="716.2" y="152.7" text-anchor="middle" class="corner-num">2</text>
+
+    <!-- Turn 3 -->
+    <circle cx="726.7" cy="192.8" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="726.7" y="197.8" text-anchor="middle" class="corner-num">3</text>
+
+    <!-- Turn 4 -->
+    <circle cx="712.4" cy="267.8" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="712.4" y="272.8" text-anchor="middle" class="corner-num">4</text>
+
+    <!-- Turn 5 -->
+    <circle cx="587.1" cy="486.4" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="587.1" y="491.4" text-anchor="middle" class="corner-num">5</text>
+
+    <!-- Turn 6 -->
+    <circle cx="567.1" cy="537.8" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="567.1" y="542.8" text-anchor="middle" class="corner-num">6</text>
+
+    <!-- Turn 7 -->
+    <circle cx="549.3" cy="526.0" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="549.3" y="531.0" text-anchor="middle" class="corner-num">7</text>
+
+    <!-- Turn 8 -->
+    <circle cx="537.9" cy="365.8" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="537.9" y="370.8" text-anchor="middle" class="corner-num">8</text>
+
+    <!-- Turn 9 -->
+    <circle cx="507.9" cy="322.3" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="507.9" y="327.3" text-anchor="middle" class="corner-num">9</text>
+
+    <!-- Turn 10 -->
+    <circle cx="421.5" cy="300.1" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="421.5" y="305.1" text-anchor="middle" class="corner-num">10</text>
+
+    <!-- Turn 11 -->
+    <circle cx="347.4" cy="229.3" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="347.4" y="234.3" text-anchor="middle" class="corner-num">11</text>
+
+    <!-- Turn 12 -->
+    <circle cx="155.4" cy="190.7" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="155.4" y="195.7" text-anchor="middle" class="corner-num">12</text>
+
+    <!-- Turn 13 -->
+    <circle cx="142.8" cy="113.1" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="142.8" y="118.1" text-anchor="middle" class="corner-num">13</text>
+
+    <!-- Turn 14 -->
+    <circle cx="117.9" cy="129.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="117.9" y="134.3" text-anchor="middle" class="corner-num">14</text>
+
+    <!-- Turn 15 -->
+    <circle cx="69.5" cy="116.8" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="69.5" y="121.8" text-anchor="middle" class="corner-num">15</text>
+
+    <!-- Turn 16 -->
+    <circle cx="73.0" cy="93.1" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="73.0" y="98.1" text-anchor="middle" class="corner-num">16</text>
+
+    <!-- Turn 17 -->
+    <circle cx="103.9" cy="62.9" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="103.9" y="67.9" text-anchor="middle" class="corner-num">17</text>
+
+  <!-- Circuit Name -->
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">Autodromo Hermanos Rodriguez</text>
+  <text x="400" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#71717a">Mexico City • 4.304 km • 17 Turns</text>
+</svg>

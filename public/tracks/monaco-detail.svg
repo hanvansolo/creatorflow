@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <defs>
+    <style>
+      .sector1 { stroke: #ef4444; }
+      .sector2 { stroke: #3b82f6; }
+      .sector3 { stroke: #eab308; }
+      .track { stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .corner-num { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; fill: #ffffff; }
+      .start-finish { stroke: #ffffff; stroke-width: 3; }
+    </style>
+  </defs>
+
+  <!-- Track Background -->
+  <rect width="800" height="600" fill="#18181b"/>
+
+  <!-- Sector 1 - Red -->
+  <path class="track sector1" d="M 455.5,153.8 L 454.7,148.8 L 455.9,144.4 L 458.7,138.3 L 461.4,134.0 L 469.8,123.4 L 512.5,65.4 L 515.5,61.3 L 519.9,60.0 L 525.2,61.5 L 528.9,64.6 L 531.6,69.4 L 532.2,74.9 L 532.3,79.4 L 532.7,83.0 L 534.9,87.4 L 537.5,90.8 L 542.3,97.5 L 545.6,103.5 L 546.8,107.1 L 548.5,109.3 L 551.0,110.0 L 554.0,109.1 L 556.2,106.8 L 556.9,103.5 L 555.4,100.7 L 551.7,98.0 L 540.5,83.8 L 539.0,80.4 L 538.9,77.1 L 539.8,74.6 L 541.0,72.2 L 546.2,69.5 L 554.3,67.5 L 558.7,65.8 L 563.2,64.0 L 569.5,61.8 L 576.3,61.3 L 579.9,63.1 L 581.2,68.7 L 580.0,101.4 L 574.9,135.0 L 569.7,156.4 L 563.9,171.7 L 553.9,189.1 L 542.4,203.9 L 525.8,222.0 L 501.9,236.6 L 487.8,243.6"/>
+
+  <!-- Sector 2 - Blue -->
+  <path class="track sector2" d="M 487.8,243.6 L 460.4,256.3 L 442.0,262.7 L 414.9,269.1 L 397.4,271.9 L 388.1,273.6 L 386.5,276.3 L 386.4,278.7 L 385.9,281.4 L 384.7,284.1 L 380.8,285.5 L 375.2,286.4 L 369.1,282.9 L 365.7,282.7 L 316.8,289.1 L 292.5,292.6 L 270.2,296.1 L 264.0,297.0 L 259.9,297.8 L 256.9,300.8 L 252.2,310.0 L 248.3,319.0 L 245.1,327.9 L 243.7,334.3 L 242.2,345.4 L 242.1,364.3 L 242.3,369.0 L 243.7,372.3 L 246.5,375.4 L 252.6,379.9 L 256.7,383.7 L 258.5,387.8 L 259.2,393.6 L 266.2,434.0 L 268.0,441.1 L 268.5,443.3 L 268.4,446.3 L 266.6,448.7 L 262.7,451.5 L 258.8,453.4 L 257.8,456.1 L 258.6,461.9 L 263.1,475.0 L 267.2,484.9 L 271.3,492.7 L 278.4,502.9 L 287.4,511.9 L 294.0,515.7 L 301.3,519.2 L 305.0,520.8 L 306.9,522.9 L 309.0,529.3 L 308.0,532.7 L 304.7,534.7 L 289.9,538.6 L 281.7,539.9 L 276.2,540.0 L 271.4,539.3 L 268.3,537.0 L 266.5,535.1 L 266.4,530.6 L 265.7,526.9 L 264.3,522.5 L 255.9,512.2 L 249.8,502.4"/>
+
+  <!-- Sector 3 - Yellow -->
+  <path class="track sector3" d="M 249.8,502.4 L 245.1,495.1 L 240.0,481.2 L 228.9,442.4 L 225.9,429.9 L 223.7,416.5 L 220.9,397.0 L 218.8,371.6 L 218.8,355.0 L 219.5,342.3 L 220.9,329.2 L 223.3,320.0 L 226.1,311.8 L 227.4,306.7 L 228.1,302.3 L 227.8,295.6 L 227.7,291.4 L 229.0,288.9 L 232.5,287.3 L 240.9,285.2 L 248.4,284.9 L 258.6,283.7 L 272.9,281.8 L 285.6,279.6 L 317.9,270.1 L 335.9,265.2 L 352.4,262.5 L 363.8,261.6 L 372.6,258.4 L 398.2,246.3 L 409.4,241.6 L 425.7,238.0 L 439.4,236.1 L 452.4,233.9 L 459.8,231.3 L 468.7,225.7 L 476.4,217.6 L 480.8,210.8 L 482.7,203.7 L 482.4,196.2 L 481.1,189.2 L 478.4,181.5 L 474.7,174.1 L 468.9,169.6 L 463.3,164.4 L 460.6,162.1 L 458.2,159.5 L 455.5,153.8 L 455.5,153.8"/>
+
+  <!-- Start/Finish Line -->
+  <circle cx="455.5" cy="153.8" r="8" fill="#ffffff"/>
+
+  <!-- Corner Numbers -->
+  
+    <!-- Turn 1 - Ste Devote -->
+    <circle cx="515.5" cy="61.3" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="515.5" y="66.3" text-anchor="middle" class="corner-num">1</text>
+
+    <!-- Turn 2 -->
+    <circle cx="546.8" cy="107.1" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="546.8" y="112.1" text-anchor="middle" class="corner-num">2</text>
+
+    <!-- Turn 3 -->
+    <circle cx="539.0" cy="80.4" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="539.0" y="85.4" text-anchor="middle" class="corner-num">3</text>
+
+    <!-- Turn 4 - Casino -->
+    <circle cx="579.9" cy="63.1" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="579.9" y="68.1" text-anchor="middle" class="corner-num">4</text>
+
+    <!-- Turn 5 -->
+    <circle cx="442.0" cy="262.7" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="442.0" y="267.7" text-anchor="middle" class="corner-num">5</text>
+
+    <!-- Turn 6 -->
+    <circle cx="369.1" cy="282.9" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="369.1" y="287.9" text-anchor="middle" class="corner-num">6</text>
+
+    <!-- Turn 7 - Hairpin -->
+    <circle cx="248.3" cy="319.0" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="248.3" y="324.0" text-anchor="middle" class="corner-num">7</text>
+
+    <!-- Turn 8 -->
+    <circle cx="258.5" cy="387.8" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="258.5" y="392.8" text-anchor="middle" class="corner-num">8</text>
+
+    <!-- Turn 9 -->
+    <circle cx="266.6" cy="448.7" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="266.6" y="453.7" text-anchor="middle" class="corner-num">9</text>
+
+    <!-- Turn 10 -->
+    <circle cx="271.3" cy="492.7" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="271.3" y="497.7" text-anchor="middle" class="corner-num">10</text>
+
+    <!-- Turn 11 -->
+    <circle cx="306.9" cy="522.9" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="306.9" y="527.9" text-anchor="middle" class="corner-num">11</text>
+
+    <!-- Turn 12 -->
+    <circle cx="266.4" cy="530.6" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="266.4" y="535.6" text-anchor="middle" class="corner-num">12</text>
+
+    <!-- Turn 13 -->
+    <circle cx="223.7" cy="416.5" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="223.7" y="421.5" text-anchor="middle" class="corner-num">13</text>
+
+    <!-- Turn 14 -->
+    <circle cx="226.1" cy="311.8" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="226.1" y="316.8" text-anchor="middle" class="corner-num">14</text>
+
+    <!-- Turn 15 -->
+    <circle cx="232.5" cy="287.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="232.5" y="292.3" text-anchor="middle" class="corner-num">15</text>
+
+    <!-- Turn 16 -->
+    <circle cx="317.9" cy="270.1" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="317.9" y="275.1" text-anchor="middle" class="corner-num">16</text>
+
+    <!-- Turn 17 -->
+    <circle cx="425.7" cy="238.0" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="425.7" y="243.0" text-anchor="middle" class="corner-num">17</text>
+
+    <!-- Turn 18 - Rascasse -->
+    <circle cx="480.8" cy="210.8" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="480.8" y="215.8" text-anchor="middle" class="corner-num">18</text>
+
+    <!-- Turn 19 -->
+    <circle cx="474.7" cy="174.1" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="474.7" y="179.1" text-anchor="middle" class="corner-num">19</text>
+
+  <!-- Circuit Name -->
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">Circuit de Monaco</text>
+  <text x="400" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#71717a">Monte Carlo • 3.337 km • 19 Turns</text>
+</svg>

@@ -1,13 +1,465 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { LandingPage } from "@/components/layout/landing-page";
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { ArrowRight, Trophy, Calendar, Newspaper, MessageSquareQuote, CircleHelp } from 'lucide-react';
+import { HeroArticle } from '@/components/news/HeroArticle';
+import { CompactNewsCard } from '@/components/news/CompactNewsCard';
+import { HorizontalNewsCard } from '@/components/news/HorizontalNewsCard';
+import { NewsListItem } from '@/components/news/NewsListItem';
+import { DailyRoundupWidget } from '@/components/news/DailyRoundupWidget';
+import { getRelatedImageSync } from '@/lib/getFallbackImage';
+import { db, newsArticles, newsSources, youtubeVideos, comments, leagueStandings, clubs, matches, competitionSeasons, competitions } from '@/lib/db';
+import Image from 'next/image';
+import { desc, eq, gte, asc, isNotNull, and, sql } from 'drizzle-orm';
+import type { NewsArticle, CredibilityRating } from '@/types';
+import { SITE_CONFIG, DEFAULT_KEYWORDS, generateFAQStructuredData, HOMEPAGE_FAQ, jsonLd, JsonLdScript } from '@/lib/seo';
+import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
+import { AdSlot } from '@/components/ads/AdSlot';
 
-export default async function Home() {
-  const { userId } = await auth();
+export const dynamic = 'force-dynamic';
 
-  if (userId) {
-    redirect("/dashboard");
+export const metadata: Metadata = {
+  title: 'Footy Feed - Football News Without the Waffle',
+  description: 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories from 12+ sources, live scores, match predictions, and player stats.',
+  keywords: [
+    ...DEFAULT_KEYWORDS,
+    'live scores',
+    'match predictions',
+    'football analysis',
+    'football news aggregator',
+    'player comparison',
+    'what if scenarios',
+    'tactical analysis',
+    'match previews',
+    'transfer news',
+  ],
+  openGraph: {
+    title: 'Footy Feed - Football News Without the Waffle',
+    description: 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories from 12+ sources, live scores, match predictions, and player stats.',
+    type: 'website',
+    siteName: SITE_CONFIG.name,
+    locale: SITE_CONFIG.locale,
+    images: [
+      {
+        url: '/images/og-home.png',
+        width: 1200,
+        height: 630,
+        alt: 'Footy Feed - Football News and Analysis',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Footy Feed - Football News Without the Waffle',
+    description: 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories, live scores, and match predictions.',
+    images: ['/images/og-home.png'],
+    site: SITE_CONFIG.twitterHandle,
+  },
+  alternates: {
+    canonical: SITE_CONFIG.url,
+  },
+};
+
+async function getLatestNews(): Promise<NewsArticle[]> {
+  const [articles, articleImagesPool] = await Promise.all([
+    db
+      .select({
+        id: newsArticles.id,
+        sourceId: newsArticles.sourceId,
+        title: newsArticles.title,
+        slug: newsArticles.slug,
+        summary: newsArticles.summary,
+        imageUrl: newsArticles.imageUrl,
+        originalUrl: newsArticles.originalUrl,
+        publishedAt: newsArticles.publishedAt,
+        isBreaking: newsArticles.isBreaking,
+        tags: newsArticles.tags,
+        credibilityRating: newsArticles.credibilityRating,
+        voteScore: newsArticles.voteScore,
+        sourceName: newsSources.name,
+        sourceSlug: newsSources.slug,
+        sourceType: newsSources.type,
+        sourcePriority: newsSources.priority,
+        sourceUrl: newsSources.url,
+      })
+      .from(newsArticles)
+      .leftJoin(newsSources, eq(newsArticles.sourceId, newsSources.id))
+      .orderBy(desc(newsArticles.publishedAt))
+      .limit(50),
+    db
+      .select({
+        title: newsArticles.title,
+        tags: newsArticles.tags,
+        imageUrl: newsArticles.imageUrl,
+      })
+      .from(newsArticles)
+      .where(isNotNull(newsArticles.imageUrl))
+      .orderBy(desc(newsArticles.publishedAt))
+      .limit(100),
+  ]);
+
+  const imagePool = articleImagesPool
+    .filter((a): a is { title: string; tags: string[] | null; imageUrl: string } => a.imageUrl !== null);
+
+  const slugs = articles.map(a => a.slug);
+  const commentCounts = slugs.length > 0 ? await db
+    .select({ contentId: comments.contentId, count: sql<number>`count(*)` })
+    .from(comments)
+    .where(and(eq(comments.contentType, 'article'), eq(comments.status, 'active')))
+    .groupBy(comments.contentId) : [];
+
+  const countMap = new Map(commentCounts.map(c => [c.contentId, Number(c.count)]));
+
+  return articles.map((a) => ({
+    id: a.id,
+    sourceId: a.sourceId || '',
+    source: {
+      id: a.sourceId || '',
+      name: a.sourceName || 'Unknown',
+      slug: a.sourceSlug || 'unknown',
+      type: (a.sourceType || 'rss') as 'rss' | 'youtube' | 'twitter',
+      url: a.sourceUrl || undefined,
+      isActive: true,
+      priority: a.sourcePriority || 99,
+    },
+    title: a.title,
+    slug: a.slug,
+    summary: a.summary || undefined,
+    imageUrl: getRelatedImageSync(a.title, a.tags, a.imageUrl, [], [], imagePool) || undefined,
+    originalUrl: a.originalUrl,
+    publishedAt: a.publishedAt.toISOString(),
+    isBreaking: a.isBreaking ?? false,
+    tags: a.tags || [],
+    credibilityRating: (a.credibilityRating as CredibilityRating) || undefined,
+    voteScore: a.voteScore ?? 0,
+    commentCount: countMap.get(a.slug) || 0,
+  }));
+}
+
+async function getLeagueTable() {
+  try {
+    const standings = await db
+      .select({
+        position: leagueStandings.position,
+        played: leagueStandings.played,
+        won: leagueStandings.won,
+        drawn: leagueStandings.drawn,
+        lost: leagueStandings.lost,
+        goalsFor: leagueStandings.goalsFor,
+        goalsAgainst: leagueStandings.goalsAgainst,
+        goalDifference: leagueStandings.goalDifference,
+        points: leagueStandings.points,
+        form: leagueStandings.form,
+        clubName: clubs.name,
+        clubSlug: clubs.slug,
+        clubCode: clubs.code,
+        clubColor: clubs.primaryColor,
+        clubLogoUrl: clubs.logoUrl,
+      })
+      .from(leagueStandings)
+      .leftJoin(clubs, eq(leagueStandings.clubId, clubs.id))
+      .leftJoin(competitionSeasons, eq(leagueStandings.competitionSeasonId, competitionSeasons.id))
+      .leftJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
+      .where(eq(competitions.slug, 'premier-league'))
+      .orderBy(asc(leagueStandings.position))
+      .limit(6);
+
+    return standings;
+  } catch {
+    return [];
   }
+}
 
-  return <LandingPage />;
+async function getUpcomingMatches() {
+  try {
+    const now = new Date();
+    const upcoming = await db
+      .select({
+        id: matches.id,
+        kickoff: matches.kickoff,
+        slug: matches.slug,
+        round: matches.round,
+        homeClubName: sql<string>`home_club.name`,
+        homeClubCode: sql<string>`home_club.code`,
+        homeClubColor: sql<string>`home_club.primary_color`,
+        awayClubName: sql<string>`away_club.name`,
+        awayClubCode: sql<string>`away_club.code`,
+        awayClubColor: sql<string>`away_club.primary_color`,
+      })
+      .from(matches)
+      .where(and(
+        gte(matches.kickoff, now),
+        eq(matches.status, 'scheduled'),
+      ))
+      .orderBy(asc(matches.kickoff))
+      .limit(5);
+
+    return upcoming;
+  } catch {
+    return [];
+  }
+}
+
+async function getLatestVideos() {
+  const videos = await db
+    .select()
+    .from(youtubeVideos)
+    .orderBy(desc(youtubeVideos.publishedAt))
+    .limit(5);
+
+  return videos;
+}
+
+export default async function HomePage() {
+  const [news, standings, latestVideos] = await Promise.all([
+    getLatestNews(),
+    getLeagueTable(),
+    getLatestVideos(),
+  ]);
+
+  const mainNews = news.filter(a => a.credibilityRating !== 'opinion' && a.credibilityRating !== 'rumour');
+  const opinions = news.filter(a => a.credibilityRating === 'opinion');
+  const rumours = news.filter(a => a.credibilityRating === 'rumour');
+
+  const heroArticle = mainNews[0] ?? null;
+  const sideGridArticles = mainNews.slice(1, 5);
+  const secondaryRowArticles = mainNews.slice(5, 11);
+  const latestArticles = mainNews.slice(11);
+
+  const faqStructuredData = jsonLd(generateFAQStructuredData(HOMEPAGE_FAQ));
+
+  return (
+    <>
+      <JsonLdScript data={faqStructuredData} />
+      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <h1 className="sr-only">Football News, Live Scores & Match Updates</h1>
+
+        {/* Featured Section: Hero + Side Grid */}
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            {heroArticle ? (
+              <HeroArticle article={heroArticle} />
+            ) : (
+              <div className="flex h-64 items-center justify-center rounded-lg bg-white dark:bg-zinc-800">
+                <p className="text-zinc-500 dark:text-zinc-400">No news articles yet</p>
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-2">
+            {sideGridArticles.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                {sideGridArticles.map((article) => (
+                  <CompactNewsCard key={article.id} article={article} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Secondary Row */}
+        {secondaryRowArticles.length > 0 && (
+          <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {secondaryRowArticles.map((article) => (
+              <HorizontalNewsCard key={article.id} article={article} />
+            ))}
+          </section>
+        )}
+
+        <div className="mt-6">
+          <AdSlot format="horizontal" />
+        </div>
+
+        {/* Daily Roundup Widget */}
+        <section className="mt-6">
+          <DailyRoundupWidget />
+        </section>
+
+        {/* Opinions & Rumours */}
+        {(opinions.length > 0 || rumours.length > 0) && (
+          <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {opinions.length > 0 && (
+              <div>
+                <div className="mb-3 flex items-center gap-2">
+                  <MessageSquareQuote className="h-4 w-4 text-blue-400" />
+                  <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Opinions & Analysis</h2>
+                </div>
+                <div className="space-y-3">
+                  {opinions.slice(0, 5).map((article) => (
+                    <NewsListItem key={article.id} article={article} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {rumours.length > 0 && (
+              <div>
+                <div className="mb-3 flex items-center gap-2">
+                  <CircleHelp className="h-4 w-4 text-amber-400" />
+                  <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Transfer Rumours</h2>
+                </div>
+                <div className="space-y-3">
+                  {rumours.slice(0, 5).map((article) => (
+                    <NewsListItem key={article.id} article={article} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Newsletter CTA */}
+        <section className="mt-8">
+          <NewsletterCTA source="homepage" variant="banner" />
+        </section>
+
+        <div className="mt-6">
+          <AdSlot format="auto" />
+        </div>
+
+        {/* More News + Sidebar */}
+        {latestArticles.length > 0 && (
+        <section className="mt-8">
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">More News</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* News List */}
+            <div className="lg:col-span-2">
+                <div className="space-y-3">
+                  {latestArticles.slice(0, 15).map((article, i) => (
+                    <div key={article.id}>
+                      <NewsListItem article={article} />
+                      {i === 4 && (
+                        <div className="my-4">
+                          <AdSlot format="fluid" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+              <div className="mt-4 text-center">
+                <Link
+                  href="/news"
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+                >
+                  View all news
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
+              {/* League Table Widget */}
+              {standings.length > 0 && (
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
+                  <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-emerald-400" />
+                        <span className="text-sm font-bold text-white tracking-tight">PREMIER LEAGUE</span>
+                      </div>
+                      <Link
+                        href="/tables"
+                        className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        Full table →
+                      </Link>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-zinc-500 border-b border-zinc-700/50">
+                          <th className="py-1 text-left w-6">#</th>
+                          <th className="py-1 text-left">Club</th>
+                          <th className="py-1 text-center w-8">P</th>
+                          <th className="py-1 text-center w-8">GD</th>
+                          <th className="py-1 text-right w-8">Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {standings.map((s) => (
+                          <tr key={s.clubSlug} className="border-b border-zinc-800/50">
+                            <td className="py-1.5 text-zinc-400">{s.position}</td>
+                            <td className="py-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <div
+                                  className="h-2.5 w-2.5 rounded-full"
+                                  style={{ backgroundColor: s.clubColor || '#666' }}
+                                />
+                                <span className="text-white font-medium">{s.clubCode || s.clubName}</span>
+                              </div>
+                            </td>
+                            <td className="py-1.5 text-center text-zinc-400">{s.played}</td>
+                            <td className="py-1.5 text-center text-zinc-400">
+                              {(s.goalDifference ?? 0) > 0 ? '+' : ''}{s.goalDifference}
+                            </td>
+                            <td className="py-1.5 text-right font-bold text-white">{s.points}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Latest Videos */}
+              {latestVideos.length > 0 && (
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
+                  <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Newspaper className="h-4 w-4 text-emerald-400" />
+                        <span className="text-sm font-bold text-white tracking-tight">LATEST VIDEOS</span>
+                      </div>
+                      <Link
+                        href="/videos"
+                        className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        All videos →
+                      </Link>
+                    </div>
+                    <div className="space-y-3">
+                      {latestVideos.slice(0, 4).map((video) => (
+                        <Link
+                          key={video.id}
+                          href={`/videos/${video.videoId}`}
+                          className="flex gap-3 group"
+                        >
+                          {video.thumbnailUrl && (
+                            <Image
+                              src={video.thumbnailUrl}
+                              alt={video.title}
+                              width={120}
+                              height={68}
+                              className="rounded object-cover flex-shrink-0"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
+                              {video.title}
+                            </p>
+                            <p className="text-[10px] text-zinc-500 mt-1">{video.channelName}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <AdSlot format="vertical" />
+            </aside>
+          </div>
+        </section>
+        )}
+
+      </div>
+      </div>
+    </>
+  );
 }

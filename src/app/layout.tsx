@@ -1,26 +1,47 @@
-import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
-import { ThemeProvider } from "@/components/layout/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
+import Script from 'next/script';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { LocationProvider } from '@/context/LocationContext';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
+import { HeadScripts, BodyStartScripts, BodyEndScripts } from '@/components/layout/InjectedScripts';
+import {
+  SITE_CONFIG,
+  DEFAULT_METADATA,
+  generateWebSiteStructuredData,
+  jsonLd,
+  JsonLdScript,
+} from '@/lib/seo';
+import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
+import './globals.css';
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "JottrPad — Your Creator Workspace",
-  description:
-    "AI-powered workspace for creators. Capture ideas, write scripts, organize research, and ask AI questions across all your content.",
+  ...DEFAULT_METADATA,
+  title: {
+    default: `${SITE_CONFIG.name} - Football News Without the Waffle`,
+    template: `%s | ${SITE_CONFIG.name}`,
+  },
 };
+
+export const viewport: Viewport = {
+  themeColor: SITE_CONFIG.themeColor,
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
+const websiteStructuredData = jsonLd(generateWebSiteStructuredData());
 
 export default function RootLayout({
   children,
@@ -28,26 +49,37 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html
-        lang="en"
-        className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
-        suppressHydrationWarning
+    <html lang="en" className="dark">
+      <head>
+        <JsonLdScript data={websiteStructuredData} />
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8717247095472771"
+          crossOrigin="anonymous"
+          strategy="lazyOnload"
+        />
+        <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 antialiased`}
       >
-        <body className="min-h-full flex flex-col">
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>
-              {children}
-              <Toaster />
-            </TooltipProvider>
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        <Suspense fallback={null}>
+          <HeadScripts />
+        </Suspense>
+        <Suspense fallback={null}>
+          <BodyStartScripts />
+        </Suspense>
+        <LocationProvider>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <NewsletterPopup />
+          </div>
+        </LocationProvider>
+        <Suspense fallback={null}>
+          <BodyEndScripts />
+        </Suspense>
+      </body>
+    </html>
   );
 }

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Dark background with rounded corners -->
+  <rect width="32" height="32" rx="6" fill="#18181b"/>
+
+  <!-- Checkered flag - 4x4 grid with slight skew for motion feel -->
+  <g transform="translate(3, 5) skewX(-5)">
+    <!-- Row 1 -->
+    <rect x="0" y="0" width="6" height="5" fill="#fafafa"/>
+    <rect x="12" y="0" width="6" height="5" fill="#fafafa"/>
+
+    <!-- Row 2 -->
+    <rect x="6" y="5" width="6" height="5" fill="#fafafa"/>
+    <rect x="18" y="5" width="6" height="5" fill="#fafafa"/>
+
+    <!-- Row 3 -->
+    <rect x="0" y="10" width="6" height="5" fill="#fafafa"/>
+    <rect x="12" y="10" width="6" height="5" fill="#fafafa"/>
+
+    <!-- Row 4 -->
+    <rect x="6" y="15" width="6" height="5" fill="#fafafa"/>
+    <rect x="18" y="15" width="6" height="5" fill="#fafafa"/>
+  </g>
+</svg>

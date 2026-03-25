@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <defs>
+    <style>
+      .sector1 { stroke: #ef4444; }
+      .sector2 { stroke: #3b82f6; }
+      .sector3 { stroke: #eab308; }
+      .track { stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .corner-num { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; fill: #ffffff; }
+      .start-finish { stroke: #ffffff; stroke-width: 3; }
+    </style>
+  </defs>
+
+  <!-- Track Background -->
+  <rect width="800" height="600" fill="#18181b"/>
+
+  <!-- Sector 1 - Red -->
+  <path class="track sector1" d="M 491.4,165.3 L 479.3,165.2 L 404.1,149.0 L 377.3,146.2 L 361.6,146.0 L 283.1,153.0 L 244.6,162.2 L 239.8,165.3 L 237.5,168.2 L 236.8,170.8 L 234.0,183.1 L 231.9,187.0 L 227.1,190.3 L 191.6,208.4 L 186.3,214.3 L 129.1,356.2 L 128.4,360.0 L 128.5,364.6 L 134.6,386.6 L 134.6,390.1 L 132.6,394.4 L 130.4,397.3 L 62.6,455.3 L 60.7,458.6 L 60.0,462.5 L 60.9,466.8 L 63.4,471.8 L 66.6,474.6"/>
+
+  <!-- Sector 2 - Blue -->
+  <path class="track sector2" d="M 66.6,474.6 L 70.3,475.7 L 75.9,475.6 L 185.2,461.4 L 197.6,460.6 L 216.0,461.6 L 229.3,463.5 L 247.4,467.0 L 266.1,470.4 L 275.7,472.3 L 281.8,471.1 L 286.4,468.8 L 292.4,463.0 L 298.4,452.1 L 307.6,429.1 L 309.7,419.0 L 310.4,407.6 L 308.6,396.0 L 295.3,332.9 L 295.5,328.9 L 297.4,324.4 L 305.1,312.2 L 315.3,296.4 L 318.2,294.9 L 322.2,294.5 L 324.9,295.7 L 339.9,301.7 L 344.6,302.3 L 502.1,301.3 L 504.1,302.2"/>
+
+  <!-- Sector 3 - Yellow -->
+  <path class="track sector3" d="M 504.1,302.2 L 506.1,306.9 L 507.6,311.0 L 509.3,312.0 L 512.6,312.1 L 575.5,286.2 L 583.4,281.7 L 609.6,263.7 L 624.6,250.0 L 639.2,235.4 L 674.6,200.6 L 681.8,195.5 L 689.6,191.7 L 736.0,171.1 L 739.5,167.7 L 740.0,162.3 L 739.1,158.0 L 725.1,128.4 L 721.8,125.6 L 718.2,124.5 L 713.2,124.3 L 709.2,125.3 L 646.8,149.0 L 624.6,157.6 L 612.6,161.9 L 602.1,164.3 L 595.0,165.6 L 491.4,165.3 L 491.4,165.3"/>
+
+  <!-- Start/Finish Line -->
+  <circle cx="491.4" cy="165.3" r="8" fill="#ffffff"/>
+
+  <!-- Corner Numbers -->
+  
+    <!-- Turn 1 - Tamburello -->
+    <circle cx="361.6" cy="146.0" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="361.6" y="151.0" text-anchor="middle" class="corner-num">1</text>
+
+    <!-- Turn 2 -->
+    <circle cx="237.5" cy="168.2" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="237.5" y="173.2" text-anchor="middle" class="corner-num">2</text>
+
+    <!-- Turn 3 -->
+    <circle cx="191.6" cy="208.4" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="191.6" y="213.4" text-anchor="middle" class="corner-num">3</text>
+
+    <!-- Turn 4 -->
+    <circle cx="134.6" cy="386.6" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="134.6" y="391.6" text-anchor="middle" class="corner-num">4</text>
+
+    <!-- Turn 5 -->
+    <circle cx="60.7" cy="458.6" r="12" fill="#27272a" stroke="#ef4444" stroke-width="3"/>
+    <text x="60.7" y="463.6" text-anchor="middle" class="corner-num">5</text>
+
+    <!-- Turn 6 - Tosa -->
+    <circle cx="70.3" cy="475.7" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="70.3" y="480.7" text-anchor="middle" class="corner-num">6</text>
+
+    <!-- Turn 7 -->
+    <circle cx="229.3" cy="463.5" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="229.3" y="468.5" text-anchor="middle" class="corner-num">7</text>
+
+    <!-- Turn 8 -->
+    <circle cx="286.4" cy="468.8" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="286.4" y="473.8" text-anchor="middle" class="corner-num">8</text>
+
+    <!-- Turn 9 -->
+    <circle cx="310.4" cy="407.6" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="310.4" y="412.6" text-anchor="middle" class="corner-num">9</text>
+
+    <!-- Turn 10 -->
+    <circle cx="305.1" cy="312.2" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="305.1" y="317.2" text-anchor="middle" class="corner-num">10</text>
+
+    <!-- Turn 11 -->
+    <circle cx="339.9" cy="301.7" r="12" fill="#27272a" stroke="#3b82f6" stroke-width="3"/>
+    <text x="339.9" y="306.7" text-anchor="middle" class="corner-num">11</text>
+
+    <!-- Turn 12 -->
+    <circle cx="507.6" cy="311.0" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="507.6" y="316.0" text-anchor="middle" class="corner-num">12</text>
+
+    <!-- Turn 13 -->
+    <circle cx="609.6" cy="263.7" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="609.6" y="268.7" text-anchor="middle" class="corner-num">13</text>
+
+    <!-- Turn 14 -->
+    <circle cx="689.6" cy="191.7" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="689.6" y="196.7" text-anchor="middle" class="corner-num">14</text>
+
+    <!-- Turn 15 -->
+    <circle cx="740.0" cy="162.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="740.0" y="167.3" text-anchor="middle" class="corner-num">15</text>
+
+    <!-- Turn 16 -->
+    <circle cx="721.8" cy="125.6" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="721.8" y="130.6" text-anchor="middle" class="corner-num">16</text>
+
+    <!-- Turn 17 -->
+    <circle cx="709.2" cy="125.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="709.2" y="130.3" text-anchor="middle" class="corner-num">17</text>
+
+    <!-- Turn 18 -->
+    <circle cx="624.6" cy="157.6" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="624.6" y="162.6" text-anchor="middle" class="corner-num">18</text>
+
+    <!-- Turn 19 -->
+    <circle cx="602.1" cy="164.3" r="12" fill="#27272a" stroke="#eab308" stroke-width="3"/>
+    <text x="602.1" y="169.3" text-anchor="middle" class="corner-num">19</text>
+
+  <!-- Circuit Name -->
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">Autodromo Enzo e Dino Ferrari</text>
+  <text x="400" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#71717a">Imola • 4.909 km • 19 Turns</text>
+</svg>
