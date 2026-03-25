@@ -41,8 +41,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { ImageDialog, LinkDialog, YoutubeDialog } from "./editor-dialogs";
+import { SlashCommands } from "./slash-commands";
+import { InternalLinkExtension } from "./internal-link-extension";
 
 const lowlight = createLowlight(common);
 
@@ -85,6 +87,8 @@ export function TiptapEditor({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Typography,
       CodeBlockLowlight.configure({ lowlight }),
+      SlashCommands,
+      InternalLinkExtension,
     ],
     content,
     editorProps: {
@@ -130,6 +134,18 @@ export function TiptapEditor({
     },
     [editor]
   );
+
+  // Listen for slash command events to open dialogs
+  useEffect(() => {
+    const openImage = () => setImageOpen(true);
+    const openYoutube = () => setYoutubeOpen(true);
+    window.addEventListener("editor:open-image-dialog", openImage);
+    window.addEventListener("editor:open-youtube-dialog", openYoutube);
+    return () => {
+      window.removeEventListener("editor:open-image-dialog", openImage);
+      window.removeEventListener("editor:open-youtube-dialog", openYoutube);
+    };
+  }, []);
 
   if (!editor) return null;
 

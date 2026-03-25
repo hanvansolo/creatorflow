@@ -2,6 +2,7 @@
 
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { CommandPalette } from "./command-palette";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto max-w-6xl px-6 py-6">{children}</div>
         </main>
       </div>
+      <CommandPalette />
     </div>
   );
 }

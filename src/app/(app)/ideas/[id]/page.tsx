@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { IdeaForm } from "@/components/ideas/idea-form";
 import { DeleteIdeaButton } from "@/components/ideas/delete-idea-button";
+import { BacklinksPanel } from "@/components/shared/backlinks-panel";
 import { getIdeaById } from "@/lib/services/ideas";
 import { getItemTags } from "@/lib/services/tags";
+import { getBacklinks } from "@/lib/services/links";
 import { updateIdeaAction } from "../actions";
 
 export default async function IdeaDetailPage({
@@ -16,10 +18,13 @@ export default async function IdeaDetailPage({
   const { userId } = await auth();
   if (!userId) return null;
 
-  const idea = await getIdeaById(userId, id);
-  if (!idea) notFound();
+  const [idea, tags, backlinks] = await Promise.all([
+    getIdeaById(userId, id),
+    getItemTags(id, "idea"),
+    getBacklinks(userId, id, "idea"),
+  ]);
 
-  const tags = await getItemTags(id, "idea");
+  if (!idea) notFound();
 
   const updateAction = updateIdeaAction.bind(null, id);
 
@@ -34,6 +39,7 @@ export default async function IdeaDetailPage({
         action={updateAction}
         submitLabel="Update Idea"
       />
+      <BacklinksPanel backlinks={backlinks} />
     </div>
   );
 }

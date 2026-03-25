@@ -13,8 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "@/lib/utils";
-import { formatFileSize } from "@/lib/storage";
+import { formatDistanceToNow, formatFileSize } from "@/lib/utils";
 import type { File as FileType, Project } from "@/types";
 
 function getFileIcon(mimeType: string) {
