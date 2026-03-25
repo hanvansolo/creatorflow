@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
   Plate,
   PlateContent,
@@ -185,8 +185,89 @@ export function PlateEditor({
     });
   };
 
+  // Slash command state
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashFilter, setSlashFilter] = useState("");
+  const [slashIndex, setSlashIndex] = useState(0);
+  const slashRef = useRef<HTMLDivElement>(null);
+
+  const slashCommands = [
+    { label: "Heading 1", icon: Heading1, action: () => editor.tf.toggleBlock("h1") },
+    { label: "Heading 2", icon: Heading2, action: () => editor.tf.toggleBlock("h2") },
+    { label: "Heading 3", icon: Heading3, action: () => editor.tf.toggleBlock("h3") },
+    { label: "Bullet List", icon: List, action: () => editor.tf.toggleBlock("ul") },
+    { label: "Numbered List", icon: ListOrdered, action: () => editor.tf.toggleBlock("ol") },
+    { label: "Quote", icon: Quote, action: () => editor.tf.toggleBlock("blockquote") },
+    { label: "Code Block", icon: Code2, action: () => editor.tf.toggleBlock("code_block") },
+    { label: "Divider", icon: Minus, action: () => editor.tf.insertNodes({ type: "hr", children: [{ text: "" }] }) },
+    { label: "Image", icon: ImageIcon, action: () => { const url = window.prompt("Image URL:"); if (url) editor.tf.insertNodes({ type: "img", url, children: [{ text: "" }] }); } },
+    { label: "Link", icon: LinkIcon, action: () => { const url = window.prompt("Link URL:"); if (url) editor.tf.insertNodes({ type: "a", url, children: [{ text: url }] }); } },
+  ];
+
+  const filteredCommands = slashCommands.filter((cmd) =>
+    cmd.label.toLowerCase().includes(slashFilter.toLowerCase())
+  );
+
+  const handleSlashKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!slashOpen) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === "Enter" && filteredCommands[slashIndex]) {
+        e.preventDefault();
+        // Delete the slash and filter text
+        editor.tf.deleteBackward("character");
+        for (let i = 0; i < slashFilter.length; i++) {
+          editor.tf.deleteBackward("character");
+        }
+        filteredCommands[slashIndex].action();
+        setSlashOpen(false);
+        setSlashFilter("");
+        setSlashIndex(0);
+      } else if (e.key === "Escape") {
+        setSlashOpen(false);
+        setSlashFilter("");
+        setSlashIndex(0);
+      } else if (e.key === "Backspace") {
+        if (slashFilter.length === 0) {
+          setSlashOpen(false);
+        } else {
+          setSlashFilter((prev) => prev.slice(0, -1));
+          setSlashIndex(0);
+        }
+      } else if (e.key === " ") {
+        setSlashOpen(false);
+        setSlashFilter("");
+      } else if (e.key.length === 1) {
+        setSlashFilter((prev) => prev + e.key);
+        setSlashIndex(0);
+      }
+    },
+    [slashOpen, slashFilter, slashIndex, filteredCommands, editor]
+  );
+
+  const handleEditorKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (slashOpen) {
+        handleSlashKeyDown(e);
+        return;
+      }
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
+        setSlashOpen(true);
+        setSlashFilter("");
+        setSlashIndex(0);
+      }
+    },
+    [slashOpen, handleSlashKeyDown]
+  );
+
   return (
-    <div className={cn("rounded-xl border border-border/50 bg-background shadow-sm", className)}>
+    <div className={cn("relative rounded-xl border border-border/50 bg-background shadow-sm", className)}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-border/40 px-3 py-1.5 bg-muted/20">
         <ToolbarButton
@@ -291,12 +372,52 @@ export function PlateEditor({
       </div>
 
       {/* Editor */}
-      <Plate editor={editor} onValueChange={handleChange}>
-        <PlateContent
-          placeholder={placeholder}
-          className="prose prose-base dark:prose-invert max-w-none min-h-[500px] px-8 py-6 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:leading-relaxed [&_blockquote]:border-l-primary/30 [&_pre]:bg-muted/50 [&_pre]:rounded-lg [&_code]:text-[13px]"
-        />
-      </Plate>
+      <div className="relative">
+        <Plate editor={editor} onValueChange={handleChange}>
+          <PlateContent
+            placeholder={placeholder}
+            onKeyDown={handleEditorKeyDown}
+            className="prose prose-base dark:prose-invert max-w-none min-h-[500px] px-8 py-6 focus:outline-none [&_img]:my-4 [&_img]:rounded-lg [&_img]:max-w-full [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:leading-relaxed [&_blockquote]:border-l-primary/30 [&_pre]:bg-muted/50 [&_pre]:rounded-lg [&_code]:text-[13px]"
+          />
+        </Plate>
+
+        {/* Slash command menu */}
+        {slashOpen && filteredCommands.length > 0 && (
+          <div
+            ref={slashRef}
+            className="absolute left-8 top-12 z-50 max-h-64 w-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95"
+          >
+            {filteredCommands.map((cmd, i) => {
+              const Icon = cmd.icon;
+              return (
+                <button
+                  key={cmd.label}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    editor.tf.deleteBackward("character");
+                    for (let j = 0; j < slashFilter.length; j++) {
+                      editor.tf.deleteBackward("character");
+                    }
+                    cmd.action();
+                    setSlashOpen(false);
+                    setSlashFilter("");
+                    setSlashIndex(0);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors",
+                    i === slashIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                  )}
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background">
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px]">{cmd.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
   index,
   uniqueIndex,
   vector,
@@ -66,6 +67,7 @@ export const ideas = pgTable(
     title: text("title").notNull(),
     body: text("body"),
     status: text("status").default("new").notNull(), // new, exploring, in_progress, done, archived
+    pinned: boolean("pinned").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -112,8 +114,9 @@ export const notes = pgTable(
       onDelete: "set null",
     }),
     title: text("title").notNull(),
-    content: text("content"), // HTML from Tiptap
-    contentPlain: text("content_plain"), // Plain text for search/indexing
+    content: text("content"),
+    contentPlain: text("content_plain"),
+    pinned: boolean("pinned").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -145,6 +148,7 @@ export const scripts = pgTable(
     contentPlain: text("content_plain"),
     status: text("status").default("draft").notNull(), // draft, editing, ready, published
     wordCount: integer("word_count").default(0).notNull(),
+    pinned: boolean("pinned").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
