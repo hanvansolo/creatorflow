@@ -137,7 +137,27 @@ export function PlateEditor({
       ListPlugin,
       BulletedListPlugin,
       NumberedListPlugin,
-      LinkPlugin.configure({ options: { forceSubmit: true } }),
+      LinkPlugin.configure({
+        options: { forceSubmit: true },
+        render: {
+          node: ({ children, element }: any) => (
+            <a
+              href={element.url}
+              className="text-primary underline underline-offset-2 cursor-pointer hover:text-primary/80"
+              target={element.url?.startsWith("/") ? undefined : "_blank"}
+              rel={element.url?.startsWith("/") ? undefined : "noopener noreferrer"}
+              onClick={(e) => {
+                if (element.url?.startsWith("/")) {
+                  e.preventDefault();
+                  window.location.href = element.url;
+                }
+              }}
+            >
+              {children}
+            </a>
+          ),
+        },
+      }),
       ImagePlugin,
       HorizontalRulePlugin,
       BaseTextAlignPlugin,
