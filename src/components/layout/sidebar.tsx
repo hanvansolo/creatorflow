@@ -21,8 +21,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "" },
   { label: "Ideas", href: "/ideas", icon: Lightbulb, color: "text-[#FFD60A]" },
-  { label: "Notes", href: "/notes", icon: StickyNote, color: "text-[#30BCED]" },
-  { label: "Scripts", href: "/scripts", icon: FileText, color: "text-[#2EC4B6]" },
   { label: "Projects", href: "/projects", icon: FolderKanban, color: "text-[#9B5DE5]" },
   { label: "Library", href: "/library", icon: Library, color: "text-[#FF6B35]" },
 ];
