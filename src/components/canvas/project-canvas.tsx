@@ -10,6 +10,8 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  Handle,
+  Position,
   type Node,
   type Edge,
   type Connection,
@@ -20,79 +22,55 @@ import "@xyflow/react/dist/style.css";
 import { Button } from "@/components/ui/button";
 import {
   StickyNote, FileText, Lightbulb, Type, Image as ImageIcon,
-  Save, Loader2, Plus,
+  Save, Loader2, Plus, Trash2, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Custom node components
-function TextCardNode({ data }: { data: any }) {
+// Compact node with handles and color
+function ContentNode({ data, color, icon: Icon, label }: { data: any; color: string; icon: any; label: string }) {
   return (
-    <div
-      className="rounded-lg border-2 bg-background p-3 shadow-lg min-w-[160px] max-w-[300px]"
-      style={{ borderColor: data.color || "#444" }}
-    >
-      {data.label && (
-        <p className="text-xs font-semibold mb-1" style={{ color: data.color }}>
-          {data.type?.toUpperCase()}
-        </p>
-      )}
-      <p className="text-sm font-medium">{data.title || "Untitled"}</p>
-      {data.description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{data.description}</p>
-      )}
-    </div>
-  );
-}
-
-function NoteNode({ data }: { data: any }) {
-  return (
-    <div className="rounded-lg border-2 border-[#30BCED] bg-[#30BCED]/5 p-3 shadow-lg min-w-[160px] max-w-[280px]">
-      <div className="flex items-center gap-1.5 mb-1">
-        <StickyNote className="h-3 w-3 text-[#30BCED]" />
-        <span className="text-[10px] font-semibold text-[#30BCED]">NOTE</span>
+    <div className="relative group">
+      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
+      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
+      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
+      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
+      <div
+        className="rounded-md border bg-background px-2.5 py-1.5 shadow-sm max-w-[180px] text-left"
+        style={{ borderColor: color, borderLeftWidth: 3 }}
+      >
+        <div className="flex items-center gap-1 mb-0.5">
+          <Icon className="h-2.5 w-2.5 shrink-0" style={{ color }} />
+          <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
+        </div>
+        <p className="text-[11px] font-medium leading-tight truncate">{data.title || "Untitled"}</p>
+        {data.description && (
+          <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">{data.description}</p>
+        )}
       </div>
-      <p className="text-sm font-medium">{data.title || "Untitled"}</p>
-      {data.description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{data.description}</p>
-      )}
     </div>
   );
 }
 
 function IdeaNode({ data }: { data: any }) {
-  return (
-    <div className="rounded-lg border-2 border-[#FFD60A] bg-[#FFD60A]/5 p-3 shadow-lg min-w-[160px] max-w-[280px]">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Lightbulb className="h-3 w-3 text-[#FFD60A]" />
-        <span className="text-[10px] font-semibold text-[#FFD60A]">IDEA</span>
-      </div>
-      <p className="text-sm font-medium">{data.title || "Untitled"}</p>
-      {data.description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{data.description}</p>
-      )}
-    </div>
-  );
+  return <ContentNode data={data} color="#FFD60A" icon={Lightbulb} label="Idea" />;
 }
-
+function NoteNode({ data }: { data: any }) {
+  return <ContentNode data={data} color="#30BCED" icon={StickyNote} label="Note" />;
+}
 function ScriptNode({ data }: { data: any }) {
-  return (
-    <div className="rounded-lg border-2 border-[#2EC4B6] bg-[#2EC4B6]/5 p-3 shadow-lg min-w-[160px] max-w-[280px]">
-      <div className="flex items-center gap-1.5 mb-1">
-        <FileText className="h-3 w-3 text-[#2EC4B6]" />
-        <span className="text-[10px] font-semibold text-[#2EC4B6]">SCRIPT</span>
-      </div>
-      <p className="text-sm font-medium">{data.title || "Untitled"}</p>
-      {data.description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{data.description}</p>
-      )}
-    </div>
-  );
+  return <ContentNode data={data} color="#2EC4B6" icon={FileText} label="Script" />;
 }
-
+function TextCardNode({ data }: { data: any }) {
+  return <ContentNode data={data} color="#9B5DE5" icon={Type} label="Card" />;
+}
 function TextBlockNode({ data }: { data: any }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-3 shadow-sm min-w-[120px] max-w-[300px]">
-      <p className="text-sm whitespace-pre-wrap">{data.text || "Double-click to edit"}</p>
+    <div className="relative">
+      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
+      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-muted-foreground/30 !border-0" />
+      <div className="rounded-md border border-border bg-muted/20 px-2.5 py-1.5 shadow-sm max-w-[180px]">
+        <p className="text-[11px] whitespace-pre-wrap leading-tight">{data.text || "Text"}</p>
+      </div>
     </div>
   );
 }
@@ -191,6 +169,42 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
     setNodes((nds) => [...nds, newNode]);
   };
 
+  // Context menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+  }, []);
+
+  const deleteNode = () => {
+    if (!contextMenu) return;
+    setNodes((nds) => nds.filter((n) => n.id !== contextMenu.nodeId));
+    setEdges((eds) => eds.filter((e) => {
+      const src = typeof e.source === "string" ? e.source : e.source;
+      const tgt = typeof e.target === "string" ? e.target : e.target;
+      return src !== contextMenu.nodeId && tgt !== contextMenu.nodeId;
+    }));
+    setContextMenu(null);
+  };
+
+  const duplicateNode = () => {
+    if (!contextMenu) return;
+    const original = nodes.find((n) => n.id === contextMenu.nodeId);
+    if (!original) return;
+    const id = `${original.type}-${Date.now()}`;
+    const newNode: Node = {
+      ...original,
+      id,
+      position: { x: original.position.x + 20, y: original.position.y + 20 },
+    };
+    setNodes((nds) => [...nds, newNode]);
+    setContextMenu(null);
+  };
+
+  // Close context menu on click anywhere
+  const onPaneClick = useCallback(() => setContextMenu(null), []);
+
   return (
     <div className="h-[calc(100vh-16rem)] rounded-xl border border-border/50 overflow-hidden bg-white dark:bg-[#0a0a0f]">
       <ReactFlow
@@ -203,7 +217,10 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
         fitView
         snapToGrid
         snapGrid={[16, 16]}
-        defaultEdgeOptions={{ animated: true, style: { stroke: "#444", strokeWidth: 1.5 } }}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneClick={onPaneClick}
+        deleteKeyCode="Delete"
+        defaultEdgeOptions={{ animated: true, style: { stroke: "#999", strokeWidth: 1 } }}
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} className="!bg-white dark:!bg-[#0a0a0f] [&>pattern>circle]:!fill-gray-200 dark:[&>pattern>circle]:!fill-[#1a1a2e]" />
@@ -325,6 +342,27 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
           </div>
         </Panel>
       </ReactFlow>
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={duplicateNode}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[12px] hover:bg-accent transition-colors"
+          >
+            <Plus className="h-3 w-3" /> Duplicate
+          </button>
+          <button
+            onClick={deleteNode}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[12px] text-red-500 hover:bg-red-500/10 transition-colors"
+          >
+            <Trash2 className="h-3 w-3" /> Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }
