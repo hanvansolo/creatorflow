@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { AIActionMenu, taskActions } from "@/components/ai/ai-action-menu";
 
 const priorityColors: Record<string, string> = {
   urgent: "#FF3B30",
@@ -191,12 +192,19 @@ function TaskCard({
       <div className="pl-2">
         <div className="flex items-start justify-between gap-1">
           <p className="text-[12px] font-medium leading-snug">{task.title}</p>
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/50 opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground transition-all"
-          >
-            <MoreHorizontal className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+            <AIActionMenu
+              actions={taskActions}
+              context={`Task: ${task.title}\n${task.description || ""}`}
+              buttonSize="sm"
+            />
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/50 hover:bg-accent hover:text-foreground transition-all"
+            >
+              <MoreHorizontal className="h-3 w-3" />
+            </button>
+          </div>
         </div>
 
         {task.description && (

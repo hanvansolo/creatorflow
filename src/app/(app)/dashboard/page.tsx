@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { getDashboardStats } from "@/lib/services/dashboard";
 import { formatDistanceToNow } from "@/lib/utils";
+import { AIInsightsPanel } from "@/components/ai/ai-insights";
 import { db } from "@/lib/db";
 import { tasks, projects, ideas } from "@/lib/db/schema";
 import { eq, and, desc, count, isNotNull } from "drizzle-orm";
@@ -206,6 +206,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Insights */}
+      <AIInsightsPanel />
     </div>
   );
 }

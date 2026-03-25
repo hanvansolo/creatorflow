@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ideas, notes, scripts, projects } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getOrCreateBoard, createTask } from "@/lib/services/boards";
 
 export async function POST(
   req: NextRequest,
@@ -90,6 +91,47 @@ export async function POST(
         .where(eq(scripts.id, script.id));
     }
   }
+
+  // AI: Auto-generate tasks from the idea
+  try {
+    if (process.env.OPENAI_API_KEY) {
+      const { getOpenAI } = await import("@/lib/ai/provider");
+      const openai = getOpenAI();
+
+      const columns = await getOrCreateBoard(project.id);
+      const todoColumn = columns.find((c) => c.title === "To Do") || columns[1] || columns[0];
+
+      const aiResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: 'You are a project manager. Break this idea into concrete, actionable tasks. Return a JSON array: [{"title": "task title", "priority": "high|medium|low"}]. Include 5-8 tasks. Return ONLY the JSON array.',
+          },
+          {
+            role: "user",
+            content: `Idea: ${idea.title}\n${idea.body || ""}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      const tasksJson = aiResponse.choices[0]?.message?.content || "[]";
+      try {
+        const generatedTasks = JSON.parse(tasksJson);
+        if (Array.isArray(generatedTasks) && todoColumn) {
+          for (const t of generatedTasks) {
+            await createTask(userId, project.id, todoColumn.id, {
+              title: t.title,
+              priority: t.priority || "medium",
+              description: t.description,
+            });
+          }
+        }
+      } catch {}
+    }
+  } catch {}
 
   return Response.json(project);
 }

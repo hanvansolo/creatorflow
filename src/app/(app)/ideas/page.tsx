@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "@/lib/utils";
 import { toast } from "sonner";
+import { AIActionMenu, ideaActions } from "@/components/ai/ai-action-menu";
 
 export default function IdeasPage() {
   const [ideas, setIdeas] = useState<any[]>([]);
@@ -150,7 +151,11 @@ function IdeaCard({
         {/* Top row */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <StatusBadge status={idea.status} />
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+            <AIActionMenu
+              actions={ideaActions}
+              context={`Idea: ${idea.title}\n${idea.body || ""}`}
+            />
             <button
               onClick={(e) => onPin(e, idea.id, idea.pinned)}
               title={idea.pinned ? "Unpin" : "Pin"}
