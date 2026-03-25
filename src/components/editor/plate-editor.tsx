@@ -13,6 +13,7 @@ import { ListPlugin, BulletedListPlugin, NumberedListPlugin } from "@udecode/pla
 import { BlockquotePlugin } from "@udecode/plate-block-quote/react";
 import { CodeBlockPlugin } from "@udecode/plate-code-block/react";
 import { LinkPlugin } from "@udecode/plate-link/react";
+import { insertLink } from "@udecode/plate-link";
 import { ImagePlugin } from "@udecode/plate-media/react";
 import { HighlightPlugin } from "@udecode/plate-highlight/react";
 import { HorizontalRulePlugin } from "@udecode/plate-horizontal-rule/react";
@@ -181,11 +182,7 @@ export function PlateEditor({
   const addLink = () => {
     const url = window.prompt("Link URL:");
     if (!url) return;
-    editor.tf.insertNodes({
-      type: "a",
-      url,
-      children: [{ text: url }],
-    });
+    insertLink(editor, { url, text: url });
   };
 
   // Slash command state
@@ -300,20 +297,15 @@ export function PlateEditor({
         setLinkIndex((prev) => Math.max(prev - 1, 0));
       } else if (e.key === "Enter" && linkResults[linkIndex]) {
         e.preventDefault();
+        e.stopPropagation();
         const item = linkResults[linkIndex];
         // Delete [[ and the query
         for (let i = 0; i < linkQuery.length + 2; i++) {
           editor.tf.deleteBackward("character");
         }
-        // Insert as a link
+        // Insert as a proper link using Plate's link API
         const href = typeHrefs[item.type]?.(item.id) || "#";
-        editor.tf.insertNodes({
-          type: "a",
-          url: href,
-          children: [{ text: item.title }],
-        });
-        // Move cursor after the link
-        editor.tf.move({ distance: 1 });
+        insertLink(editor, { url: href, text: item.title });
         setLinkMenuOpen(false);
         setLinkQuery("");
         setLinkIndex(0);
@@ -549,12 +541,7 @@ export function PlateEditor({
                       editor.tf.deleteBackward("character");
                     }
                     const href = typeHrefs[item.type]?.(item.id) || "#";
-                    editor.tf.insertNodes({
-                      type: "a",
-                      url: href,
-                      children: [{ text: item.title }],
-                    });
-                    try { editor.tf.move({ distance: 1 }); } catch {}
+                    insertLink(editor, { url: href, text: item.title });
                     setLinkMenuOpen(false);
                     setLinkQuery("");
                     setLinkIndex(0);
