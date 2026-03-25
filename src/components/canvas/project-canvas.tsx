@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   ReactFlow,
   MiniMap,
@@ -99,6 +100,7 @@ interface ProjectCanvasProps {
 }
 
 export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [], projectScripts = [] }: ProjectCanvasProps) {
+  const router = useRouter();
   const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
   const [saving, setSaving] = useState(false);
@@ -202,6 +204,29 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
     setContextMenu(null);
   };
 
+  const typeHrefs: Record<string, (id: string) => string> = {
+    idea: (id) => `/ideas/${id}`,
+    note: (id) => `/notes/${id}`,
+    script: (id) => `/scripts/${id}`,
+  };
+
+  const openNode = (nodeId?: string) => {
+    const nid = nodeId || contextMenu?.nodeId;
+    if (!nid) return;
+    const node = nodes.find((n) => n.id === nid);
+    if (!node?.data?.contentId || !node.type) return;
+    const href = typeHrefs[node.type]?.(node.data.contentId as string);
+    if (href) router.push(href);
+    setContextMenu(null);
+  };
+
+  const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    if (node.data?.contentId && node.type) {
+      const href = typeHrefs[node.type]?.(node.data.contentId as string);
+      if (href) router.push(href);
+    }
+  }, [router]);
+
   // Close context menu on click anywhere
   const onPaneClick = useCallback(() => setContextMenu(null), []);
 
@@ -218,6 +243,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
         snapToGrid
         snapGrid={[16, 16]}
         onNodeContextMenu={onNodeContextMenu}
+        onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={onPaneClick}
         deleteKeyCode="Delete"
         defaultEdgeOptions={{ animated: true, style: { stroke: "#999", strokeWidth: 1 } }}
@@ -284,7 +310,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
                   <button
                     key={idea.id}
                     className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
-                    onClick={() => addNode("idea", { title: idea.title, description: idea.body?.slice(0, 100) })}
+                    onClick={() => addNode("idea", { contentId: idea.id, title: idea.title, description: idea.body?.slice(0, 100) })}
                   >
                     <Lightbulb className="h-2.5 w-2.5 text-[#FFD60A] shrink-0" />
                     <span className="truncate">{idea.title}</span>
@@ -300,7 +326,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
                   <button
                     key={note.id}
                     className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
-                    onClick={() => addNode("note", { title: note.title, description: note.contentPlain?.slice(0, 100) })}
+                    onClick={() => addNode("note", { contentId: note.id, title: note.title, description: note.contentPlain?.slice(0, 100) })}
                   >
                     <StickyNote className="h-2.5 w-2.5 text-[#30BCED] shrink-0" />
                     <span className="truncate">{note.title}</span>
@@ -316,7 +342,7 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
                   <button
                     key={script.id}
                     className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
-                    onClick={() => addNode("script", { title: script.title, description: script.contentPlain?.slice(0, 100) })}
+                    onClick={() => addNode("script", { contentId: script.id, title: script.title, description: script.contentPlain?.slice(0, 100) })}
                   >
                     <FileText className="h-2.5 w-2.5 text-[#2EC4B6] shrink-0" />
                     <span className="truncate">{script.title}</span>
@@ -346,14 +372,22 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
       {/* Context menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95"
+          className="fixed z-50 rounded-lg border bg-popover p-1 shadow-xl animate-in fade-in-0 zoom-in-95 min-w-[140px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
+          {!!nodes.find((n) => n.id === contextMenu.nodeId)?.data?.contentId && (
+            <button
+              onClick={() => openNode()}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[12px] hover:bg-accent transition-colors"
+            >
+              <FileText className="h-3 w-3" /> Open
+            </button>
+          )}
           <button
             onClick={duplicateNode}
             className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[12px] hover:bg-accent transition-colors"
           >
-            <Plus className="h-3 w-3" /> Duplicate
+            <Copy className="h-3 w-3" /> Duplicate
           </button>
           <button
             onClick={deleteNode}
