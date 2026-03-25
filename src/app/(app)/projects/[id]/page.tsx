@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronRight, Trash2, Sparkles, Search, Loader2, Zap } from "lucide-react";
+import { ChevronRight, Trash2, Sparkles, Search, Loader2, Zap, Layout, KanbanSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -18,6 +18,11 @@ import { deleteProjectAction } from "../actions";
 import { AIActionMenu, projectActions } from "@/components/ai/ai-action-menu";
 import { AISwipeBoard } from "@/components/board/swipe-board";
 import { toast } from "sonner";
+
+const ProjectCanvas = dynamic(
+  () => import("@/components/canvas/project-canvas").then((m) => m.ProjectCanvas),
+  { ssr: false }
+);
 
 const KanbanBoard = dynamic(
   () => import("@/components/board/kanban-board").then((m) => m.KanbanBoard),
@@ -34,6 +39,7 @@ export default function ProjectDetailPage() {
   const [researchTopic, setResearchTopic] = useState("");
   const [researching, setResearching] = useState(false);
   const [swipeMode, setSwipeMode] = useState(false);
+  const [view, setView] = useState<"board" | "canvas">("board");
   const boardRef = useRef<{ refresh: () => void } | null>(null);
 
   const fetchProject = () => {
@@ -133,6 +139,28 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
+      {/* View toggle */}
+      {!swipeMode && (
+        <div className="flex items-center gap-1 glass-card p-1 w-fit">
+          <button
+            onClick={() => setView("board")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
+              view === "board" ? "bg-[#a855f7]/10 text-[#a855f7] border border-[#a855f7]/20" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <KanbanSquare className="h-3.5 w-3.5" /> Board
+          </button>
+          <button
+            onClick={() => setView("canvas")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
+              view === "canvas" ? "bg-[#06b6d4]/10 text-[#06b6d4] border border-[#06b6d4]/20" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Layout className="h-3.5 w-3.5" /> Canvas
+          </button>
+        </div>
+      )}
+
       {/* Main content */}
       {swipeMode ? (
         <AISwipeBoard
@@ -142,6 +170,13 @@ export default function ProjectDetailPage() {
             setSwipeMode(false);
             fetchProject();
           }}
+        />
+      ) : view === "canvas" ? (
+        <ProjectCanvas
+          projectId={id}
+          projectNotes={project.notes || []}
+          projectIdeas={project.ideas || []}
+          projectScripts={project.scripts || []}
         />
       ) : (
         <KanbanBoard projectId={id} />

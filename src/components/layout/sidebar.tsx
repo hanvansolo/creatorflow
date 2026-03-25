@@ -13,6 +13,7 @@ import {
   Sparkles,
   CreditCard,
   Rocket,
+  Network,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -24,6 +25,7 @@ const navigation = [
 
 const secondaryNavigation = [
   { label: "AI Co-pilot", href: "/chat", icon: Sparkles, color: "text-[#F72585]" },
+  { label: "Graph", href: "/graph", icon: Network, color: "text-[#06b6d4]" },
   { label: "Search", href: "/search", icon: Search, color: "" },
   { label: "Settings", href: "/settings", icon: Settings, color: "" },
 ];
