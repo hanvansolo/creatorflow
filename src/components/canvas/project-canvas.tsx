@@ -127,6 +127,23 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
   const [loaded, setLoaded] = useState(false);
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch ALL user content for the add panel
+  const [allIdeas, setAllIdeas] = useState<any[]>([]);
+  const [allNotes, setAllNotes] = useState<any[]>([]);
+  const [allScripts, setAllScripts] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/ideas").then((r) => r.json()),
+      fetch("/api/notes").then((r) => r.json()),
+      fetch("/api/scripts").then((r) => r.json()),
+    ]).then(([ideas, notes, scripts]) => {
+      setAllIdeas(ideas || []);
+      setAllNotes(notes || []);
+      setAllScripts(scripts || []);
+    }).catch(() => {});
+  }, []);
+
   // Load canvas
   useEffect(() => {
     fetch(`/api/canvas/${projectId}`)
@@ -238,40 +255,62 @@ export function ProjectCanvas({ projectId, projectNotes = [], projectIdeas = [],
           </div>
         </Panel>
 
-        {/* Existing content */}
+        {/* All content panel */}
         <Panel position="top-right" className="flex items-center gap-1.5">
-          <div className="flex flex-col gap-1 rounded-lg border border-border/50 bg-background/90 p-1.5 shadow-lg backdrop-blur-sm max-h-48 overflow-y-auto">
-            <p className="text-[10px] font-medium text-muted-foreground px-1">Drag content onto canvas</p>
-            {projectIdeas.map((idea: any) => (
-              <button
-                key={idea.id}
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
-                onClick={() => addNode("idea", { title: idea.title, description: idea.body?.slice(0, 100) })}
-              >
-                <Lightbulb className="h-2.5 w-2.5 text-[#FFD60A] shrink-0" />
-                <span className="truncate">{idea.title}</span>
-              </button>
-            ))}
-            {projectNotes.map((note: any) => (
-              <button
-                key={note.id}
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
-                onClick={() => addNode("note", { title: note.title, description: note.contentPlain?.slice(0, 100) })}
-              >
-                <StickyNote className="h-2.5 w-2.5 text-[#30BCED] shrink-0" />
-                <span className="truncate">{note.title}</span>
-              </button>
-            ))}
-            {projectScripts.map((script: any) => (
-              <button
-                key={script.id}
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
-                onClick={() => addNode("script", { title: script.title, description: script.contentPlain?.slice(0, 100) })}
-              >
-                <FileText className="h-2.5 w-2.5 text-[#2EC4B6] shrink-0" />
-                <span className="truncate">{script.title}</span>
-              </button>
-            ))}
+          <div className="flex flex-col gap-1 rounded-lg border border-border/50 bg-background/90 p-1.5 shadow-lg backdrop-blur-sm max-h-72 w-52 overflow-y-auto">
+            <p className="text-[10px] font-semibold text-muted-foreground px-1 uppercase tracking-wider">Add to Canvas</p>
+
+            {allIdeas.length > 0 && (
+              <>
+                <p className="text-[9px] font-medium text-[#FFD60A] px-1 mt-1">Ideas</p>
+                {allIdeas.map((idea: any) => (
+                  <button
+                    key={idea.id}
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
+                    onClick={() => addNode("idea", { title: idea.title, description: idea.body?.slice(0, 100) })}
+                  >
+                    <Lightbulb className="h-2.5 w-2.5 text-[#FFD60A] shrink-0" />
+                    <span className="truncate">{idea.title}</span>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {allNotes.length > 0 && (
+              <>
+                <p className="text-[9px] font-medium text-[#30BCED] px-1 mt-1">Notes</p>
+                {allNotes.map((note: any) => (
+                  <button
+                    key={note.id}
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
+                    onClick={() => addNode("note", { title: note.title, description: note.contentPlain?.slice(0, 100) })}
+                  >
+                    <StickyNote className="h-2.5 w-2.5 text-[#30BCED] shrink-0" />
+                    <span className="truncate">{note.title}</span>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {allScripts.length > 0 && (
+              <>
+                <p className="text-[9px] font-medium text-[#2EC4B6] px-1 mt-1">Scripts</p>
+                {allScripts.map((script: any) => (
+                  <button
+                    key={script.id}
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent text-left"
+                    onClick={() => addNode("script", { title: script.title, description: script.contentPlain?.slice(0, 100) })}
+                  >
+                    <FileText className="h-2.5 w-2.5 text-[#2EC4B6] shrink-0" />
+                    <span className="truncate">{script.title}</span>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {allIdeas.length === 0 && allNotes.length === 0 && allScripts.length === 0 && (
+              <p className="text-[10px] text-muted-foreground px-1 py-2">No content yet</p>
+            )}
           </div>
         </Panel>
 
