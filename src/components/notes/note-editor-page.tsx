@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
-const TiptapEditor = dynamic(
-  () => import("@/components/editor/tiptap-editor").then((m) => m.TiptapEditor),
+const PlateEditor = dynamic(
+  () => import("@/components/editor/plate-editor").then((m) => m.PlateEditor),
   { ssr: false, loading: () => <div className="h-[400px] rounded-lg border border-input bg-background animate-pulse" /> }
 );
 import { Trash2, Save, Loader2 } from "lucide-react";
@@ -132,7 +132,7 @@ export function NoteEditorPage({
       />
 
       {/* Editor */}
-      <TiptapEditor
+      <PlateEditor
         content={content}
         onChange={(html, plain) => {
           setContent(html);
