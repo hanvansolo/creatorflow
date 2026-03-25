@@ -41,7 +41,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { ImageDialog, LinkDialog, YoutubeDialog } from "./editor-dialogs";
 
 const lowlight = createLowlight(common);
 
@@ -97,43 +98,42 @@ export function TiptapEditor({
     },
   });
 
-  const addImage = useCallback(() => {
+  const [imageOpen, setImageOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [youtubeOpen, setYoutubeOpen] = useState(false);
+
+  const handleImageSubmit = useCallback(
+    (url: string, alt?: string) => {
+      if (!editor) return;
+      editor.chain().focus().setImage({ src: url, alt }).run();
+    },
+    [editor]
+  );
+
+  const handleLinkSubmit = useCallback(
+    (url: string) => {
+      if (!editor) return;
+      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    },
+    [editor]
+  );
+
+  const handleLinkRemove = useCallback(() => {
     if (!editor) return;
-    const url = window.prompt("Image URL:");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    editor.chain().focus().extendMarkRange("link").unsetLink().run();
   }, [editor]);
 
-  const addLink = useCallback(() => {
-    if (!editor) return;
-    const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("Link URL:", previousUrl);
-
-    if (url === null) return;
-
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange("link")
-      .setLink({ href: url })
-      .run();
-  }, [editor]);
-
-  const addYoutube = useCallback(() => {
-    if (!editor) return;
-    const url = window.prompt("YouTube URL:");
-    if (url) {
+  const handleYoutubeSubmit = useCallback(
+    (url: string) => {
+      if (!editor) return;
       editor.chain().focus().setYoutubeVideo({ src: url }).run();
-    }
-  }, [editor]);
+    },
+    [editor]
+  );
 
   if (!editor) return null;
+
+  const currentLinkUrl = editor.getAttributes("link").href || "";
 
   return (
     <div
@@ -264,27 +264,27 @@ export function TiptapEditor({
 
         {/* Media */}
         <ToolbarButton
-          onClick={addImage}
+          onClick={() => setImageOpen(true)}
           active={false}
           icon={ImageIcon}
           tooltip="Insert image"
         />
         <ToolbarButton
-          onClick={addLink}
+          onClick={() => setLinkOpen(true)}
           active={editor.isActive("link")}
           icon={LinkIcon}
           tooltip="Insert link"
         />
         {editor.isActive("link") && (
           <ToolbarButton
-            onClick={() => editor.chain().focus().unsetLink().run()}
+            onClick={handleLinkRemove}
             active={false}
             icon={Unlink}
             tooltip="Remove link"
           />
         )}
         <ToolbarButton
-          onClick={addYoutube}
+          onClick={() => setYoutubeOpen(true)}
           active={false}
           icon={MonitorPlay}
           tooltip="Embed YouTube"
@@ -337,7 +337,7 @@ export function TiptapEditor({
           tooltip="Highlight"
         />
         <ToolbarButton
-          onClick={addLink}
+          onClick={() => setLinkOpen(true)}
           active={editor.isActive("link")}
           icon={LinkIcon}
           tooltip="Link"
@@ -346,6 +346,26 @@ export function TiptapEditor({
 
       {/* Editor */}
       <EditorContent editor={editor} />
+
+      {/* Dialogs */}
+      <ImageDialog
+        open={imageOpen}
+        onOpenChange={setImageOpen}
+        onSubmit={handleImageSubmit}
+      />
+      <LinkDialog
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        onSubmit={handleLinkSubmit}
+        onRemove={handleLinkRemove}
+        initialUrl={currentLinkUrl}
+        hasLink={editor.isActive("link")}
+      />
+      <YoutubeDialog
+        open={youtubeOpen}
+        onOpenChange={setYoutubeOpen}
+        onSubmit={handleYoutubeSubmit}
+      />
     </div>
   );
 }
