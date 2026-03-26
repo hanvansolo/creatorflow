@@ -84,19 +84,21 @@ export async function GET(
       continue;
     }
 
-    // File is missing - try to re-scrape external URL from original article
+    // File is missing - try to re-scrape and download from original article
     if (article.originalUrl) {
       console.log(`[FixImages] Missing: ${article.title.slice(0, 40)}... - trying to re-scrape`);
       const scrapedUrl = await scrapeArticleImage(article.originalUrl);
       if (scrapedUrl) {
-        // Store the external URL directly instead of downloading
-        await db
-          .update(newsArticles)
-          .set({ imageUrl: scrapedUrl })
-          .where(eq(newsArticles.id, article.id));
-        fixed++;
-        console.log(`[FixImages] Fixed with external URL: ${scrapedUrl.slice(0, 60)}...`);
-        continue;
+        const downloadResult = await downloadImage(scrapedUrl);
+        if (downloadResult.success && downloadResult.localPath) {
+          await db
+            .update(newsArticles)
+            .set({ imageUrl: downloadResult.localPath })
+            .where(eq(newsArticles.id, article.id));
+          fixed++;
+          console.log(`[FixImages] Fixed: ${downloadResult.localPath}`);
+          continue;
+        }
       }
     }
 

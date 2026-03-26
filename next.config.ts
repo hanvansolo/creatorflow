@@ -41,8 +41,9 @@ const nextConfig: NextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
-      // Allow all HTTPS images — news articles link to many different CDNs
+      // Allow all HTTPS images — scraped og:image URLs come from many CDNs
       { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
     ],
   },
 };

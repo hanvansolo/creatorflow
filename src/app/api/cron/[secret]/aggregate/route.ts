@@ -164,9 +164,19 @@ export async function GET(
           );
         }
 
-        // Use the original external image URL directly (no local download)
-        // Railway's ephemeral filesystem doesn't persist downloaded images
-        const finalImageUrl = article.imageUrl || null;
+        // Download image to persistent storage (Railway volume)
+        let finalImageUrl = article.imageUrl;
+        if (ENABLE_IMAGE_DOWNLOAD && article.imageUrl) {
+          try {
+            const result = await downloadImage(article.imageUrl);
+            if (result.success && result.localPath) {
+              finalImageUrl = result.localPath;
+              imagesDownloaded++;
+            }
+          } catch (error) {
+            console.error('Image download error:', error);
+          }
+        }
 
         // Generate slug
         const slug = generateNewsSlug(finalTitle, article.publishedAt);
