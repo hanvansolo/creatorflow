@@ -150,7 +150,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
           <div className="mb-6 flex items-center justify-center gap-5 rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-6 py-5">
             <div className="flex items-center gap-3">
               {club1.logoUrl ? (
-                <img src={club1.logoUrl} alt="" className="h-10 w-10 object-contain" />
+                <img src={club1.logoUrl} alt={`${club1.name} logo`} className="h-10 w-10 object-contain" />
               ) : (
                 <Shield className="h-10 w-10 text-zinc-500" />
               )}
@@ -160,7 +160,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
             <div className="flex items-center gap-3">
               <span className="text-lg font-bold text-white">{club2.shortName || club2.name}</span>
               {club2.logoUrl ? (
-                <img src={club2.logoUrl} alt="" className="h-10 w-10 object-contain" />
+                <img src={club2.logoUrl} alt={`${club2.name} logo`} className="h-10 w-10 object-contain" />
               ) : (
                 <Shield className="h-10 w-10 text-zinc-500" />
               )}
@@ -239,7 +239,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
                             {m.home_club_short || m.home_club_name}
                           </span>
                           {m.home_club_logo && (
-                            <img src={m.home_club_logo} alt="" className="h-5 w-5 object-contain shrink-0" />
+                            <img src={m.home_club_logo} alt={`${m.home_club_short || m.home_club_name} logo`} className="h-5 w-5 object-contain shrink-0" />
                           )}
                         </div>
                         <span className="text-sm font-bold text-white tabular-nums px-2 shrink-0">
@@ -247,7 +247,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
                         </span>
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {m.away_club_logo && (
-                            <img src={m.away_club_logo} alt="" className="h-5 w-5 object-contain shrink-0" />
+                            <img src={m.away_club_logo} alt={`${m.away_club_short || m.away_club_name} logo`} className="h-5 w-5 object-contain shrink-0" />
                           )}
                           <span className="text-sm font-medium text-zinc-200 truncate">
                             {m.away_club_short || m.away_club_name}

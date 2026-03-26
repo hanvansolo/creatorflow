@@ -96,6 +96,7 @@ export const DEFAULT_METADATA: Metadata = {
     description: SITE_CONFIG.description,
     images: [
       {
+        // TODO: Create /public/images/og-default.png (1200x630px) — branded OG image for social sharing
         url: '/images/og-default.png',
         width: 1200,
         height: 630,

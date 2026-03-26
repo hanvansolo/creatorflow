@@ -453,7 +453,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
                 {latestArticles.map((item, i) => (
                   <Link key={item.id} href={`/news/${item.slug}`} className="flex gap-3 group">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt="" className="h-12 w-18 rounded object-cover flex-shrink-0" />
+                      <img src={item.imageUrl} alt={item.title} className="h-12 w-18 rounded object-cover flex-shrink-0" />
                     ) : (
                       <div className="h-12 w-18 rounded bg-zinc-800 flex-shrink-0 flex items-center justify-center">
                         <span className="text-[10px] text-zinc-600 font-bold">FF</span>

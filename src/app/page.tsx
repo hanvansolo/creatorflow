@@ -42,7 +42,8 @@ export const metadata: Metadata = {
     locale: SITE_CONFIG.locale,
     images: [
       {
-        url: '/images/og-home.png',
+        // TODO: Create /public/images/og-home.png (1200x630px) — branded homepage OG image for social sharing
+      url: '/images/og-home.png',
         width: 1200,
         height: 630,
         alt: 'Footy Feed - Football News and Analysis',
@@ -326,7 +327,7 @@ export default async function HomePage() {
                       {article.imageUrl && (
                         <img
                           src={article.imageUrl}
-                          alt=""
+                          alt={article.title}
                           className="h-16 w-24 rounded object-cover flex-shrink-0"
                         />
                       )}
@@ -363,7 +364,7 @@ export default async function HomePage() {
                       {article.imageUrl && (
                         <img
                           src={article.imageUrl}
-                          alt=""
+                          alt={article.title}
                           className="h-16 w-24 rounded object-cover flex-shrink-0"
                         />
                       )}

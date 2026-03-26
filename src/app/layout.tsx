@@ -14,6 +14,7 @@ import {
   JsonLdScript,
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
+import { CookieConsent } from '@/components/layout/CookieConsent';
 import Script from 'next/script';
 import './globals.css';
 
@@ -75,6 +76,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <NewsletterPopup />
+            <CookieConsent />
           </div>
         </LocationProvider>
         <Suspense fallback={null}>
