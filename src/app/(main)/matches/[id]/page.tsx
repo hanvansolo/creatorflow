@@ -242,9 +242,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     getMatchAnalysis(id),
   ]);
 
-  // Only fetch from API during live matches (not for every page view — saves API quota)
-  const isCurrentlyLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
-  if ((events as any[]).length === 0 && match.api_football_id && isCurrentlyLive) {
+  // Fetch from API if no events in DB
+  if ((events as any[]).length === 0 && match.api_football_id) {
     try {
       const apiEvents = await getFixtureEvents(match.api_football_id);
       if (apiEvents.response && apiEvents.response.length > 0) {
@@ -269,7 +268,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     }
   }
 
-  if ((stats as any[]).length === 0 && match.api_football_id && isCurrentlyLive) {
+  if ((stats as any[]).length === 0 && match.api_football_id) {
     try {
       const apiStats = await getFixtureStatistics(match.api_football_id);
       if (apiStats.response && apiStats.response.length >= 2) {
