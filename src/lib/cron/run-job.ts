@@ -126,6 +126,11 @@ export async function runCronJob(jobName: string): Promise<{ success: boolean; r
         response = await GET(request, { params });
         break;
       }
+      case 'live-sync': {
+        const { GET } = await import('@/app/api/cron/[secret]/live-sync/route');
+        response = await GET(request, { params });
+        break;
+      }
       default:
         return { success: false, result: { error: `Unknown job: ${jobName}` } };
     }
