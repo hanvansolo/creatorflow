@@ -5,11 +5,11 @@ export function detectTechnicalTopic(_text: string): string | null {
 }
 
 export async function createDeepDiveFromArticle(..._args: unknown[]) {
-  return null;
+  return null as any;
 }
 
 export async function extractTechnicalDeepDives(..._args: unknown[]) {
-  return { created: 0, results: [] };
+  return { created: 0, results: [] as any[] };
 }
 
 export async function getDeepDives(_category?: string, _limit?: number): Promise<Array<{
@@ -23,7 +23,7 @@ export async function getDeepDives(_category?: string, _limit?: number): Promise
   tags: string[] | null;
   createdAt: Date | null;
 }>> {
-  return [];
+  return [] as any[];
 }
 
 export async function getDeepDiveBySlug(_slug: string): Promise<{
@@ -44,5 +44,5 @@ export async function getDeepDiveBySlug(_slug: string): Promise<{
 }
 
 export async function getDeepDiveCategories(): Promise<Array<{ category: string; count: number }>> {
-  return [];
+  return [] as any[];
 }

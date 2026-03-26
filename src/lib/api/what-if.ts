@@ -1,19 +1,19 @@
 // TODO: Rewrite for Footy Feed (stubbed during F1→Soccer migration)
 
 export async function generateWhatIfAnalysis(_question: string) {
-  return null;
+  return null as any;
 }
 
 export async function findSimilarScenario(_question: string) {
-  return null;
+  return null as any;
 }
 
 export async function saveWhatIfScenario(_question: string, _analysis: unknown, _generationType?: string) {
-  return null;
+  return null as any;
 }
 
 export async function getOrGenerateWhatIf(_question: string) {
-  return null;
+  return null as any;
 }
 
 export async function getPopularScenarios(_limit?: number) {
@@ -25,7 +25,7 @@ export async function getRecentScenarios(_limit?: number) {
 }
 
 export async function getScenarioBySlug(_slug: string) {
-  return null;
+  return null as any;
 }
 
 export async function getScenariosByType(_type: string, _limit?: number) {

@@ -5,11 +5,11 @@ export async function getUpcomingRacesWithoutPreviews(_daysAhead?: number) {
 }
 
 export async function generateRacePreview(..._args: unknown[]) {
-  return null;
+  return null as any;
 }
 
 export async function saveRacePreview(_raceId: string, _content: unknown) {
-  return null;
+  return null as any;
 }
 
 export async function generateUpcomingPreviews(_daysAhead?: number) {
@@ -17,11 +17,11 @@ export async function generateUpcomingPreviews(_daysAhead?: number) {
 }
 
 export async function getRacePreviewByRaceId(_raceId: string) {
-  return null;
+  return null as any;
 }
 
 export async function getRacePreviewBySlug(_raceSlug: string) {
-  return null;
+  return null as any;
 }
 
 export async function getPublishedPreviews(_limit?: number) {
@@ -29,11 +29,11 @@ export async function getPublishedPreviews(_limit?: number) {
 }
 
 export async function getOrGeneratePreview(_raceId: string, _raceName: string, _circuitId: string | null, _raceDatetime: Date | null) {
-  return null;
+  return null as any;
 }
 
 export async function getNextRacePreview() {
-  return null;
+  return null as any;
 }
 
 export async function updatePreviewsAfterSessions() {

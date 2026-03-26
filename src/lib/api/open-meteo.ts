@@ -12,11 +12,11 @@ export async function fetchWeatherForecast(
   _startDate: Date,
   _endDate: Date
 ) {
-  return null;
+  return null as any;
 }
 
 export function findClosestHourlyData(_forecast: unknown, _targetTime: Date) {
-  return null;
+  return null as any;
 }
 
 export function getWeatherDescription(_condition: WeatherCondition): string {
