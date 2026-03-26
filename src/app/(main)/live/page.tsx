@@ -265,9 +265,10 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
                     // Goals are already linked by club_id but we display by home/away name
 
                     return (
-                      <div
+                      <Link
+                        href={`/matches/${match.id}`}
                         key={match.id}
-                        className="bg-zinc-900 hover:bg-zinc-800/50 transition-colors border-l-2 border-l-emerald-500 px-4 py-4"
+                        className="block bg-zinc-900 hover:bg-zinc-800/50 transition-colors border-l-2 border-l-emerald-500 px-4 py-4"
                       >
                         {/* Match header with minute */}
                         <div className="flex items-center justify-center gap-2 mb-3">
@@ -358,7 +359,7 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
                             })}
                           </div>
                         )}
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
