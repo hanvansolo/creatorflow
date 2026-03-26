@@ -243,12 +243,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   ]);
 
   // If no events/stats in DB but we have an API-Football ID, fetch on demand
-  let apiFetchStatus = '';
   if ((events as any[]).length === 0 && match.api_football_id) {
     try {
-      apiFetchStatus = `Fetching events for fixture ${match.api_football_id}...`;
       const apiEvents = await getFixtureEvents(match.api_football_id);
-      apiFetchStatus += ` API returned: results=${apiEvents.results}, responseLen=${apiEvents.response?.length}, errors=${JSON.stringify(apiEvents.errors || {}).slice(0, 100)}`;
       if (apiEvents.response && apiEvents.response.length > 0) {
         events = apiEvents.response.map((e: any) => ({
           event_type: mapEventType(e.type, e.detail),
@@ -266,9 +263,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           description: e.detail,
         }));
       }
-      apiFetchStatus += ` Got ${(events as any[]).length} events`;
     } catch (e) {
-      apiFetchStatus += ` ERROR: ${e instanceof Error ? e.message : String(e)}`;
       console.error('[Match] Failed to fetch API events:', e);
     }
   }
@@ -316,12 +311,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="min-h-screen bg-zinc-900">
-      {/* Debug info — remove after testing */}
-      {apiFetchStatus && (
-        <div className="bg-zinc-800 border border-zinc-700 mx-auto max-w-5xl mt-2 px-4 py-2 rounded text-xs text-zinc-400">
-          Debug: {apiFetchStatus} | Events: {(events as any[]).length} | Stats: {(stats as any[]).length} | API ID: {match.api_football_id}
-        </div>
-      )}
       {/* ===== MATCH HEADER ===== */}
       <div
         className="relative overflow-hidden"
