@@ -248,16 +248,44 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Content with Technical Term Annotations */}
-        {article.content && annotatedContent && (
-          <div className="prose prose-invert mt-8 max-w-none">
-            <AnnotatedParagraphs
-              paragraphs={annotatedContent.paragraphs}
-              termsByParagraph={annotatedContent.termsByParagraph}
-              className="space-y-4"
-              paragraphClassName="text-zinc-300 leading-relaxed"
-              adInterval={0}
-            />
+        {/* Content */}
+        {article.content && (
+          <div className="prose prose-invert mt-8 max-w-none space-y-4">
+            {article.content.split('\n\n').filter(p => p.trim()).map((paragraph, i) => {
+              const trimmed = paragraph.trim();
+              // Lines wrapped in **bold** → render as H2 subheading
+              const headingMatch = trimmed.match(/^\*\*(.+)\*\*$/);
+              if (headingMatch) {
+                return (
+                  <h2 key={i} className="text-xl font-bold text-white mt-8 mb-3">
+                    {headingMatch[1]}
+                  </h2>
+                );
+              }
+              // Lines starting with ## → render as H2
+              if (trimmed.startsWith('## ')) {
+                return (
+                  <h2 key={i} className="text-xl font-bold text-white mt-8 mb-3">
+                    {trimmed.replace(/^##\s*/, '')}
+                  </h2>
+                );
+              }
+              // Lines starting with ### → render as H3
+              if (trimmed.startsWith('### ')) {
+                return (
+                  <h3 key={i} className="text-lg font-semibold text-zinc-200 mt-6 mb-2">
+                    {trimmed.replace(/^###\s*/, '')}
+                  </h3>
+                );
+              }
+              // Regular paragraph — also handle inline **bold** and *italic*
+              const html = trimmed
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>');
+              return (
+                <p key={i} className="text-zinc-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
+              );
+            })}
           </div>
         )}
 
