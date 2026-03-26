@@ -4,8 +4,9 @@ import { createPageMetadata } from '@/lib/seo';
 import { db, clubs } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import Link from 'next/link';
-import { GitCompareArrows } from 'lucide-react';
+import { GitCompareArrows, Swords, Shield } from 'lucide-react';
 import { H2HWidget } from '@/components/widgets/ApiFootballWidget';
+import TeamSearchSelector from '@/components/compare/TeamSearchSelector';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,12 +21,31 @@ interface PageProps {
   searchParams: Promise<{ team1?: string; team2?: string }>;
 }
 
+const POPULAR_MATCHUPS = [
+  { team1: 'arsenal', team2: 'tottenham-hotspur', label: 'Arsenal vs Spurs' },
+  { team1: 'manchester-united', team2: 'liverpool', label: 'Man Utd vs Liverpool' },
+  { team1: 'real-madrid', team2: 'barcelona', label: 'Real Madrid vs Barcelona' },
+  { team1: 'manchester-city', team2: 'arsenal', label: 'Man City vs Arsenal' },
+  { team1: 'ac-milan', team2: 'inter-milan', label: 'AC Milan vs Inter' },
+  { team1: 'bayern-munich', team2: 'borussia-dortmund', label: 'Bayern vs Dortmund' },
+  { team1: 'chelsea', team2: 'arsenal', label: 'Chelsea vs Arsenal' },
+  { team1: 'paris-saint-germain', team2: 'marseille', label: 'PSG vs Marseille' },
+];
+
 export default async function ComparePage({ searchParams }: PageProps) {
   const { team1, team2 } = await searchParams;
 
   const allClubs = await db.query.clubs.findMany({
     where: eq(clubs.isActive, true),
     orderBy: (clubs, { asc }) => [asc(clubs.name)],
+    columns: {
+      slug: true,
+      name: true,
+      shortName: true,
+      logoUrl: true,
+      primaryColor: true,
+      apiFootballId: true,
+    },
   });
 
   const club1 = team1 ? allClubs.find(c => c.slug === team1) : null;
@@ -34,53 +54,59 @@ export default async function ComparePage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-zinc-900">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <GitCompareArrows className="h-6 w-6 text-emerald-400" />
-            <h1 className="text-2xl font-bold text-white">Head to Head</h1>
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+              <GitCompareArrows className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Head to Head</h1>
+              <p className="text-zinc-400 text-sm">Compare two teams — match history, results, and stats</p>
+            </div>
           </div>
-          <p className="text-zinc-400 text-sm">Compare two teams — match history, results, and stats</p>
         </div>
 
-        {/* Team selectors */}
+        {/* Team selectors with search */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">Team 1</label>
-            <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto rounded-lg bg-zinc-800 border border-zinc-700 p-3">
-              {allClubs.slice(0, 50).map(c => (
-                <Link
-                  key={c.slug}
-                  href={`/compare?team1=${c.slug}&team2=${team2 || ''}`}
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    team1 === c.slug
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                  }`}
-                >
-                  {c.shortName || c.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">Team 2</label>
-            <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto rounded-lg bg-zinc-800 border border-zinc-700 p-3">
-              {allClubs.slice(0, 50).map(c => (
-                <Link
-                  key={c.slug}
-                  href={`/compare?team1=${team1 || ''}&team2=${c.slug}`}
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    team2 === c.slug
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                  }`}
-                >
-                  {c.shortName || c.name}
-                </Link>
-              ))}
-            </div>
-          </div>
+          <TeamSearchSelector
+            clubs={allClubs}
+            paramName="team1"
+            otherParam={team2 || ''}
+            selectedSlug={team1 || null}
+            label="Team 1"
+          />
+          <TeamSearchSelector
+            clubs={allClubs}
+            paramName="team2"
+            otherParam={team1 || ''}
+            selectedSlug={team2 || null}
+            label="Team 2"
+          />
         </div>
+
+        {/* Selected teams visual comparison header */}
+        {club1 && club2 && (
+          <div className="mb-6 flex items-center justify-center gap-5 rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-6 py-5">
+            <div className="flex items-center gap-3">
+              {club1.logoUrl ? (
+                <img src={club1.logoUrl} alt="" className="h-10 w-10 object-contain" />
+              ) : (
+                <Shield className="h-10 w-10 text-zinc-500" />
+              )}
+              <span className="text-lg font-bold text-white">{club1.shortName || club1.name}</span>
+            </div>
+            <Swords className="h-6 w-6 text-emerald-400" />
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-bold text-white">{club2.shortName || club2.name}</span>
+              {club2.logoUrl ? (
+                <img src={club2.logoUrl} alt="" className="h-10 w-10 object-contain" />
+              ) : (
+                <Shield className="h-10 w-10 text-zinc-500" />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* H2H Widget */}
         {club1?.apiFootballId && club2?.apiFootballId ? (
@@ -97,6 +123,29 @@ export default async function ComparePage({ searchParams }: PageProps) {
             </p>
           </div>
         )}
+
+        {/* Popular comparisons */}
+        <div className="mt-10">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-4">Popular Rivalries</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {POPULAR_MATCHUPS.map((matchup) => (
+              <Link
+                key={`${matchup.team1}-${matchup.team2}`}
+                href={`/compare?team1=${matchup.team1}&team2=${matchup.team2}`}
+                className={`group flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                  team1 === matchup.team1 && team2 === matchup.team2
+                    ? 'bg-emerald-600/10 border-emerald-500/30'
+                    : 'bg-zinc-800/60 border-zinc-700/40 hover:border-emerald-500/20 hover:bg-zinc-800'
+                }`}
+              >
+                <Swords className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors shrink-0" />
+                <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
+                  {matchup.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
