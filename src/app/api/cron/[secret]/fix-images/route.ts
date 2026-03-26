@@ -9,7 +9,7 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 // Storage path - Railway volume or local fallback
 const STORAGE_PATH = process.env.IMAGE_STORAGE_PATH || 'public/images/articles';
@@ -35,7 +35,7 @@ export async function GET(
   { params }: { params: Promise<{ secret: string }> }
 ) {
   const { secret } = await params;
-  if (secret !== CRON_SECRET) {
+  if (secret !== CRON_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

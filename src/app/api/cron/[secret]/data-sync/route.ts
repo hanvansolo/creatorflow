@@ -23,7 +23,7 @@ import { COMPETITIONS } from '@/lib/constants/competitions';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max for full sync
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 function slugify(str: string): string {
   return str
@@ -538,7 +538,7 @@ export async function GET(
   try {
     const { secret } = await params;
 
-    if (secret !== CRON_SECRET) {
+    if (secret !== CRON_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

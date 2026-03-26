@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 // Script keys used in the system
 const SCRIPT_KEYS = [
@@ -14,7 +14,7 @@ const SCRIPT_KEYS = [
 ] as const;
 
 function validateSecret(secret: string): boolean {
-  return secret === CRON_SECRET;
+  return secret === CRON_KEY;
 }
 
 /**

@@ -1,14 +1,14 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 /**
  * Runs a cron job directly by importing and calling the route handler.
  * This avoids the unreliable self-fetch pattern.
  */
 export async function runCronJob(jobName: string): Promise<{ success: boolean; result: unknown }> {
-  const secret = CRON_SECRET;
+  const secret = CRON_KEY;
   // Add ?force=true so manual "Run Now" bypasses timezone/schedule filters
   const fakeUrl = `http://localhost/api/cron/${secret}/${jobName}?force=true`;
   const request = new NextRequest(fakeUrl);

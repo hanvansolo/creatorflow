@@ -16,8 +16,8 @@ import { runCronJob } from '@/lib/cron/run-job';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max
 
-// Secret token for cron authentication (use CRON_SECRET env var)
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+// Secret token for cron authentication (use CRON_KEY env var)
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 const ENABLE_SPINNING = process.env.ANTHROPIC_API_KEY ? true : false;
 const ENABLE_IMAGE_DOWNLOAD = process.env.DOWNLOAD_IMAGES !== 'false';
@@ -31,7 +31,7 @@ export async function GET(
     const { secret } = await params;
 
     // Validate secret token
-    if (secret !== CRON_SECRET) {
+    if (secret !== CRON_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

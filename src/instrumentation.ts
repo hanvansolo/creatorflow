@@ -104,7 +104,7 @@ export async function register() {
     return;
   }
 
-  const secret = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+  const secret = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   // Load settings from DB (intervals + enabled/disabled)

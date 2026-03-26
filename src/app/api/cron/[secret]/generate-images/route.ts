@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { secret } = await params;
 
   // Verify cron secret
-  if (secret !== process.env.CRON_SECRET) {
+  if (secret !== process.env.CRON_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

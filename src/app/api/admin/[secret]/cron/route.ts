@@ -6,7 +6,7 @@ import { runCronJob } from '@/lib/cron/run-job';
 
 export const dynamic = 'force-dynamic';
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 const DEFAULT_JOBS = [
   { jobName: 'aggregate',   intervalMs: 15 * 60 * 1000,      label: 'News Aggregation' },
@@ -30,7 +30,7 @@ const DEFAULT_JOBS = [
 ];
 
 function validateSecret(secret: string): boolean {
-  return secret === CRON_SECRET;
+  return secret === CRON_KEY;
 }
 
 /**

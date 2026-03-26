@@ -9,7 +9,7 @@ export const maxDuration = 120;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ secret: string }> }) {
   const { secret } = await params;
-  if (secret !== process.env.CRON_SECRET) {
+  if (secret !== process.env.CRON_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

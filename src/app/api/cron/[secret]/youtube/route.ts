@@ -7,7 +7,7 @@ import { YOUTUBE_CHANNELS } from '@/lib/constants/channels';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 2 minutes max
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 interface YouTubeVideo {
@@ -108,7 +108,7 @@ export async function GET(
   try {
     const { secret } = await params;
 
-    if (secret !== CRON_SECRET) {
+    if (secret !== CRON_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

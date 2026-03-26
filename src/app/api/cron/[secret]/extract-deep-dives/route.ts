@@ -5,7 +5,7 @@ import { extractTechnicalDeepDives } from '@/lib/api/technical-deep-dives';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.ADMIN_API_KEY || 'dev-key';
+const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +14,7 @@ export async function GET(
   try {
     const { secret } = await params;
 
-    if (secret !== CRON_SECRET) {
+    if (secret !== CRON_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

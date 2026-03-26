@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { secret } = await params;
 
-  if (secret !== process.env.CRON_SECRET) {
+  if (secret !== process.env.CRON_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
