@@ -56,6 +56,10 @@ body {
   background: #52525b;
 }
 
+/* Hide scrollbar for ticker */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Gradient backgrounds */
 .bg-gradient-brand {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);

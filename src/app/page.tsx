@@ -14,6 +14,7 @@ import { desc, eq, gte, asc, isNotNull, and, sql } from 'drizzle-orm';
 import type { NewsArticle, CredibilityRating } from '@/types';
 import { SITE_CONFIG, DEFAULT_KEYWORDS, generateFAQStructuredData, HOMEPAGE_FAQ, jsonLd, JsonLdScript } from '@/lib/seo';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
+import { LiveTicker } from '@/components/live/LiveTicker';
 
 
 export const dynamic = 'force-dynamic';
@@ -268,6 +269,10 @@ export default async function HomePage() {
   return (
     <>
       <JsonLdScript data={faqStructuredData} />
+
+      {/* Live scores ticker */}
+      <LiveTicker />
+
       <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="sr-only">Football News, Live Scores & Match Updates</h1>
