@@ -12,8 +12,11 @@ import { Card, CardContent } from '@/components/ui/Card';
 
 import { CommentSection } from '@/components/comments/CommentSection';
 import { AnnotatedParagraphs } from '@/components/deep-dives/AnnotatedContent';
-import { db, newsArticles, newsSources, comments } from '@/lib/db';
-import { eq, desc, ne, isNotNull, and, sql } from 'drizzle-orm';
+import { db, newsArticles, newsSources, comments, leagueStandings, clubs, competitionSeasons, competitions } from '@/lib/db';
+import { LiveTicker } from '@/components/live/LiveTicker';
+import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
+import { TrendingUp, Trophy, Calendar, Zap, Table, BarChart3, ArrowUpRight, Newspaper, ArrowRight } from 'lucide-react';
+import { eq, desc, ne, asc, isNotNull, and, sql } from 'drizzle-orm';
 import { getRelatedImageSync } from '@/lib/getFallbackImage';
 import { formatRelativeTime } from '@/lib/utils';
 import { prepareAnnotatedContent } from '@/lib/utils/prepare-annotated-content';
@@ -127,12 +130,43 @@ export default async function NewsArticlePage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch trending articles, image pool, annotated content, and comment count
-  const [trendingArticles, imagePool, annotatedContent, commentCountResult] = await Promise.all([
+  // Fetch trending articles, image pool, annotated content, comment count, and sidebar data
+  const [trendingArticles, imagePool, annotatedContent, commentCountResult, latestArticles, topStandings] = await Promise.all([
     getTrendingArticles(article.id),
     getArticleImagePool(),
     article.content ? prepareAnnotatedContent(article.content) : null,
     db.select({ count: sql<number>`count(*)` }).from(comments).where(and(eq(comments.contentType, 'article'), eq(comments.contentId, slug), eq(comments.status, 'active'))),
+    // Latest 5 articles for sidebar
+    db.select({
+      id: newsArticles.id,
+      title: newsArticles.title,
+      slug: newsArticles.slug,
+      imageUrl: newsArticles.imageUrl,
+      publishedAt: newsArticles.publishedAt,
+      sourceName: newsSources.name,
+    })
+    .from(newsArticles)
+    .leftJoin(newsSources, eq(newsArticles.sourceId, newsSources.id))
+    .where(and(ne(newsArticles.slug, slug)))
+    .orderBy(desc(newsArticles.publishedAt))
+    .limit(6),
+    // Top league standings for sidebar
+    db.select({
+      position: leagueStandings.position,
+      points: leagueStandings.points,
+      clubName: clubs.name,
+      clubSlug: clubs.slug,
+      clubCode: clubs.code,
+      clubColor: clubs.primaryColor,
+      competitionName: competitions.name,
+    })
+    .from(leagueStandings)
+    .innerJoin(clubs, eq(leagueStandings.clubId, clubs.id))
+    .innerJoin(competitionSeasons, eq(leagueStandings.competitionSeasonId, competitionSeasons.id))
+    .innerJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
+    .where(eq(competitions.slug, 'premier-league'))
+    .orderBy(asc(leagueStandings.position))
+    .limit(6),
   ]);
   const commentCount = commentCountResult[0]?.count ?? 0;
 
@@ -176,8 +210,13 @@ export default async function NewsArticlePage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Article */}
-      <article className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Live ticker */}
+      <LiveTicker />
+
+      {/* Article + Sidebar grid */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <article className="lg:col-span-2">
         {/* Header Info */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
           {article.isBreaking && (
@@ -363,6 +402,131 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
         )}
       </article>
+
+      {/* Sidebar */}
+      <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
+        {/* Quick Links */}
+        <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm font-bold text-white tracking-tight">EXPLORE</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { href: '/tables', label: 'Tables', icon: Table },
+                { href: '/fixtures', label: 'Fixtures', icon: Calendar },
+                { href: '/live', label: 'Live Scores', icon: Zap },
+                { href: '/transfers', label: 'Transfers', icon: ArrowUpRight },
+                { href: '/predictions', label: 'Predictions', icon: BarChart3 },
+                { href: '/videos', label: 'Videos', icon: Newspaper },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-2 rounded-lg bg-zinc-800/50 border border-zinc-700/30 px-3 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-700/50 hover:border-emerald-500/30 transition-all"
+                >
+                  <item.icon className="h-3.5 w-3.5 text-emerald-500" />
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Latest News */}
+        {latestArticles.length > 0 && (
+          <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+            <div className="h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-red-500" />
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-bold text-white tracking-tight">LATEST NEWS</span>
+                </div>
+                <Link href="/news" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                  All news →
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {latestArticles.map((item, i) => (
+                  <Link key={item.id} href={`/news/${item.slug}`} className="flex gap-3 group">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="" className="h-12 w-18 rounded object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-12 w-18 rounded bg-zinc-800 flex-shrink-0 flex items-center justify-center">
+                        <span className="text-[10px] text-zinc-600 font-bold">FF</span>
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
+                        {item.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">{item.sourceName}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* League Table */}
+        {topStandings.length > 0 && (
+          <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+            <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-emerald-400" />
+                  <span className="text-sm font-bold text-white tracking-tight">
+                    {(topStandings[0]?.competitionName || 'LEAGUE TABLE').toUpperCase()}
+                  </span>
+                </div>
+                <Link href="/tables" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                  Full table →
+                </Link>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-zinc-500 border-b border-zinc-700/50">
+                    <th className="py-1 text-left w-6">#</th>
+                    <th className="py-1 text-left">Club</th>
+                    <th className="py-1 text-right w-8">Pts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topStandings.map((s) => (
+                    <tr key={s.clubSlug} className="border-b border-zinc-800/50">
+                      <td className="py-1.5 text-zinc-400">{s.position}</td>
+                      <td className="py-1.5">
+                        <Link href={`/teams/${s.clubSlug}`} className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.clubColor || '#666' }} />
+                          <span className="text-white font-medium">{s.clubCode || s.clubName}</span>
+                        </Link>
+                      </td>
+                      <td className="py-1.5 text-right font-bold text-white">{s.points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Newsletter */}
+        <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+          <div className="p-4">
+            <span className="text-sm font-bold text-white tracking-tight">NEWSLETTER</span>
+            <p className="text-xs text-zinc-400 mt-1 mb-3">Football news without the waffle. Weekly.</p>
+            <NewsletterCTA source="article-sidebar" variant="inline" />
+          </div>
+        </div>
+      </aside>
+      </div>
+      </div>
     </div>
     </>
   );
