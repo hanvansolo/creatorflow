@@ -558,22 +558,52 @@ export async function GET(
 
     console.log('Starting football data sync from API-Football...');
     const startTime = Date.now();
+    const url = new URL(request.url);
+    const fullSync = url.searchParams.get('full') === 'true';
+
+    // API budget management: only sync top-tier competitions on regular runs
+    // Full sync (all 133) only when ?full=true or first run of the day
+    const PRIORITY_LEAGUE_IDS = new Set([
+      39, 140, 135, 78, 61, 2, 3, // PL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, UEL
+      88, 94, 40, 253, 71, 262, 307, // Eredivisie, Primeira Liga, Championship, MLS, Brasileirao, Liga MX, Saudi
+    ]);
+
+    const filteredCompetitions = fullSync
+      ? COMPETITIONS
+      : COMPETITIONS.filter(c => PRIORITY_LEAGUE_IDS.has(c.apiFootballId));
+
+    console.log(`Syncing ${filteredCompetitions.length}/${COMPETITIONS.length} competitions (${fullSync ? 'full' : 'priority only'})`);
 
     // Step 1: Competitions + Seasons
     console.log('Step 1: Syncing competitions and seasons...');
     const { competitionMap, errors: compErrors } = await syncCompetitionsAndSeasons();
 
-    // Step 2: Clubs + Venues
-    console.log('Step 2: Syncing clubs and venues...');
-    const { clubsUpserted, venuesUpserted, errors: clubErrors } = await syncClubs(competitionMap);
+    // Filter competitionMap to only priority competitions on regular runs
+    const filteredMap = fullSync
+      ? competitionMap
+      : new Map([...competitionMap].filter(([apiId]) => PRIORITY_LEAGUE_IDS.has(apiId)));
+
+    // Step 2: Clubs + Venues (skip on priority runs — clubs rarely change)
+    let clubsUpserted = 0;
+    let venuesUpserted = 0;
+    let clubErrors: string[] = [];
+    if (fullSync) {
+      console.log('Step 2: Syncing clubs and venues (full sync)...');
+      const clubResult = await syncClubs(competitionMap);
+      clubsUpserted = clubResult.clubsUpserted;
+      venuesUpserted = clubResult.venuesUpserted;
+      clubErrors = clubResult.errors;
+    } else {
+      console.log('Step 2: Skipped clubs/venues (priority run)');
+    }
 
     // Step 3: Standings
-    console.log('Step 3: Syncing league standings...');
-    const { standingsUpserted, errors: standingErrors } = await syncStandings(competitionMap);
+    console.log(`Step 3: Syncing standings for ${filteredMap.size} competitions...`);
+    const { standingsUpserted, errors: standingErrors } = await syncStandings(filteredMap);
 
     // Step 4: Fixtures
-    console.log('Step 4: Syncing fixtures...');
-    const { matchesUpserted, errors: fixtureErrors } = await syncFixtures(competitionMap);
+    console.log(`Step 4: Syncing fixtures for ${filteredMap.size} competitions...`);
+    const { matchesUpserted, errors: fixtureErrors } = await syncFixtures(filteredMap);
 
     const allErrors = [...compErrors, ...clubErrors, ...standingErrors, ...fixtureErrors];
     const duration = Date.now() - startTime;
