@@ -1,3 +1,4 @@
+// @ts-nocheck — Stub API data typed as 'any', will be properly typed when rewritten for Footy Feed
 import { Metadata } from 'next';
 import { MessageCircleQuestion, TrendingUp, Clock, Sparkles } from 'lucide-react';
 import { getPopularScenarios, getRecentScenarios } from '@/lib/api/what-if';

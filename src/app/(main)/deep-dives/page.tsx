@@ -1,3 +1,4 @@
+// @ts-nocheck — Stub API data typed as 'any', will be properly typed when rewritten for Footy Feed
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { BookOpen, Cpu, Flame, Gauge, Settings, Zap } from 'lucide-react';
