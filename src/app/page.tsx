@@ -14,7 +14,7 @@ import { desc, eq, gte, asc, isNotNull, and, sql } from 'drizzle-orm';
 import type { NewsArticle, CredibilityRating } from '@/types';
 import { SITE_CONFIG, DEFAULT_KEYWORDS, generateFAQStructuredData, HOMEPAGE_FAQ, jsonLd, JsonLdScript } from '@/lib/seo';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
-import { AdSlot } from '@/components/ads/AdSlot';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -238,13 +238,7 @@ export default async function HomePage() {
         {/* Featured Section: Hero + Side Grid */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            {heroArticle ? (
-              <HeroArticle article={heroArticle} />
-            ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg bg-white dark:bg-zinc-800">
-                <p className="text-zinc-500 dark:text-zinc-400">No news articles yet</p>
-              </div>
-            )}
+            {heroArticle && <HeroArticle article={heroArticle} />}
           </div>
 
           <div className="lg:col-span-2">
@@ -266,10 +260,6 @@ export default async function HomePage() {
             ))}
           </section>
         )}
-
-        <div className="mt-6">
-          <AdSlot format="horizontal" />
-        </div>
 
         {/* Daily Roundup Widget */}
         <section className="mt-6">
@@ -314,32 +304,23 @@ export default async function HomePage() {
           <NewsletterCTA source="homepage" variant="banner" />
         </section>
 
-        <div className="mt-6">
-          <AdSlot format="auto" />
-        </div>
-
         {/* More News + Sidebar */}
-        {latestArticles.length > 0 && (
         <section className="mt-8">
-          <div className="mb-4 flex items-center gap-2">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">More News</h2>
-          </div>
-
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* News List */}
             <div className="lg:col-span-2">
-                <div className="space-y-3">
-                  {latestArticles.slice(0, 15).map((article, i) => (
-                    <div key={article.id}>
-                      <NewsListItem article={article} />
-                      {i === 4 && (
-                        <div className="my-4">
-                          <AdSlot format="fluid" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+              {latestArticles.length > 0 && (
+                <>
+                  <div className="mb-4 flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">More News</h2>
+                  </div>
+                  <div className="space-y-3">
+                    {latestArticles.slice(0, 15).map((article) => (
+                      <NewsListItem key={article.id} article={article} />
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="mt-4 text-center">
                 <Link
@@ -452,12 +433,9 @@ export default async function HomePage() {
                   </div>
                 </div>
               )}
-
-              <AdSlot format="vertical" />
             </aside>
           </div>
         </section>
-        )}
 
       </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { TechnicalTermPopover } from './TechnicalTermPopover';
-import { InArticleAd } from '@/components/ads/AdSlot';
+
 
 interface AnnotatedTerm {
   term: string;
@@ -98,9 +98,6 @@ export function AnnotatedParagraphs({
             terms={termsByParagraph[index] || []}
             className={paragraphClassName}
           />
-          {showAds && (index + 1) % adInterval === 0 && index < paragraphs.length - 2 && (
-            <InArticleAd className="my-6" />
-          )}
         </div>
       ))}
     </div>

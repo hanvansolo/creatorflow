@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
-import Script from 'next/script';
+
 import { Geist, Geist_Mono } from 'next/font/google';
 import { LocationProvider } from '@/context/LocationContext';
 import { Header } from '@/components/layout/Header';
@@ -52,12 +52,6 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <JsonLdScript data={websiteStructuredData} />
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8717247095472771"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-        />
-        <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 antialiased`}

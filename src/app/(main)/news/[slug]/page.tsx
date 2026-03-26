@@ -9,7 +9,7 @@ import { CredibilityBadge } from '@/components/news/CredibilityBadge';
 import { VoteButtons } from '@/components/news/VoteButtons';
 import { SourceFavicon } from '@/components/news/SourceFavicon';
 import { Card, CardContent } from '@/components/ui/Card';
-import { InArticleAd } from '@/components/ads/AdSlot';
+
 import { CommentSection } from '@/components/comments/CommentSection';
 import { AnnotatedParagraphs } from '@/components/deep-dives/AnnotatedContent';
 import { db, newsArticles, newsSources, comments } from '@/lib/db';
@@ -256,13 +256,10 @@ export default async function NewsArticlePage({ params }: PageProps) {
               termsByParagraph={annotatedContent.termsByParagraph}
               className="space-y-4"
               paragraphClassName="text-zinc-300 leading-relaxed"
-              adInterval={5}
+              adInterval={0}
             />
           </div>
         )}
-
-        {/* Ad placement after article content */}
-        <InArticleAd />
 
         {/* Source Link */}
         <Card className="mt-4">
