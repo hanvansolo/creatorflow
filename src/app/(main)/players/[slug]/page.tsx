@@ -2,11 +2,10 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, User, ArrowRight, Newspaper, Shield, Banknote, FileText } from 'lucide-react';
-import { db, players, clubs, newsArticles } from '@/lib/db';
+import { ArrowLeft, User, Newspaper, Shield, Banknote, FileText, BarChart3, Activity } from 'lucide-react';
+import { db, players, clubs, newsArticles, playerSeasonStats, competitionSeasons, competitions } from '@/lib/db';
 import { eq, ilike, or, desc, sql } from 'drizzle-orm';
 import { createPageMetadata } from '@/lib/seo';
-import { PlayerWidget } from '@/components/widgets/ApiFootballWidget';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +51,37 @@ export default async function PlayerDetailPage({ params }: PageProps) {
 
   const name = player.knownAs || `${player.firstName} ${player.lastName}`;
   const posStyle = POSITION_COLORS[player.position] || POSITION_COLORS.MID;
+
+  // Fetch season stats with competition and club info
+  const seasonStats = await db
+    .select({
+      appearances: playerSeasonStats.appearances,
+      starts: playerSeasonStats.starts,
+      minutesPlayed: playerSeasonStats.minutesPlayed,
+      goals: playerSeasonStats.goals,
+      assists: playerSeasonStats.assists,
+      yellowCards: playerSeasonStats.yellowCards,
+      redCards: playerSeasonStats.redCards,
+      cleanSheets: playerSeasonStats.cleanSheets,
+      penaltiesScored: playerSeasonStats.penaltiesScored,
+      penaltiesMissed: playerSeasonStats.penaltiesMissed,
+      passAccuracy: playerSeasonStats.passAccuracy,
+      shotsOnTarget: playerSeasonStats.shotsOnTarget,
+      tackles: playerSeasonStats.tackles,
+      interceptions: playerSeasonStats.interceptions,
+      saves: playerSeasonStats.saves,
+      averageRating: playerSeasonStats.averageRating,
+      competitionName: competitions.name,
+      competitionShortName: competitions.shortName,
+      clubName: clubs.name,
+      clubSlug: clubs.slug,
+      clubLogoUrl: clubs.logoUrl,
+    })
+    .from(playerSeasonStats)
+    .innerJoin(competitionSeasons, eq(playerSeasonStats.competitionSeasonId, competitionSeasons.id))
+    .innerJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
+    .leftJoin(clubs, eq(playerSeasonStats.clubId, clubs.id))
+    .where(eq(playerSeasonStats.playerId, player.id));
 
   // Fetch related news articles mentioning the player
   const relatedNews = await db
@@ -152,7 +182,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
               <p className="text-sm font-semibold text-emerald-400 group-hover:text-emerald-300 transition-colors truncate">
                 {player.currentClub.name}
               </p>
-              <span className="text-[10px] text-zinc-500">View team →</span>
+              <span className="text-[10px] text-zinc-500">View team &rarr;</span>
             </Link>
           )}
           {player.marketValue && (
@@ -191,15 +221,99 @@ export default async function PlayerDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* API-Football Player Widget */}
-        {player.apiFootballId ? (
-          <div className="rounded-xl overflow-hidden border border-zinc-700/50">
-            <PlayerWidget playerId={player.apiFootballId} />
+        {/* Physical info */}
+        {(player.height || player.weight) && (
+          <div className="mb-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {player.height && (
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Activity className="h-3.5 w-3.5 text-zinc-500" />
+                  <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Height</span>
+                </div>
+                <p className="text-lg font-semibold text-white">{player.height} cm</p>
+              </div>
+            )}
+            {player.weight && (
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Activity className="h-3.5 w-3.5 text-zinc-500" />
+                  <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Weight</span>
+                </div>
+                <p className="text-lg font-semibold text-white">{player.weight} kg</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Season Stats */}
+        {seasonStats.length > 0 ? (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Season Statistics</h2>
+            </div>
+            <div className="space-y-4">
+              {seasonStats.map((stat, i) => (
+                <div key={i} className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    {stat.clubLogoUrl && (
+                      <img src={stat.clubLogoUrl} alt="" className="h-5 w-5 object-contain" />
+                    )}
+                    <p className="text-sm font-medium text-emerald-400">{stat.competitionName}</p>
+                    {stat.clubName && (
+                      <Link href={`/teams/${stat.clubSlug}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                        {stat.clubName}
+                      </Link>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-8 gap-3">
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Apps</p>
+                      <p className="text-xl font-bold text-white">{stat.appearances ?? 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Goals</p>
+                      <p className="text-xl font-bold text-white">{stat.goals ?? 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Assists</p>
+                      <p className="text-xl font-bold text-white">{stat.assists ?? 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Minutes</p>
+                      <p className="text-lg font-semibold text-zinc-300">{(stat.minutesPlayed ?? 0).toLocaleString()}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">YC</p>
+                      <p className={`text-lg font-semibold ${(stat.yellowCards ?? 0) > 0 ? 'text-yellow-400' : 'text-zinc-500'}`}>{stat.yellowCards ?? 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">RC</p>
+                      <p className={`text-lg font-semibold ${(stat.redCards ?? 0) > 0 ? 'text-red-400' : 'text-zinc-500'}`}>{stat.redCards ?? 0}</p>
+                    </div>
+                    {(player.position === 'GK' || player.position === 'DEF') && (
+                      <div className="text-center">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">CS</p>
+                        <p className="text-lg font-semibold text-zinc-300">{stat.cleanSheets ?? 0}</p>
+                      </div>
+                    )}
+                    {stat.averageRating && (
+                      <div className="text-center">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Rating</p>
+                        <p className={`text-xl font-bold ${Number(stat.averageRating) >= 7 ? 'text-emerald-400' : Number(stat.averageRating) >= 6 ? 'text-yellow-400' : 'text-red-400'}`}>
+                          {Number(stat.averageRating).toFixed(1)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800 p-12 text-center">
-            <User className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-            <p className="text-zinc-400">Player data is being synced. Check back soon.</p>
+          <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800 p-12 text-center">
+            <BarChart3 className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+            <p className="text-zinc-400">Season statistics are being synced. Check back soon.</p>
           </div>
         )}
 
