@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { matchEvents, matchStats, matchAnalysis, players, clubs } from '@/lib/db/schema';
 import { eq, desc, asc, sql } from 'drizzle-orm';
+import { getFixtureEvents, getFixtureStatistics, mapEventType } from '@/lib/api/football-api';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -30,9 +31,9 @@ async function getMatch(id: string) {
     SELECT
       m.*,
       hc.name as home_name, hc.slug as home_slug, hc.code as home_code,
-      hc.primary_color as home_color, hc.logo_url as home_logo,
+      hc.primary_color as home_color, hc.logo_url as home_logo, hc.api_football_id as home_api_id,
       ac.name as away_name, ac.slug as away_slug, ac.code as away_code,
-      ac.primary_color as away_color, ac.logo_url as away_logo,
+      ac.primary_color as away_color, ac.logo_url as away_logo, ac.api_football_id as away_api_id,
       comp.name as competition_name, comp.slug as competition_slug,
       v.name as venue_name, v.city as venue_city
     FROM matches m
@@ -235,15 +236,72 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   if (!match) notFound();
 
-  const [events, stats, analyses] = await Promise.all([
+  let [events, stats, analyses] = await Promise.all([
     getMatchEvents(id),
     getMatchStats(id),
     getMatchAnalysis(id),
   ]);
 
-  const homeStats = stats.find((s: any) => s.club_id === match.home_club_id);
-  const awayStats = stats.find((s: any) => s.club_id === match.away_club_id);
-  const latestAnalysis = analyses[0] ?? null;
+  // If no events/stats in DB but we have an API-Football ID, fetch on demand
+  if ((events as any[]).length === 0 && match.api_football_id) {
+    try {
+      const apiEvents = await getFixtureEvents(match.api_football_id);
+      if (apiEvents.response && apiEvents.response.length > 0) {
+        events = apiEvents.response.map((e: any) => ({
+          event_type: mapEventType(e.type, e.detail),
+          minute: e.time.elapsed,
+          added_time: e.time.extra,
+          player_known_as: e.player?.name,
+          player_first_name: null,
+          player_last_name: null,
+          second_player_known_as: e.assist?.name,
+          second_player_first_name: null,
+          second_player_last_name: null,
+          club_name: e.team?.name,
+          club_code: null,
+          club_id: null,
+          description: e.detail,
+        }));
+      }
+    } catch (e) {
+      console.error('[Match] Failed to fetch API events:', e);
+    }
+  }
+
+  if ((stats as any[]).length === 0 && match.api_football_id) {
+    try {
+      const apiStats = await getFixtureStatistics(match.api_football_id);
+      if (apiStats.response && apiStats.response.length >= 2) {
+        const parseVal = (v: any) => v === null ? null : typeof v === 'string' ? parseInt(v.replace('%','')) : v;
+        const getStat = (arr: any[], type: string) => arr.find((s: any) => s.type === type)?.value ?? null;
+        stats = apiStats.response.map((team: any) => ({
+          club_name: team.team.name,
+          club_code: null,
+          club_id: team.team.id === match.home_api_id ? match.home_club_id : match.away_club_id,
+          possession: parseVal(getStat(team.statistics, 'Ball Possession')),
+          shots_total: parseVal(getStat(team.statistics, 'Total Shots')),
+          shots_on_target: parseVal(getStat(team.statistics, 'Shots on Goal')),
+          shots_off_target: parseVal(getStat(team.statistics, 'Shots off Goal')),
+          corners: parseVal(getStat(team.statistics, 'Corner Kicks')),
+          fouls: parseVal(getStat(team.statistics, 'Fouls')),
+          offsides: parseVal(getStat(team.statistics, 'Offsides')),
+          yellow_cards: parseVal(getStat(team.statistics, 'Yellow Cards')),
+          red_cards: parseVal(getStat(team.statistics, 'Red Cards')),
+          saves: parseVal(getStat(team.statistics, 'Goalkeeper Saves')),
+          passes_total: parseVal(getStat(team.statistics, 'Total passes')),
+          passes_accurate: parseVal(getStat(team.statistics, 'Passes accurate')),
+          pass_accuracy: parseVal(getStat(team.statistics, 'Passes %')),
+          expected_goals: getStat(team.statistics, 'expected_goals'),
+        }));
+      }
+    } catch (e) {
+      console.error('[Match] Failed to fetch API stats:', e);
+    }
+  }
+
+  const homeStats = (stats as any[]).find((s: any) => s.club_name === match.home_name || s.club_id === match.home_club_id);
+  const awayStats = (stats as any[]).find((s: any) => s.club_name === match.away_name || s.club_id === match.away_club_id);
+  const latestAnalysis = (analyses as any[])[0] ?? null;
   const kickoff = new Date(match.kickoff);
   const isScheduled = match.status === 'scheduled';
   const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
