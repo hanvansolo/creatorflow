@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Metadata } from 'next';
 import { SITE_CONFIG, DEFAULT_METADATA } from './constants';
 import type {

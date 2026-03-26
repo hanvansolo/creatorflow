@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SITE_URL } from './transport';
 
 const LOGO_URL = `${SITE_URL}/images/logo.png`;

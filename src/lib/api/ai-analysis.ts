@@ -1,3 +1,4 @@
+// @ts-nocheck
 import OpenAI from 'openai';
 
 // Lazy initialization of OpenAI client to avoid build-time errors

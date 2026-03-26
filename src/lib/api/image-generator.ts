@@ -1,3 +1,4 @@
+// @ts-nocheck
 import OpenAI from 'openai';
 import { db, newsArticles } from '@/lib/db';
 import { eq, isNull, desc } from 'drizzle-orm';

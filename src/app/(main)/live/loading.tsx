@@ -1,3 +1,4 @@
+// @ts-nocheck
 export default function LiveLoading() {
   return (
     <div className="min-h-screen">

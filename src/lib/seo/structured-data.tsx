@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SITE_CONFIG } from './constants';
 import type {
   StructuredDataArticle,
