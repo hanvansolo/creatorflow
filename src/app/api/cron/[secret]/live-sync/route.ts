@@ -65,9 +65,21 @@ export async function GET(
     const liveResponse = await getLiveFixtures();
     const liveFixtures = liveResponse.response;
 
+    // Clean up stale "live" matches in our DB — if API says no live matches,
+    // any match in our DB still marked as live that kicked off 3+ hours ago is finished
+    const { inArray } = await import('drizzle-orm');
+    const liveStatuses = ['live', 'halftime', 'extra_time', 'penalties'];
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
+    await db.execute(sql`
+      UPDATE matches SET status = 'finished'
+      WHERE status IN ('live', 'halftime', 'extra_time', 'penalties')
+      AND kickoff < ${threeHoursAgo.toISOString()}
+    `);
+
     if (!liveFixtures || liveFixtures.length === 0) {
       console.log('[live-sync] No live matches found');
-      return NextResponse.json({ message: 'No live matches', updated: 0 });
+      return NextResponse.json({ message: 'No live matches', updated: 0, staleCleanup: true });
     }
 
     console.log(`[live-sync] Found ${liveFixtures.length} live matches`);
