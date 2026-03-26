@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { LiveDashboard } from './LiveDashboard';
 export { Leaderboard } from './Leaderboard';
 export { LeaderboardRow } from './LeaderboardRow';

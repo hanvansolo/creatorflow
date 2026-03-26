@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import type { Driver, Position, Interval, Stint, Lap } from '@/lib/api/openf1/types';

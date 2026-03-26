@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/Badge';

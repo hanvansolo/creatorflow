@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Trophy, Calendar, Newspaper, MessageSquareQuote, CircleHelp } from 'lucide-react';

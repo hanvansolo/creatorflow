@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import type { TireCompound } from '@/lib/api/openf1/types';

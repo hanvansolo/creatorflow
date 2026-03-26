@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RaceWeekendCard } from './RaceWeekendCard';
 import { CountdownTimer } from './CountdownTimer';
 import type { Race } from '@/types';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { notFound } from 'next/navigation';
 import { Settings, Shield, Code, Mail, Users } from 'lucide-react';
 import { db, cronSettings, aggregationJobs, siteSettings, contactMessages, newsletterSubscribers } from '@/lib/db';

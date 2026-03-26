@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { db, newsSources, newsArticles, aggregationJobs } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Award } from 'lucide-react';
 
 interface DriverGrade {

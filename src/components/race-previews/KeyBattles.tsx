@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

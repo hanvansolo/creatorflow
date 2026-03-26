@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { History, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

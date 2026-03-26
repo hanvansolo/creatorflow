@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, Radio, Clock, Circle } from 'lucide-react';

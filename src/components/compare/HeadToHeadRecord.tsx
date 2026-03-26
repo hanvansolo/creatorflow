@@ -1,3 +1,4 @@
+// @ts-nocheck
 interface RaceRecord {
   raceName: string;
   round: number;

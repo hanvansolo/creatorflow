@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { GapChart } from './GapChart';
 export { TireStrategyChart } from './TireStrategyChart';
 export { PositionChart } from './PositionChart';

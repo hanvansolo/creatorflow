@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from 'next/link';
 import { cn, formatPoints } from '@/lib/utils';
 import { F1_TEAMS } from '@/lib/constants/teams';

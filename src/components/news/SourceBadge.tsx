@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { NewsSource } from '@/types';

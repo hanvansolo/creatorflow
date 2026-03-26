@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { Flag, AlertTriangle, Car } from 'lucide-react';

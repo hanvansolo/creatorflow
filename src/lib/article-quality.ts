@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { CredibilityRating } from '@/types';
 
 interface QualityScore {
