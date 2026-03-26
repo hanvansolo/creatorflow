@@ -85,13 +85,13 @@ async function syncCompetitionsAndSeasons() {
         competitionId = inserted.id;
       }
 
-      // Get current season from API
-      let seasonYear = new Date().getFullYear();
+      // Get current season from API — MUST use the API's season year, not the calendar year
+      let seasonYear: number | null = null;
       try {
         const leagueData = await getLeagues({ id: comp.apiFootballId });
         if (leagueData.response.length > 0) {
           const apiLeague = leagueData.response[0];
-          const currentSeason = apiLeague.seasons.find((s) => s.current);
+          const currentSeason = apiLeague.seasons.find((s: any) => s.current);
           if (currentSeason) {
             seasonYear = currentSeason.year;
           }
@@ -104,7 +104,13 @@ async function syncCompetitionsAndSeasons() {
           }
         }
       } catch (err) {
-        console.warn(`Could not fetch league info for ${comp.name}, using default year ${seasonYear}:`, err);
+        console.warn(`Could not fetch league info for ${comp.name}:`, err);
+      }
+
+      // Skip this competition if we couldn't determine the season
+      if (seasonYear === null) {
+        console.warn(`Skipping ${comp.name}: could not determine current season`);
+        continue;
       }
 
       // Upsert season
