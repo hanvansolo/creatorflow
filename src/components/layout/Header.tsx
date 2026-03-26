@@ -21,8 +21,8 @@ export function Header() {
             <Image
               src={logo}
               alt="Footy Feed"
-              height={40}
-              className="h-10 w-auto"
+              height={56}
+              className="h-14 w-auto"
               priority
             />
           </Link>
