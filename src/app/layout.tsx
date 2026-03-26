@@ -14,6 +14,7 @@ import {
   JsonLdScript,
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
+import Script from 'next/script';
 import './globals.css';
 
 const geistSans = Geist({
@@ -52,6 +53,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <JsonLdScript data={websiteStructuredData} />
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8717247095472771"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 antialiased`}
