@@ -302,7 +302,8 @@ export default async function FixturesPage({ searchParams }: PageProps) {
                     const isScheduled = match.status === 'scheduled';
 
                     return (
-                      <div
+                      <Link
+                        href={`/matches/${match.id}`}
                         key={match.id}
                         className={`flex items-center px-4 py-3 bg-zinc-900 hover:bg-zinc-800/50 transition-colors ${
                           isLive ? 'border-l-2 border-l-emerald-500' : ''
@@ -359,7 +360,7 @@ export default async function FixturesPage({ searchParams }: PageProps) {
                         {match.referee && (
                           <span className="hidden lg:block text-[10px] text-zinc-600 ml-3 shrink-0">{match.referee}</span>
                         )}
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

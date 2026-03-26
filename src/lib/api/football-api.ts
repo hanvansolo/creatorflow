@@ -274,6 +274,11 @@ export async function getFixtureEvents(fixtureId: number) {
   return apiFetch<ApiFixtureEvent[]>('/fixtures/events', { fixture: fixtureId });
 }
 
+/** Get statistics for a fixture */
+export async function getFixtureStatistics(fixtureId: number) {
+  return apiFetch<Array<{ team: { id: number; name: string }; statistics: Array<{ type: string; value: number | string | null }> }>>('/fixtures/statistics', { fixture: fixtureId });
+}
+
 /** Get lineups for a fixture */
 export async function getFixtureLineups(fixtureId: number) {
   return apiFetch<ApiLineup[]>('/fixtures/lineups', { fixture: fixtureId });

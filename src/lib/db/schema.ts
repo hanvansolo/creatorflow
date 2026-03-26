@@ -202,6 +202,50 @@ export const matchLineups = pgTable('match_lineups', {
   uniqueIndex('idx_match_lineups_unique').on(table.matchId, table.playerId),
 ]);
 
+// ===== MATCH STATISTICS =====
+export const matchStats = pgTable('match_stats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  matchId: uuid('match_id').references(() => matches.id, { onDelete: 'cascade' }).notNull(),
+  clubId: uuid('club_id').references(() => clubs.id).notNull(),
+  possession: integer('possession'), // percentage
+  shotsTotal: integer('shots_total').default(0),
+  shotsOnTarget: integer('shots_on_target').default(0),
+  shotsOffTarget: integer('shots_off_target').default(0),
+  corners: integer('corners').default(0),
+  fouls: integer('fouls').default(0),
+  offsides: integer('offsides').default(0),
+  yellowCards: integer('yellow_cards').default(0),
+  redCards: integer('red_cards').default(0),
+  saves: integer('saves').default(0),
+  passesTotal: integer('passes_total'),
+  passesAccurate: integer('passes_accurate'),
+  passAccuracy: integer('pass_accuracy'), // percentage
+  expectedGoals: decimal('expected_goals', { precision: 4, scale: 2 }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  uniqueIndex('idx_match_stats_unique').on(table.matchId, table.clubId),
+  index('idx_match_stats_match').on(table.matchId),
+]);
+
+// ===== MATCH AI ANALYSIS =====
+export const matchAnalysis = pgTable('match_analysis', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  matchId: uuid('match_id').references(() => matches.id, { onDelete: 'cascade' }).notNull(),
+  analysisType: varchar('analysis_type', { length: 30 }).notNull(), // prediction, commentary, tactical, momentum
+  minute: integer('minute'), // match minute when analysis was generated
+  title: text('title'),
+  content: text('content').notNull(),
+  prediction: jsonb('prediction'), // { homeWinPct, drawPct, awayWinPct, expectedScore, confidence }
+  momentum: varchar('momentum', { length: 10 }), // home, away, neutral
+  keyInsight: text('key_insight'), // one-line headline insight
+  triggeredBy: varchar('triggered_by', { length: 50 }), // goal, red_card, halftime, kickoff, var_decision
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_match_analysis_match').on(table.matchId),
+  index('idx_match_analysis_type').on(table.analysisType),
+]);
+
 // ===== LEAGUE STANDINGS =====
 export const leagueStandings = pgTable('league_standings', {
   id: uuid('id').primaryKey().defaultRandom(),
