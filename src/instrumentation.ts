@@ -105,7 +105,9 @@ export async function register() {
   }
 
   const secret = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  // Use internal port for self-fetch — Railway uses PORT env var (usually 8080)
+  const port = process.env.PORT || '3000';
+  const baseUrl = `http://localhost:${port}`;
 
   // Load settings from DB (intervals + enabled/disabled)
   const dbSettings = await loadSettingsFromDB();
