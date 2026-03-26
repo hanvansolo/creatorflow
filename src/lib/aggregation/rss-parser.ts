@@ -144,7 +144,35 @@ export async function parseFeed(config: RSSFeedConfig): Promise<ParsedArticle[]>
       // Decode HTML entities in title and content
       const decodedTitle = decodeHtmlEntities(item.title.trim());
       const decodedSummary = summary ? decodeHtmlEntities(summary) : undefined;
-      const decodedContent = item.content ? decodeHtmlEntities(item.content) : undefined;
+
+      // Clean content: strip HTML, remove promotional junk
+      let decodedContent: string | undefined;
+      if (item.content) {
+        let cleaned = item.content
+          .replace(/<[^>]*>/g, ' ')       // strip HTML tags
+          .replace(/\s+/g, ' ')            // collapse whitespace
+          .trim();
+        cleaned = decodeHtmlEntities(cleaned);
+
+        // Remove common promotional patterns
+        const junkPatterns = [
+          /DOWNLOAD THE OFFICIAL.*?(PLAY|STORE)\s*/gi,
+          /The post\s+.*?appeared first on\s+.*?\.?\s*$/gi,
+          /Click here to.*$/gi,
+          /Subscribe to.*$/gi,
+          /Sign up for.*$/gi,
+          /Read more at.*$/gi,
+          /Continue reading.*$/gi,
+          /For more stories like this.*$/gi,
+          /\[…\]/g,
+          /\[\.\.\.\]/g,
+        ];
+        for (const pattern of junkPatterns) {
+          cleaned = cleaned.replace(pattern, '').trim();
+        }
+
+        decodedContent = cleaned || undefined;
+      }
 
       const articleUrl = item.link;
       const author = item.creator || (item as any).dcCreator;
