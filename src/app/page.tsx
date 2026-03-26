@@ -138,6 +138,20 @@ async function getLatestNews(): Promise<NewsArticle[]> {
 
 async function getLeagueTable() {
   try {
+    // Try Premier League first, fall back to any league with standings
+    let leagueFilter = eq(competitions.slug, 'premier-league');
+    const plCheck = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(leagueStandings)
+      .leftJoin(competitionSeasons, eq(leagueStandings.competitionSeasonId, competitionSeasons.id))
+      .leftJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
+      .where(eq(competitions.slug, 'premier-league'));
+
+    if (Number(plCheck[0]?.count || 0) === 0) {
+      // Fall back to whichever league has standings
+      leagueFilter = sql`${competitions.type} = 'league'` as any;
+    }
+
     const standings = await db
       .select({
         position: leagueStandings.position,
@@ -155,14 +169,15 @@ async function getLeagueTable() {
         clubCode: clubs.code,
         clubColor: clubs.primaryColor,
         clubLogoUrl: clubs.logoUrl,
+        competitionName: competitions.name,
       })
       .from(leagueStandings)
       .leftJoin(clubs, eq(leagueStandings.clubId, clubs.id))
       .leftJoin(competitionSeasons, eq(leagueStandings.competitionSeasonId, competitionSeasons.id))
       .leftJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
-      .where(eq(competitions.slug, 'premier-league'))
+      .where(leagueFilter)
       .orderBy(asc(leagueStandings.position))
-      .limit(6);
+      .limit(8);
 
     return standings;
   } catch {
@@ -428,7 +443,7 @@ export default async function HomePage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-emerald-400" />
-                        <span className="text-sm font-bold text-white tracking-tight">PREMIER LEAGUE</span>
+                        <span className="text-sm font-bold text-white tracking-tight">{(standings[0]?.competitionName || 'LEAGUE TABLE').toUpperCase()}</span>
                       </div>
                       <Link href="/tables" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
                         Full table →
