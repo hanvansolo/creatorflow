@@ -45,7 +45,7 @@ export async function GET(
   console.log('[FixImages] Starting broken image check...');
   const storageDir = getStorageDir();
 
-  // Get articles with local image paths (these are the ones that might be broken)
+  // Get articles that need images: either broken local paths or NULL image URLs
   const articles = await db
     .select({
       id: newsArticles.id,
@@ -57,7 +57,8 @@ export async function GET(
     .where(
       or(
         like(newsArticles.imageUrl, '/api/images/%'),
-        like(newsArticles.imageUrl, '/images/articles/%')
+        like(newsArticles.imageUrl, '/images/articles/%'),
+        isNull(newsArticles.imageUrl)
       )
     )
     .orderBy(desc(newsArticles.publishedAt))
@@ -69,22 +70,21 @@ export async function GET(
   let cleared = 0;
 
   for (const article of articles) {
-    if (!article.imageUrl) continue;
     checked++;
 
-    // Extract filename from path
-    const filename = article.imageUrl.split('/').pop();
-    if (!filename) continue;
-
-    const filepath = path.join(storageDir, filename);
-
-    // Check if file exists
-    if (await fileExists(filepath)) {
-      alreadyOk++;
-      continue;
+    // If article has an existing local image path, check if file exists
+    if (article.imageUrl) {
+      const filename = article.imageUrl.split('/').pop();
+      if (filename) {
+        const filepath = path.join(storageDir, filename);
+        if (await fileExists(filepath)) {
+          alreadyOk++;
+          continue;
+        }
+      }
     }
 
-    // File is missing - try to re-scrape and download from original article
+    // Image missing or null — try to scrape and download from original article
     if (article.originalUrl) {
       console.log(`[FixImages] Missing: ${article.title.slice(0, 40)}... - trying to re-scrape`);
       const scrapedUrl = await scrapeArticleImage(article.originalUrl);
