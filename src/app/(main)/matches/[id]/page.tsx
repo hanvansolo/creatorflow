@@ -248,6 +248,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     try {
       apiFetchStatus = `Fetching events for fixture ${match.api_football_id}...`;
       const apiEvents = await getFixtureEvents(match.api_football_id);
+      apiFetchStatus += ` API returned: results=${apiEvents.results}, responseLen=${apiEvents.response?.length}, errors=${JSON.stringify(apiEvents.errors || {}).slice(0, 100)}`;
       if (apiEvents.response && apiEvents.response.length > 0) {
         events = apiEvents.response.map((e: any) => ({
           event_type: mapEventType(e.type, e.detail),
