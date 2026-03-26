@@ -14,6 +14,7 @@ import {
   JsonLdScript,
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
+import { WidgetConfig } from '@/components/widgets/ApiFootballWidget';
 import './globals.css';
 
 const geistSans = Geist({
@@ -68,6 +69,9 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <NewsletterPopup />
+            {process.env.API_FOOTBALL_KEY && (
+              <WidgetConfig apiKey={process.env.API_FOOTBALL_KEY} theme="dark" />
+            )}
           </div>
         </LocationProvider>
         <Suspense fallback={null}>
