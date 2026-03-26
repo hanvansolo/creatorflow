@@ -261,7 +261,7 @@ export const leagueStandings = pgTable('league_standings', {
   goalDifference: integer('goal_difference').default(0),
   points: integer('points').default(0),
   form: jsonb('form'), // last 5 results: ["W","W","D","L","W"]
-  group: varchar('group', { length: 10 }), // for group-stage competitions: "A", "B", etc.
+  group: varchar('group', { length: 100 }), // group name from API — can be league name or "A", "B", etc.
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
