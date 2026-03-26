@@ -1,7 +1,7 @@
 // @ts-nocheck
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, Trophy, Calendar, Newspaper, MessageSquareQuote, CircleHelp } from 'lucide-react';
+import { ArrowRight, Trophy, Calendar, Newspaper, MessageSquareQuote, CircleHelp, TrendingUp, Table, Zap, BarChart3, ArrowUpRight, Mail } from 'lucide-react';
 import { HeroArticle } from '@/components/news/HeroArticle';
 import { CompactNewsCard } from '@/components/news/CompactNewsCard';
 import { HorizontalNewsCard } from '@/components/news/HorizontalNewsCard';
@@ -210,11 +210,33 @@ async function getLatestVideos() {
   return videos;
 }
 
+async function getTrendingArticles() {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const articles = await db
+    .select({
+      id: newsArticles.id,
+      title: newsArticles.title,
+      slug: newsArticles.slug,
+      imageUrl: newsArticles.imageUrl,
+      voteScore: newsArticles.voteScore,
+      publishedAt: newsArticles.publishedAt,
+      sourceName: newsSources.name,
+    })
+    .from(newsArticles)
+    .leftJoin(newsSources, eq(newsArticles.sourceId, newsSources.id))
+    .where(gte(newsArticles.publishedAt, oneDayAgo))
+    .orderBy(desc(newsArticles.voteScore))
+    .limit(5);
+
+  return articles;
+}
+
 export default async function HomePage() {
-  const [news, standings, latestVideos] = await Promise.all([
+  const [news, standings, latestVideos, trending] = await Promise.all([
     getLatestNews(),
     getLeagueTable(),
     getLatestVideos(),
+    getTrendingArticles(),
   ]);
 
   const mainNews = news.filter(a => a.credibilityRating !== 'opinion' && a.credibilityRating !== 'rumour');
@@ -335,20 +357,80 @@ export default async function HomePage() {
 
             {/* Sidebar */}
             <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
+
+              {/* Quick Links */}
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
+                <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-bold text-white tracking-tight">EXPLORE</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { href: '/tables', label: 'Tables', icon: Table },
+                      { href: '/fixtures', label: 'Fixtures', icon: Calendar },
+                      { href: '/live', label: 'Live Scores', icon: Zap },
+                      { href: '/transfers', label: 'Transfers', icon: ArrowUpRight },
+                      { href: '/predictions', label: 'Predictions', icon: BarChart3 },
+                      { href: '/videos', label: 'Videos', icon: Newspaper },
+                    ].map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="flex items-center gap-2 rounded-lg bg-zinc-800/50 border border-zinc-700/30 px-3 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-700/50 hover:border-emerald-500/30 transition-all"
+                      >
+                        <item.icon className="h-3.5 w-3.5 text-emerald-500" />
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Trending Articles */}
+              {trending.length > 0 && (
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
+                  <div className="h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-red-500" />
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="h-4 w-4 text-amber-400" />
+                      <span className="text-sm font-bold text-white tracking-tight">TRENDING</span>
+                    </div>
+                    <div className="space-y-3">
+                      {trending.map((article, i) => (
+                        <Link
+                          key={article.id}
+                          href={`/news/${article.slug}`}
+                          className="flex gap-3 group"
+                        >
+                          <span className="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-zinc-800 text-xs font-bold text-zinc-400 group-hover:bg-emerald-600/20 group-hover:text-emerald-400 transition-colors">
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
+                              {article.title}
+                            </p>
+                            <p className="text-[10px] text-zinc-500 mt-0.5">{article.sourceName}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* League Table Widget */}
               {standings.length > 0 && (
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
                   <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
-                  <div className="p-4 relative z-10">
+                  <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-emerald-400" />
                         <span className="text-sm font-bold text-white tracking-tight">PREMIER LEAGUE</span>
                       </div>
-                      <Link
-                        href="/tables"
-                        className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
+                      <Link href="/tables" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
                         Full table →
                       </Link>
                     </div>
@@ -368,10 +450,7 @@ export default async function HomePage() {
                             <td className="py-1.5 text-zinc-400">{s.position}</td>
                             <td className="py-1.5">
                               <div className="flex items-center gap-1.5">
-                                <div
-                                  className="h-2.5 w-2.5 rounded-full"
-                                  style={{ backgroundColor: s.clubColor || '#666' }}
-                                />
+                                <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.clubColor || '#666' }} />
                                 <span className="text-white font-medium">{s.clubCode || s.clubName}</span>
                               </div>
                             </td>
@@ -388,43 +467,43 @@ export default async function HomePage() {
                 </div>
               )}
 
+              {/* Newsletter Sidebar CTA */}
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
+                <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Mail className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-bold text-white tracking-tight">NEWSLETTER</span>
+                  </div>
+                  <p className="text-xs text-zinc-400 mb-3">
+                    Get the best football news delivered weekly. No spam, no waffle.
+                  </p>
+                  <NewsletterCTA source="sidebar" variant="inline" />
+                </div>
+              </div>
+
               {/* Latest Videos */}
               {latestVideos.length > 0 && (
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-700/50">
-                  <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500" />
-                  <div className="p-4 relative z-10">
+                  <div className="h-1 bg-gradient-to-r from-rose-500 via-red-400 to-orange-500" />
+                  <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <Newspaper className="h-4 w-4 text-emerald-400" />
+                        <Newspaper className="h-4 w-4 text-red-400" />
                         <span className="text-sm font-bold text-white tracking-tight">LATEST VIDEOS</span>
                       </div>
-                      <Link
-                        href="/videos"
-                        className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
+                      <Link href="/videos" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
                         All videos →
                       </Link>
                     </div>
                     <div className="space-y-3">
                       {latestVideos.slice(0, 4).map((video) => (
-                        <Link
-                          key={video.id}
-                          href={`/videos/${video.videoId}`}
-                          className="flex gap-3 group"
-                        >
+                        <Link key={video.id} href={`/videos/${video.videoId}`} className="flex gap-3 group">
                           {video.thumbnailUrl && (
-                            <Image
-                              src={video.thumbnailUrl}
-                              alt={video.title}
-                              width={120}
-                              height={68}
-                              className="rounded object-cover flex-shrink-0"
-                            />
+                            <Image src={video.thumbnailUrl} alt={video.title} width={120} height={68} className="rounded object-cover flex-shrink-0" />
                           )}
                           <div className="min-w-0">
-                            <p className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
-                              {video.title}
-                            </p>
+                            <p className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors line-clamp-2">{video.title}</p>
                             <p className="text-[10px] text-zinc-500 mt-1">{video.channelName}</p>
                           </div>
                         </Link>
