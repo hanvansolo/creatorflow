@@ -7,6 +7,7 @@ import { COMPETITIONS } from '@/lib/constants/competitions';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, ChevronLeft, ChevronRight, Info, Clock } from 'lucide-react';
+import { CompetitionSelector } from '@/components/competitions';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,9 +60,15 @@ function formatKickoff(kickoff: string): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-const QUICK_FILTERS = COMPETITIONS.filter(
-  c => ['premier-league', 'la-liga', 'serie-a', 'bundesliga', 'ligue-1', 'champions-league', 'europa-league', 'fa-cup'].includes(c.slug)
-);
+const ALL_COMPETITIONS = COMPETITIONS.map(c => ({
+  name: c.name,
+  slug: c.slug,
+  shortName: c.shortName,
+  type: c.type,
+  country: c.country,
+  countryCode: c.countryCode,
+  description: c.description,
+}));
 
 async function getMatches(date: string, competitionSlug?: string) {
   try {
@@ -235,34 +242,13 @@ export default async function FixturesPage({ searchParams }: PageProps) {
           </Link>
         </div>
 
-        {/* Competition filter pills */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/fixtures?date=${activeDate}`}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                !competition
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-              }`}
-            >
-              All
-            </Link>
-            {QUICK_FILTERS.map((comp) => (
-              <Link
-                key={comp.slug}
-                href={`/fixtures?date=${activeDate}&competition=${comp.slug}`}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                  competition === comp.slug
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-                }`}
-              >
-                {comp.shortName}
-              </Link>
-            ))}
-          </div>
-        </div>
+        {/* Competition selector */}
+        <CompetitionSelector
+          competitions={ALL_COMPETITIONS}
+          selectedSlug={competition || ''}
+          basePath="/fixtures"
+          extraParams={`&date=${activeDate}`}
+        />
 
         {/* Date display */}
         <div className="mb-5 flex items-center gap-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/30 px-4 py-2.5">

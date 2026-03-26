@@ -6,6 +6,18 @@ import { sql, gt, inArray } from 'drizzle-orm';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Radio, ArrowRight, Zap, Calendar, Trophy, Goal } from 'lucide-react';
+import { COMPETITIONS } from '@/lib/constants/competitions';
+import { CompetitionSelector } from '@/components/competitions';
+
+const ALL_COMPETITIONS = COMPETITIONS.map(c => ({
+  name: c.name,
+  slug: c.slug,
+  shortName: c.shortName,
+  type: c.type,
+  country: c.country,
+  countryCode: c.countryCode,
+  description: c.description,
+}));
 
 export const dynamic = 'force-dynamic';
 
@@ -102,7 +114,13 @@ function groupByCompetition(matches: LiveMatch[]): Record<string, LiveMatch[]> {
   return groups;
 }
 
-export default async function LiveScoresPage() {
+interface PageProps {
+  searchParams: Promise<{ competition?: string }>;
+}
+
+export default async function LiveScoresPage({ searchParams }: PageProps) {
+  const { competition } = await searchParams;
+
   // Count live matches from DB
   const liveStatuses = ['live', 'halftime', 'extra_time', 'penalties'];
   const liveCountResult = await db
@@ -139,7 +157,10 @@ export default async function LiveScoresPage() {
   }
 
   // Fetch live match details and events
-  const liveMatches = await getLiveMatches();
+  const allLiveMatches = await getLiveMatches();
+  const liveMatches = competition
+    ? allLiveMatches.filter(m => m.competition_slug === competition)
+    : allLiveMatches;
   const matchIds = liveMatches.map(m => m.id);
   const events = await getMatchEvents(matchIds);
   const grouped = groupByCompetition(liveMatches);
@@ -208,6 +229,13 @@ export default async function LiveScoresPage() {
             </div>
           )}
         </div>
+
+        {/* Competition selector */}
+        <CompetitionSelector
+          competitions={ALL_COMPETITIONS}
+          selectedSlug={competition || ''}
+          basePath="/live"
+        />
 
         {/* Live matches grouped by competition */}
         {competitionNames.length > 0 ? (

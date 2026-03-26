@@ -7,6 +7,7 @@ import { COMPETITIONS } from '@/lib/constants/competitions';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Trophy, ArrowRight, LayoutGrid } from 'lucide-react';
+import { CompetitionSelector } from '@/components/competitions';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,12 +104,10 @@ export default async function TablesPage({ searchParams }: PageProps) {
   const activeSlugs = await getActiveCompetitionSlugs();
 
   // Only show competitions that have standings data
-  const LEAGUE_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'league' && activeSlugs.has(c.slug));
-  const CUP_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'cup' && activeSlugs.has(c.slug));
-  const INTL_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'international' && activeSlugs.has(c.slug));
+  const activeCompetitions = COMPETITIONS.filter(c => activeSlugs.has(c.slug));
 
   // Default to first available competition
-  const defaultSlug = LEAGUE_COMPETITIONS[0]?.slug || CUP_COMPETITIONS[0]?.slug || INTL_COMPETITIONS[0]?.slug || 'premier-league';
+  const defaultSlug = activeCompetitions[0]?.slug || 'premier-league';
   const selectedSlug = competition || defaultSlug;
   const selected = COMPETITIONS.find(c => c.slug === selectedSlug) || COMPETITIONS[0];
   const standings = await getStandings(selectedSlug);
@@ -129,68 +128,12 @@ export default async function TablesPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Competition selector — grouped by type */}
-        <div className="mb-8 space-y-4">
-          {/* Leagues row */}
-          {LEAGUE_COMPETITIONS.length > 0 && <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Leagues</h3>
-            <div className="flex flex-wrap gap-2">
-              {LEAGUE_COMPETITIONS.map((comp) => (
-                <Link
-                  key={comp.slug}
-                  href={`/tables?competition=${comp.slug}`}
-                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
-                    selectedSlug === comp.slug
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-                  }`}
-                >
-                  {comp.shortName}
-                </Link>
-              ))}
-            </div>
-          </div>}
-
-          {/* Cups row */}
-          {CUP_COMPETITIONS.length > 0 && <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Cups</h3>
-            <div className="flex flex-wrap gap-2">
-              {CUP_COMPETITIONS.map((comp) => (
-                <Link
-                  key={comp.slug}
-                  href={`/tables?competition=${comp.slug}`}
-                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
-                    selectedSlug === comp.slug
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-                  }`}
-                >
-                  {comp.shortName}
-                </Link>
-              ))}
-            </div>
-          </div>}
-
-          {/* International row */}
-          {INTL_COMPETITIONS.length > 0 && <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">International</h3>
-            <div className="flex flex-wrap gap-2">
-              {INTL_COMPETITIONS.map((comp) => (
-                <Link
-                  key={comp.slug}
-                  href={`/tables?competition=${comp.slug}`}
-                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
-                    selectedSlug === comp.slug
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-                  }`}
-                >
-                  {comp.shortName}
-                </Link>
-              ))}
-            </div>
-          </div>}
-        </div>
+        {/* Competition selector */}
+        <CompetitionSelector
+          competitions={activeCompetitions}
+          selectedSlug={selectedSlug}
+          basePath="/tables"
+        />
 
         {/* Selected competition info */}
         <div className="mb-6 flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-5 py-3">
