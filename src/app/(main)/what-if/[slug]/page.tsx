@@ -127,7 +127,7 @@ export default async function ScenarioDetailPage({ params }: PageProps) {
           <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Detailed Analysis</h2>
             <div className="prose prose-invert prose-zinc max-w-none">
-              {scenario.detailedAnalysis.split('\n\n').map((paragraph, index) => (
+              {scenario.detailedAnalysis.split('\n\n').map((paragraph: string, index: number) => (
                 <p key={index} className="text-zinc-300 leading-relaxed mb-4 last:mb-0">
                   {paragraph}
                 </p>
