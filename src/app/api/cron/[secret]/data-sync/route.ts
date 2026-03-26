@@ -198,7 +198,9 @@ async function syncClubs(
     if (!mapped) continue;
 
     try {
+      console.log(`Fetching teams for ${comp.name} (league=${comp.apiFootballId}, season=${mapped.season})...`);
       const teamsData = await getTeams(comp.apiFootballId, mapped.season);
+      console.log(`Got ${teamsData.response.length} teams for ${comp.name}`, teamsData.errors);
 
       for (const teamEntry of teamsData.response) {
         const { team, venue } = teamEntry;
