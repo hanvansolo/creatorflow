@@ -10,7 +10,7 @@ const DEFAULT_JOBS = [
   { name: 'aggregate',         path: '/api/cron/{secret}/aggregate',         intervalMs: 15 * 60 * 1000,      delayMs: 30_000   },
   { name: 'youtube',           path: '/api/cron/{secret}/youtube',           intervalMs: 60 * 60 * 1000,      delayMs: 60_000   },
   { name: 'weather',           path: '/api/cron/{secret}/weather',           intervalMs: 30 * 60 * 1000,      delayMs: 90_000   },
-  { name: 'data-sync',         path: '/api/cron/{secret}/data-sync',         intervalMs: 12 * 60 * 60 * 1000, delayMs: 120_000  }, // Every 12h — priority leagues only. Use ?full=true for all 133
+  { name: 'data-sync',         path: '/api/cron/{secret}/data-sync?full=true', intervalMs: 12 * 60 * 60 * 1000, delayMs: 120_000  }, // Every 12h — full sync all 133 competitions
   { name: 'ai-analysis',       path: '/api/cron/{secret}/ai-analysis',       intervalMs: 6 * 60 * 60 * 1000,  delayMs: 150_000  },
   { name: 'predictions',       path: '/api/cron/{secret}/predictions',       intervalMs: 12 * 60 * 60 * 1000, delayMs: 180_000  },
   { name: 'roundup',           path: '/api/cron/{secret}/roundup',           intervalMs: 60 * 60 * 1000,      delayMs: 240_000  },
