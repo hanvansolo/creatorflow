@@ -193,12 +193,18 @@ async function syncClubs(
   let clubsUpserted = 0;
   let venuesUpserted = 0;
 
+  console.log(`[syncClubs] competitionMap has ${competitionMap.size} entries`);
+  console.log(`[syncClubs] COMPETITIONS has ${COMPETITIONS.length} items`);
   for (const comp of COMPETITIONS) {
+    console.log(`[syncClubs] Looking up ${comp.name} (apiFootballId=${comp.apiFootballId})...`);
     const mapped = competitionMap.get(comp.apiFootballId);
-    if (!mapped) continue;
+    if (!mapped) {
+      console.log(`[syncClubs] SKIP: ${comp.name} not in competitionMap`);
+      continue;
+    }
 
     try {
-      console.log(`Fetching teams for ${comp.name} (league=${comp.apiFootballId}, season=${mapped.season})...`);
+      console.log(`[syncClubs] Fetching teams for ${comp.name} (league=${comp.apiFootballId}, season=${mapped.season})...`);
       const teamsData = await getTeams(comp.apiFootballId, mapped.season);
       console.log(`Got ${teamsData.response.length} teams for ${comp.name}`, teamsData.errors);
 
