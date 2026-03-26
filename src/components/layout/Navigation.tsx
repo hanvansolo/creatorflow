@@ -13,6 +13,7 @@ const navItems = [
   { href: '/transfers', label: 'Transfers' },
   { href: '/videos', label: 'Videos' },
   { href: '/predictions', label: 'Predictions' },
+  { href: '/rules', label: 'Rules' },
 ];
 
 interface NavigationProps {

@@ -14,6 +14,7 @@ const footerLinks = {
     { href: '/predictions', label: 'Predictions' },
     { href: '/videos', label: 'Videos' },
     { href: '/what-if', label: 'What If' },
+    { href: '/rules', label: 'Rules' },
   ],
 };
 
