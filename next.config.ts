@@ -41,42 +41,8 @@ const nextConfig: NextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
-      // Football news sources
-      { protocol: 'https', hostname: '*.bbci.co.uk' },
-      { protocol: 'https', hostname: 'ichef.bbci.co.uk' },
-      { protocol: 'https', hostname: '*.skysports.com' },
-      { protocol: 'https', hostname: '*.theguardian.com' },
-      { protocol: 'https', hostname: 'i.guim.co.uk' },
-      { protocol: 'https', hostname: '*.espn.com' },
-      { protocol: 'https', hostname: '*.espncdn.com' },
-      { protocol: 'https', hostname: '*.goal.com' },
-      { protocol: 'https', hostname: '*.fourfourtwo.com' },
-      { protocol: 'https', hostname: '*.football365.com' },
-      { protocol: 'https', hostname: '*.teamtalk.com' },
-      { protocol: 'https', hostname: '*.mirror.co.uk' },
-      { protocol: 'https', hostname: '*.90min.com' },
-      { protocol: 'https', hostname: '*.football.london' },
-      { protocol: 'https', hostname: '*.tribalfootball.com' },
-      // API-Football media
-      { protocol: 'https', hostname: 'media.api-sports.io' },
-      { protocol: 'https', hostname: 'media-*.api-sports.io' },
-      // Self-hosted images
-      { protocol: 'https', hostname: 'www.footy-feed.com' },
-      { protocol: 'https', hostname: 'footy-feed.com' },
-      // Placeholder and generic
-      { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'upload.wikimedia.org' },
-      // Country flags
-      { protocol: 'https', hostname: 'flagcdn.com' },
-      // YouTube thumbnails
-      { protocol: 'https', hostname: 'i.ytimg.com' },
-      { protocol: 'https', hostname: 'img.youtube.com' },
-      { protocol: 'https', hostname: '*.ytimg.com' },
-      // Favicons
-      { protocol: 'https', hostname: 'www.google.com' },
-      // WordPress-hosted images
-      { protocol: 'https', hostname: '*.wp.com' },
-      { protocol: 'https', hostname: '*.wordpress.com' },
+      // Allow all HTTPS images — news articles link to many different CDNs
+      { protocol: 'https', hostname: '**' },
     ],
   },
 };

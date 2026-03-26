@@ -164,19 +164,9 @@ export async function GET(
           );
         }
 
-        // Download image if enabled
-        let finalImageUrl = article.imageUrl;
-        if (ENABLE_IMAGE_DOWNLOAD && article.imageUrl) {
-          try {
-            const result = await downloadImage(article.imageUrl);
-            if (result.success && result.localPath) {
-              finalImageUrl = result.localPath;
-              imagesDownloaded++;
-            }
-          } catch (error) {
-            console.error('Image download error:', error);
-          }
-        }
+        // Use the original external image URL directly (no local download)
+        // Railway's ephemeral filesystem doesn't persist downloaded images
+        const finalImageUrl = article.imageUrl || null;
 
         // Generate slug
         const slug = generateNewsSlug(finalTitle, article.publishedAt);
