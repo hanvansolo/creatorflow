@@ -83,7 +83,6 @@ async function getMatchEvents(matchIds: string[]): Promise<MatchEvent[]> {
       FROM match_events me
       LEFT JOIN players p ON me.player_id = p.id
       WHERE me.match_id = ANY(${matchIds})
-        AND me.event_type IN ('goal', 'own_goal', 'penalty_scored')
       ORDER BY me.minute, me.added_time
     `);
     return (rows as any[]) as MatchEvent[];
@@ -296,22 +295,39 @@ export default async function LiveScoresPage() {
                           </p>
                         )}
 
-                        {/* Goal scorers */}
+                        {/* Match timeline — all events */}
                         {matchGoals.length > 0 && (
                           <div className="mt-3 flex flex-col items-center gap-0.5">
-                            {matchGoals.map((evt, i) => (
+                            {matchGoals.map((evt, i) => {
+                              const isGoal = ['goal', 'own_goal', 'penalty_scored'].includes(evt.event_type);
+                              const isCard = ['yellow_card', 'second_yellow', 'red_card'].includes(evt.event_type);
+                              const isSub = evt.event_type === 'substitution';
+                              const isVar = evt.event_type === 'var_decision';
+
+                              let icon = <Goal className="h-3 w-3 text-emerald-500/70" />;
+                              let label = '';
+                              if (evt.event_type === 'own_goal') { icon = <Goal className="h-3 w-3 text-red-400/70" />; label = '(OG)'; }
+                              else if (evt.event_type === 'penalty_scored') { icon = <Goal className="h-3 w-3 text-emerald-500/70" />; label = '(P)'; }
+                              else if (evt.event_type === 'penalty_missed') { icon = <span className="h-3 w-3 text-[10px] text-red-400">✗</span>; label = '(Pen missed)'; }
+                              else if (evt.event_type === 'yellow_card') { icon = <span className="inline-block h-3 w-2 rounded-[1px] bg-yellow-400" />; }
+                              else if (evt.event_type === 'second_yellow') { icon = <span className="inline-block h-3 w-2 rounded-[1px] bg-yellow-400 ring-1 ring-red-500" />; }
+                              else if (evt.event_type === 'red_card') { icon = <span className="inline-block h-3 w-2 rounded-[1px] bg-red-500" />; }
+                              else if (isSub) { icon = <span className="text-[10px] text-emerald-400">↔</span>; }
+                              else if (isVar) { icon = <span className="text-[9px] font-bold text-blue-400">VAR</span>; }
+
+                              return (
                               <div key={i} className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                                <Goal className="h-3 w-3 text-emerald-500/70" />
-                                <span>
-                                  {evt.player_name || 'Unknown'}
-                                  {evt.event_type === 'own_goal' && <span className="text-red-400 ml-1">(OG)</span>}
-                                  {evt.event_type === 'penalty_scored' && <span className="text-amber-400 ml-1">(P)</span>}
-                                </span>
-                                <span className="text-zinc-600">
+                                <span className="text-zinc-600 w-6 text-right font-mono text-[10px]">
                                   {evt.minute}&apos;{evt.added_time ? `+${evt.added_time}` : ''}
                                 </span>
+                                {icon}
+                                <span>
+                                  {evt.player_name || 'Unknown'}
+                                  {label && <span className={`ml-1 ${evt.event_type === 'own_goal' ? 'text-red-400' : 'text-amber-400'}`}>{label}</span>}
+                                </span>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>

@@ -21,9 +21,19 @@ interface PageProps {
   searchParams: Promise<{ competition?: string }>;
 }
 
-const LEAGUE_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'league');
-const CUP_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'cup');
-const INTL_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'international');
+async function getActiveCompetitionSlugs(): Promise<Set<string>> {
+  try {
+    const rows = await db
+      .select({ slug: competitions.slug })
+      .from(leagueStandings)
+      .innerJoin(competitionSeasons, eq(leagueStandings.competitionSeasonId, competitionSeasons.id))
+      .innerJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
+      .groupBy(competitions.slug);
+    return new Set(rows.map(r => r.slug));
+  } catch {
+    return new Set();
+  }
+}
 
 async function getStandings(competitionSlug: string) {
   try {
@@ -90,7 +100,16 @@ function FormBadge({ result }: { result: string }) {
 
 export default async function TablesPage({ searchParams }: PageProps) {
   const { competition } = await searchParams;
-  const selectedSlug = competition || 'premier-league';
+  const activeSlugs = await getActiveCompetitionSlugs();
+
+  // Only show competitions that have standings data
+  const LEAGUE_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'league' && activeSlugs.has(c.slug));
+  const CUP_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'cup' && activeSlugs.has(c.slug));
+  const INTL_COMPETITIONS = COMPETITIONS.filter(c => c.type === 'international' && activeSlugs.has(c.slug));
+
+  // Default to first available competition
+  const defaultSlug = LEAGUE_COMPETITIONS[0]?.slug || CUP_COMPETITIONS[0]?.slug || INTL_COMPETITIONS[0]?.slug || 'premier-league';
+  const selectedSlug = competition || defaultSlug;
   const selected = COMPETITIONS.find(c => c.slug === selectedSlug) || COMPETITIONS[0];
   const standings = await getStandings(selectedSlug);
 
@@ -113,7 +132,7 @@ export default async function TablesPage({ searchParams }: PageProps) {
         {/* Competition selector — grouped by type */}
         <div className="mb-8 space-y-4">
           {/* Leagues row */}
-          <div>
+          {LEAGUE_COMPETITIONS.length > 0 && <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Leagues</h3>
             <div className="flex flex-wrap gap-2">
               {LEAGUE_COMPETITIONS.map((comp) => (
@@ -130,10 +149,10 @@ export default async function TablesPage({ searchParams }: PageProps) {
                 </Link>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* Cups row */}
-          <div>
+          {CUP_COMPETITIONS.length > 0 && <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Cups</h3>
             <div className="flex flex-wrap gap-2">
               {CUP_COMPETITIONS.map((comp) => (
@@ -150,10 +169,10 @@ export default async function TablesPage({ searchParams }: PageProps) {
                 </Link>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* International row */}
-          <div>
+          {INTL_COMPETITIONS.length > 0 && <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">International</h3>
             <div className="flex flex-wrap gap-2">
               {INTL_COMPETITIONS.map((comp) => (
@@ -170,7 +189,7 @@ export default async function TablesPage({ searchParams }: PageProps) {
                 </Link>
               ))}
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Selected competition info */}
