@@ -303,32 +303,78 @@ export default async function HomePage() {
           <DailyRoundupWidget />
         </section>
 
-        {/* Opinions & Rumours */}
+        {/* Opinions & Transfer Rumours */}
         {(opinions.length > 0 || rumours.length > 0) && (
           <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Opinions */}
             {opinions.length > 0 && (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <MessageSquareQuote className="h-4 w-4 text-blue-400" />
-                  <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Opinions & Analysis</h2>
+              <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+                <div className="flex items-center gap-2.5 px-5 py-3 border-b border-zinc-700/50">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10">
+                    <MessageSquareQuote className="h-3.5 w-3.5 text-blue-400" />
+                  </div>
+                  <h2 className="text-sm font-bold text-white tracking-tight">OPINIONS & ANALYSIS</h2>
                 </div>
-                <div className="space-y-3">
-                  {opinions.slice(0, 5).map((article) => (
-                    <NewsListItem key={article.id} article={article} />
+                <div className="divide-y divide-zinc-800/50">
+                  {opinions.slice(0, 4).map((article) => (
+                    <Link key={article.id} href={`/news/${article.slug}`} className="flex gap-3 px-5 py-3 hover:bg-zinc-800/40 transition-colors group">
+                      {article.imageUrl && (
+                        <img
+                          src={article.imageUrl}
+                          alt=""
+                          className="h-16 w-24 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-200 line-clamp-2 group-hover:text-white transition-colors">
+                          {article.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10px] text-zinc-500">{article.source?.name}</span>
+                          <span className="text-[10px] text-zinc-600">·</span>
+                          <span className="text-[10px] text-zinc-500">
+                            {new Date(article.publishedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Transfer Rumours */}
             {rumours.length > 0 && (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <CircleHelp className="h-4 w-4 text-amber-400" />
-                  <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Transfer Rumours</h2>
+              <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
+                <div className="flex items-center gap-2.5 px-5 py-3 border-b border-zinc-700/50">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10">
+                    <CircleHelp className="h-3.5 w-3.5 text-amber-400" />
+                  </div>
+                  <h2 className="text-sm font-bold text-white tracking-tight">TRANSFER RUMOURS</h2>
                 </div>
-                <div className="space-y-3">
-                  {rumours.slice(0, 5).map((article) => (
-                    <NewsListItem key={article.id} article={article} />
+                <div className="divide-y divide-zinc-800/50">
+                  {rumours.slice(0, 4).map((article) => (
+                    <Link key={article.id} href={`/news/${article.slug}`} className="flex gap-3 px-5 py-3 hover:bg-zinc-800/40 transition-colors group">
+                      {article.imageUrl && (
+                        <img
+                          src={article.imageUrl}
+                          alt=""
+                          className="h-16 w-24 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-200 line-clamp-2 group-hover:text-white transition-colors">
+                          {article.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10px] text-zinc-500">{article.source?.name}</span>
+                          <span className="text-[10px] text-zinc-600">·</span>
+                          <span className="text-[10px] text-zinc-500">
+                            {new Date(article.publishedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </div>

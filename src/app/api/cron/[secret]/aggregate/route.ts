@@ -102,6 +102,30 @@ export async function GET(
       if (!sourceId) continue;
 
       for (const article of articles) {
+        // Filter out non-football content (cricket, rugby, NFL, etc.)
+        const titleLower = (article.title || '').toLowerCase();
+        const contentLower = (article.content || article.summary || '').toLowerCase().slice(0, 500);
+        const combined = titleLower + ' ' + contentLower;
+        const nonFootballKeywords = [
+          'cricket', 'ipl', 'test match', 'ashes', 'wicket', 'batsman', 'bowler', 'twenty20', 't20',
+          'rugby', 'six nations', 'all blacks', 'springboks', 'scrum', 'try scorer',
+          'nfl', 'super bowl', 'quarterback', 'touchdown', 'nba', 'baseball', 'mlb',
+          'tennis', 'wimbledon', 'grand slam', 'roland garros',
+          'golf', 'pga', 'masters tournament', 'ryder cup',
+          'formula 1', 'f1', 'grand prix', 'motorsport', 'moto gp',
+          'boxing', 'ufc', 'mma', 'heavyweight bout',
+          'cycling', 'tour de france',
+          'horse racing', 'cheltenham', 'grand national',
+          'olympics', 'olympic games',
+          'nhl', 'ice hockey', 'stanley cup',
+        ];
+        const isNonFootball = nonFootballKeywords.some(kw => combined.includes(kw));
+        if (isNonFootball) {
+          console.log(`[Aggregate] Skipped non-football: "${article.title?.slice(0, 60)}..."`);
+          skippedCount++;
+          continue;
+        }
+
         // Check if article already exists
         const [existing] = await db
           .select({ id: newsArticles.id })
