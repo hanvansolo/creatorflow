@@ -11,6 +11,14 @@ function getSecret(): Uint8Array {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = request.headers.get('host') || '';
+
+  // Redirect bare domain to www (preserves path and query)
+  if (host === 'footy-feed.com') {
+    const url = new URL(request.url);
+    url.host = 'www.footy-feed.com';
+    return NextResponse.redirect(url, 301);
+  }
 
   // Only protect /admin routes (not /api/admin which uses its own secret-based auth)
   if (!pathname.startsWith('/admin')) {
@@ -30,14 +38,12 @@ export async function middleware(request: NextRequest) {
     const role = payload.role as string;
 
     if (role !== 'admin' && role !== 'superadmin') {
-      // User is logged in but not an admin — show 404 instead of revealing admin exists
       const url = new URL('/not-found', request.url);
       return NextResponse.rewrite(url);
     }
 
     return NextResponse.next();
   } catch {
-    // Invalid/expired token — redirect to login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -45,5 +51,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|images|api).*)'],
 };
