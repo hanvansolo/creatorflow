@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   const limit = parseInt(request.nextUrl.searchParams.get('limit') || '5');
+  const offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
 
   const articles = await db
     .select({
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
     })
     .from(newsArticles)
     .orderBy(desc(newsArticles.publishedAt))
+    .offset(offset)
     .limit(limit);
 
   const results = [];
