@@ -23,7 +23,7 @@ const DEFAULT_JOBS = [
   { name: 'email-weekly',      path: '/api/cron/{secret}/email-weekly',      intervalMs: 60 * 60 * 1000,      delayMs: 450_000  }, // Hourly on Sundays - sends where it's 10am
   { name: 'email-race-reminder', path: '/api/cron/{secret}/email-race-reminder', intervalMs: 12 * 60 * 60 * 1000, delayMs: 480_000  }, // Every 12h - checks for races in 3 days
   { name: 'email-race-roundup', path: '/api/cron/{secret}/email-race-roundup', intervalMs: 12 * 60 * 60 * 1000, delayMs: 510_000  }, // Every 12h - checks for races in last 2 days
-  { name: 'live-sync',          path: '/api/cron/{secret}/live-sync',          intervalMs: 2 * 60 * 1000,       delayMs: 60_000   }, // Every 2 min - live match scores, events, stats + AI analysis
+  { name: 'live-sync',          path: '/api/cron/{secret}/live-sync',          intervalMs: 60 * 1000,            delayMs: 30_000   }, // Every 1 min - live match scores, events, stats + AI analysis
   { name: 'fix-images',         path: '/api/cron/{secret}/fix-images',         intervalMs: 30 * 60 * 1000,      delayMs: 540_000  }, // Every 30 min - re-scrape missing article images
 ];
 
