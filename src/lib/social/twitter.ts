@@ -1,4 +1,4 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://footy-feed.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
 
 // In-memory token cache (refreshed when expired)
 let cachedToken: string | null = null;

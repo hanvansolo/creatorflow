@@ -108,7 +108,9 @@ export async function GET(
         const combined = titleLower + ' ' + contentLower;
         const nonFootballKeywords = [
           'cricket', 'ipl', 'test match', 'ashes', 'wicket', 'batsman', 'bowler', 'twenty20', 't20',
-          'rugby', 'six nations', 'all blacks', 'springboks', 'scrum', 'try scorer',
+          'rugby', 'rugby league', 'super league', 'six nations', 'all blacks', 'springboks', 'scrum', 'try scorer',
+          'hull kr', 'hull kingston', 'st helens', 'wigan warriors', 'warrington wolves', 'catalans dragons',
+          'salford red devils', 'leigh leopards', 'castleford tigers', 'huddersfield giants',
           'nfl', 'super bowl', 'quarterback', 'touchdown', 'nba', 'baseball', 'mlb',
           'tennis', 'wimbledon', 'grand slam', 'roland garros',
           'golf', 'pga', 'masters tournament', 'ryder cup',
