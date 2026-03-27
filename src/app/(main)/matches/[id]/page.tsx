@@ -87,7 +87,7 @@ async function getMatchAnalysis(matchId: string) {
 }
 
 function getPlayerName(event: any) {
-  return event.player_known_as || `${event.player_first_name ?? ''} ${event.player_last_name ?? ''}`.trim() || 'Unknown';
+  return event.player_known_as || `${event.player_first_name ?? ''} ${event.player_last_name ?? ''}`.trim() || event.club_name || 'Unknown';
 }
 
 function getSecondPlayerName(event: any) {
@@ -247,21 +247,27 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     try {
       const apiEvents = await getFixtureEvents(match.api_football_id);
       if (apiEvents.response && apiEvents.response.length > 0) {
-        events = apiEvents.response.map((e: any) => ({
-          event_type: mapEventType(e.type, e.detail),
-          minute: e.time.elapsed,
-          added_time: e.time.extra,
-          player_known_as: e.player?.name,
-          player_first_name: null,
-          player_last_name: null,
-          second_player_known_as: e.assist?.name,
-          second_player_first_name: null,
-          second_player_last_name: null,
-          club_name: e.team?.name,
-          club_code: null,
-          club_id: null,
-          description: e.detail,
-        }));
+        events = apiEvents.response.map((e: any) => {
+          // API-Football events: { player: { id, name }, assist: { id, name }, team: { id, name }, time: { elapsed, extra }, type, detail }
+          const playerName = e.player?.name || e.player_name || null;
+          const assistName = e.assist?.name || e.assist_name || null;
+          const teamName = e.team?.name || e.team_name || null;
+          return {
+            event_type: mapEventType(e.type, e.detail),
+            minute: e.time?.elapsed ?? e.elapsed ?? e.minute,
+            added_time: e.time?.extra ?? null,
+            player_known_as: playerName,
+            player_first_name: null,
+            player_last_name: null,
+            second_player_known_as: assistName,
+            second_player_first_name: null,
+            second_player_last_name: null,
+            club_name: teamName,
+            club_code: null,
+            club_id: null,
+            description: e.detail || e.comments || null,
+          };
+        });
       }
     } catch (e) {
       console.error('[Match] Failed to fetch API events:', e);
