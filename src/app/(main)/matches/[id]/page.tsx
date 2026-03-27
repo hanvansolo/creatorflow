@@ -35,7 +35,7 @@ async function getMatch(id: string) {
       hc.primary_color as home_color, hc.logo_url as home_logo, hc.api_football_id as home_api_id,
       ac.name as away_name, ac.slug as away_slug, ac.code as away_code,
       ac.primary_color as away_color, ac.logo_url as away_logo, ac.api_football_id as away_api_id,
-      comp.name as competition_name, comp.slug as competition_slug,
+      comp.name as competition_name, comp.slug as competition_slug, comp.type as competition_type,
       v.name as venue_name, v.city as venue_city
     FROM matches m
     INNER JOIN clubs hc ON m.home_club_id = hc.id
@@ -306,9 +306,15 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     }
   }
 
-  // Fetch betting odds for non-finished matches
+  // Fetch betting odds — only for league and major cup matches (not internationals/friendlies)
+  // API-Football odds coverage doesn't include international friendlies or qualifiers
+  const competitionType = match.competition_type || '';
+  const competitionSlug = match.competition_slug || '';
+  const noOddsCompetitions = ['friendlies', 'wc-qualifiers-', 'afcon-qualifiers', 'euro-qualifiers', 'concacaf-nations-league'];
+  const hasOddsCoverage = competitionType !== 'international' && !noOddsCompetitions.some(s => competitionSlug.startsWith(s));
+
   let oddsData: any = null;
-  if (match.status !== 'finished' && match.api_football_id) {
+  if (match.status !== 'finished' && match.api_football_id && hasOddsCoverage) {
     try {
       const isLiveMatch = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
       if (isLiveMatch) {
