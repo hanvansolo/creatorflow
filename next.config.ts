@@ -32,7 +32,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
-        headers: securityHeaders,
+        headers: [
+          ...securityHeaders,
+          {
+            key: 'Impact-Site-Verification',
+            value: 'cfef735d-47e2-4c0b-8630-84ff2dc0ea39',
+          },
+        ],
       },
     ];
   },
