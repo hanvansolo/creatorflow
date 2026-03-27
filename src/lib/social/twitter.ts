@@ -124,8 +124,29 @@ const DRIVER_HASHTAGS: Record<string, string> = {
   'bruno fernandes': '#BrunoFernandes',
   'son': '#Son', 'heung-min': '#Son',
   'guardiola': '#Guardiola', 'pep': '#Guardiola',
-  'arteta': '#Arteta', 'klopp': '#Klopp',
+  'arteta': '#Arteta', 'klopp': '#Klopp', 'slot': '#Slot',
   'ancelotti': '#Ancelotti', 'mourinho': '#Mourinho',
+  'madueke': '#Madueke', 'noni': '#Madueke',
+  'raphinha': '#Raphinha',
+  'wirtz': '#Wirtz', 'florian': '#Wirtz',
+  'lewandowski': '#Lewandowski',
+  'neymar': '#Neymar',
+  'alexander-arnold': '#TAA', 'trent': '#TAA',
+  'van dijk': '#VanDijk', 'virgil': '#VanDijk',
+  'martinez': '#Martinez',
+  'grealish': '#Grealish', 'jack': '#Grealish',
+  'rashford': '#Rashford', 'marcus': '#Rashford',
+  'osimhen': '#Osimhen',
+  'xhaka': '#Xhaka', 'granit': '#Xhaka',
+  'modric': '#Modric', 'luka': '#Modric',
+  'rodri': '#Rodri',
+  'szoboszlai': '#Szoboszlai',
+  'caicedo': '#Caicedo',
+  'isak': '#Isak', 'alexander': '#Isak',
+  'watkins': '#Watkins', 'ollie': '#Watkins',
+  'gordon': '#Gordon', 'anthony': '#Gordon',
+  'gyokeres': '#Gyokeres', 'viktor': '#Gyokeres',
+  'kvaratskhelia': '#Kvaratskhelia', 'kvara': '#Kvaratskhelia',
 };
 
 const TEAM_HASHTAGS: Record<string, string> = {
@@ -251,7 +272,8 @@ export async function postToTwitter(
   title: string,
   slug: string,
   tags?: string[],
-  imageUrl?: string
+  imageUrl?: string,
+  summary?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const token = await getAccessToken();
 
@@ -263,10 +285,23 @@ export async function postToTwitter(
     const url = `${SITE_URL}/news/${slug}`;
     const hashtags = buildHashtags(title, tags || []);
 
-    let text = `${title}\n\n${url}\n\n${hashtags}`;
+    // Build tweet: title + summary snippet + URL + hashtags
+    const summarySnippet = summary ? summary.slice(0, 100).replace(/\s+\S*$/, '...') : '';
+
+    let text: string;
+    if (summarySnippet) {
+      text = `📰 ${title}\n\n${summarySnippet}\n\n${url}\n\n${hashtags}`;
+    } else {
+      text = `📰 ${title}\n\n${url}\n\n${hashtags}`;
+    }
+
     if (text.length > 280) {
-      const maxTitle = 280 - url.length - hashtags.length - 6;
-      text = `${title.slice(0, maxTitle)}...\n\n${url}\n\n${hashtags}`;
+      // Drop summary first
+      text = `📰 ${title}\n\n${url}\n\n${hashtags}`;
+    }
+    if (text.length > 280) {
+      const maxTitle = 280 - url.length - hashtags.length - 8;
+      text = `📰 ${title.slice(0, maxTitle)}...\n\n${url}\n\n${hashtags}`;
     }
 
     const res = await fetch('https://api.twitter.com/2/tweets', {

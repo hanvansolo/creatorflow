@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       title: newsArticles.title,
       slug: newsArticles.slug,
       tags: newsArticles.tags,
+      summary: newsArticles.summary,
     })
     .from(newsArticles)
     .orderBy(desc(newsArticles.publishedAt))
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const results = [];
   for (const article of articles) {
-    const result = await postToTwitter(article.title, article.slug, article.tags || []);
+    const result = await postToTwitter(article.title, article.slug, article.tags || [], undefined, article.summary || undefined);
     results.push({ title: article.title.slice(0, 50), ...result });
     // Small delay between tweets
     await new Promise(r => setTimeout(r, 2000));
