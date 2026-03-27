@@ -249,9 +249,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       const apiEvents = await getFixtureEvents(match.api_football_id);
       if (apiEvents.response && apiEvents.response.length > 0) {
         events = apiEvents.response.map((e: any) => {
-          // API-Football events: { player: { id, name }, assist: { id, name }, team: { id, name }, time: { elapsed, extra }, type, detail }
-          const playerName = e.player?.name || e.player_name || null;
-          const assistName = e.assist?.name || e.assist_name || null;
+          // API-Football events structure varies — try all known paths
+          const playerName = e.player?.name || e.player_name || (typeof e.player === 'string' ? e.player : null);
+          const assistName = e.assist?.name || e.assist_name || (typeof e.assist === 'string' ? e.assist : null);
           const teamName = e.team?.name || e.team_name || null;
           return {
             event_type: mapEventType(e.type, e.detail),
