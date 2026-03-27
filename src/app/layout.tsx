@@ -77,7 +77,9 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <NewsletterPopup />
-            <CookieConsent />
+            <Suspense fallback={null}>
+              <CookieConsent />
+            </Suspense>
           </div>
         </LocationProvider>
         <Suspense fallback={null}>
