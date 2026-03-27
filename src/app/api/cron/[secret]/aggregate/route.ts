@@ -145,12 +145,13 @@ export async function GET(
           continue;
         }
 
-        // Spin the article content if enabled
+        // Spin the article content if enabled (max 5 per run to avoid timeout)
+        const MAX_SPINS_PER_RUN = 5;
         let finalTitle = article.title;
         let finalSummary = article.summary;
         let finalContent = article.content;
 
-        if (ENABLE_SPINNING && (article.content || article.summary)) {
+        if (ENABLE_SPINNING && (article.content || article.summary) && spunCount < MAX_SPINS_PER_RUN) {
           try {
             const spun = await spinArticle(
               article.title,
