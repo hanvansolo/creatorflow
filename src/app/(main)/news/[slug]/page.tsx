@@ -179,6 +179,34 @@ export default async function NewsArticlePage({ params }: PageProps) {
     imagePool
   );
 
+  // Check if any live matches relate to this article
+  let relatedLiveMatch: any = null;
+  try {
+    const titleWords = article.title.toLowerCase();
+    const liveMatches = await db.execute(sql`
+      SELECT m.id, m.home_score, m.away_score, m.status, m.minute,
+        hc.name as home_name, hc.code as home_code, hc.primary_color as home_color,
+        ac.name as away_name, ac.code as away_code, ac.primary_color as away_color,
+        comp.name as competition_name
+      FROM matches m
+      INNER JOIN clubs hc ON m.home_club_id = hc.id
+      INNER JOIN clubs ac ON m.away_club_id = ac.id
+      LEFT JOIN competition_seasons cs ON m.competition_season_id = cs.id
+      LEFT JOIN competitions comp ON cs.competition_id = comp.id
+      WHERE m.status IN ('live', 'halftime', 'extra_time', 'penalties')
+      LIMIT 30
+    `);
+    for (const m of (liveMatches as any[])) {
+      const homeFirst = (m.home_name || '').split(' ')[0].toLowerCase();
+      const awayFirst = (m.away_name || '').split(' ')[0].toLowerCase();
+      if (homeFirst.length > 3 && titleWords.includes(homeFirst) ||
+          awayFirst.length > 3 && titleWords.includes(awayFirst)) {
+        relatedLiveMatch = m;
+        break;
+      }
+    }
+  } catch {}
+
   // Generate structured data for SEO
   const structuredData = jsonLd(
     generateArticleStructuredData({
@@ -195,6 +223,35 @@ export default async function NewsArticlePage({ params }: PageProps) {
     <>
       <JsonLdScript data={structuredData} />
       <div className="min-h-screen">
+      {/* Related live match banner */}
+      {relatedLiveMatch && (
+        <Link
+          href={`/matches/${relatedLiveMatch.id}`}
+          className="block bg-emerald-900/30 border-b border-emerald-500/20 hover:bg-emerald-900/40 transition-colors"
+        >
+          <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8 flex items-center justify-center gap-3">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-sm font-semibold text-emerald-400">LIVE NOW</span>
+            <span className="text-sm text-white">
+              {relatedLiveMatch.home_name}
+              <span className="font-bold mx-1.5">
+                {relatedLiveMatch.home_score} - {relatedLiveMatch.away_score}
+              </span>
+              {relatedLiveMatch.away_name}
+            </span>
+            <span className="text-xs text-emerald-400/70">
+              {relatedLiveMatch.status === 'halftime' ? 'HT' : `${relatedLiveMatch.minute}'`}
+            </span>
+            <span className="text-xs text-zinc-500">
+              {relatedLiveMatch.competition_name}
+            </span>
+            <ArrowRight className="h-3.5 w-3.5 text-emerald-400" />
+          </div>
+        </Link>
+      )}
       {/* Header */}
       <div className="border-b border-zinc-800 bg-zinc-900/50">
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
