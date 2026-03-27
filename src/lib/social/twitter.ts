@@ -180,6 +180,24 @@ const GP_HASHTAGS: Record<string, string> = {
   'community shield': '#CommunityShield',
   'super cup': '#SuperCup', 'club world cup': '#ClubWorldCup',
   'carabao cup': '#CarabaoCup',
+  'mls': '#MLS', 'liga mx': '#LigaMX',
+  'eredivisie': '#Eredivisie', 'primeira liga': '#PrimeiraLiga',
+  'scottish': '#SPFL', 'championship': '#EFLChampionship',
+  'saudi': '#SaudiProLeague',
+  // Countries for internationals
+  'england': '#England', 'france': '#France', 'germany': '#Germany',
+  'spain': '#Spain', 'italy': '#Italy', 'brazil': '#Brazil',
+  'argentina': '#Argentina', 'portugal': '#Portugal', 'netherlands': '#Netherlands',
+  'belgium': '#Belgium', 'uruguay': '#Uruguay', 'colombia': '#Colombia',
+  'mexico': '#Mexico', 'usa': '#USMNT', 'japan': '#Japan',
+  'south korea': '#SouthKorea', 'morocco': '#Morocco', 'senegal': '#Senegal',
+  'nigeria': '#Nigeria', 'ghana': '#Ghana', 'cameroon': '#Cameroon',
+  'switzerland': '#Switzerland', 'croatia': '#Croatia', 'denmark': '#Denmark',
+  'sweden': '#Sweden', 'norway': '#Norway', 'scotland': '#Scotland',
+  'wales': '#Wales', 'ireland': '#Ireland', 'poland': '#Poland',
+  'turkey': '#Turkey', 'austria': '#Austria', 'czech': '#CzechRepublic',
+  'serbia': '#Serbia', 'ukraine': '#Ukraine', 'egypt': '#Egypt',
+  'australia': '#Socceroos', 'canada': '#CanMNT',
 };
 
 // Generic football topic hashtags as fallback
@@ -207,6 +225,7 @@ function buildHashtags(title: string, tags: string[]): string {
   const seen = new Set<string>();
 
   function add(tag: string) {
+    if (hashtags.length >= 5) return;
     const lower = tag.toLowerCase();
     if (!seen.has(lower)) {
       seen.add(lower);
@@ -214,15 +233,14 @@ function buildHashtags(title: string, tags: string[]): string {
     }
   }
 
-  // Match GPs first (most specific)
+  // 1. Match known competitions
   for (const [keyword, tag] of Object.entries(GP_HASHTAGS)) {
     if (text.includes(keyword)) { add(tag); break; }
   }
 
-  // Match drivers (allow short names like "max", "spa" etc)
+  // 2. Match known players
   for (const [keyword, tag] of Object.entries(DRIVER_HASHTAGS)) {
     if (hashtags.length >= 4) break;
-    // For short keywords (3-4 chars), require word boundary match
     if (keyword.length <= 4) {
       const regex = new RegExp(`\\b${keyword}\\b`, 'i');
       if (regex.test(text)) add(tag);
@@ -231,34 +249,64 @@ function buildHashtags(title: string, tags: string[]): string {
     }
   }
 
-  // Match teams
+  // 3. Match known clubs
   for (const [keyword, tag] of Object.entries(TEAM_HASHTAGS)) {
     if (hashtags.length >= 4) break;
     if (text.includes(keyword)) add(tag);
   }
 
-  // If we still only have #Football or nothing, try topic hashtags
-  if (hashtags.length === 0) {
-    for (const [keyword, tag] of Object.entries(TOPIC_HASHTAGS)) {
-      if (hashtags.length >= 3) break;
-      if (text.includes(keyword)) add(tag);
+  // 4. Match topics
+  for (const [keyword, tag] of Object.entries(TOPIC_HASHTAGS)) {
+    if (hashtags.length >= 4) break;
+    if (text.includes(keyword)) add(tag);
+  }
+
+  // 5. SMART FALLBACK: Convert article tags into hashtags
+  // RSS tags often contain team names, player names, and topics
+  if (hashtags.length < 3) {
+    const skipWords = new Set([
+      'football', 'soccer', 'sport', 'news', 'breaking', 'update', 'latest',
+      'live', 'match', 'game', 'report', 'analysis', 'feature', 'opinion',
+      'video', 'watch', 'highlights', 'preview', 'review', 'blog', 'liveblog',
+      'newsstory', 'gossip', 'rumour', 'rumor', 'extra time', 'extratime',
+      'features', 'newsround', 'stories',
+    ]);
+
+    for (const rawTag of (tags || [])) {
+      if (hashtags.length >= 4) break;
+      // Clean the tag — remove special chars, keep words
+      const cleaned = rawTag.trim().replace(/[^a-zA-Z0-9\s-]/g, '');
+      if (cleaned.length < 3 || cleaned.length > 25) continue;
+      if (skipWords.has(cleaned.toLowerCase())) continue;
+
+      // Convert to hashtag: "Manchester City" → "#ManchesterCity"
+      const hashTag = '#' + cleaned.split(/[\s-]+/).map(w =>
+        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      ).join('');
+
+      if (hashTag.length >= 4 && hashTag.length <= 25) {
+        add(hashTag);
+      }
     }
   }
 
-  // Always add #Football
+  // 6. TITLE EXTRACTION: Pull proper nouns from the title
+  if (hashtags.length < 3) {
+    // Find capitalized words in the original title (proper nouns = teams, players, countries)
+    const properNouns = title.match(/[A-Z][a-z]{2,}/g) || [];
+    const skipNouns = new Set(['The', 'And', 'For', 'But', 'Not', 'With', 'Has', 'Have', 'Was', 'Were', 'Are', 'His', 'Her', 'How', 'Why', 'What', 'Who', 'New', 'Set', 'Out', 'Off', 'Top', 'Big', 'All', 'Can', 'May', 'Will', 'Get', 'Got', 'Put', 'Run', 'Let', 'Old', 'End', 'Key', 'Win', 'Way']);
+
+    for (const noun of properNouns) {
+      if (hashtags.length >= 4) break;
+      if (skipNouns.has(noun)) continue;
+      if (noun.length >= 4) {
+        add(`#${noun}`);
+      }
+    }
+  }
+
+  // 7. Always add #Football at the end
   add('#Football');
-
-  // If we only have #Football, extract a word from the title as fallback
-  if (hashtags.length === 1) {
-    // Use the article tags if available
-    const cleanTags = (tags || [])
-      .map(t => t.replace(/[^a-zA-Z0-9]/g, ''))
-      .filter(t => t.length >= 4 && t.length <= 18 && t.toLowerCase() !== 'football');
-
-    for (const t of cleanTags.slice(0, 2)) {
-      add(`#${t}`);
-    }
-  }
 
   return hashtags.join(' ');
 }
