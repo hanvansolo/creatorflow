@@ -245,24 +245,22 @@ export function OddsPanel({ oddsData }: OddsPanelProps) {
                 return (
                   <th
                     key={bk.id}
-                    className="min-w-[80px] w-[80px] px-2 py-2.5 text-center border-r border-zinc-800/40 last:border-r-0"
+                    className="min-w-[90px] w-[90px] px-2 py-3 text-center border-r border-zinc-800/40 last:border-r-0"
                   >
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5">
                       {logo ? (
-                        <Image
+                        <img
                           src={logo}
                           alt={bk.name}
-                          width={20}
-                          height={20}
-                          className="rounded-sm"
-                          unoptimized
+                          className="h-8 w-auto max-w-[70px] object-contain"
+                          loading="lazy"
                         />
                       ) : (
-                        <div className="w-5 h-5 rounded-sm bg-zinc-700 flex items-center justify-center text-[8px] font-bold text-zinc-400">
-                          {bk.name.charAt(0)}
+                        <div className="w-8 h-8 rounded bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-400">
+                          {bk.name.slice(0, 2)}
                         </div>
                       )}
-                      <span className="text-[9px] text-zinc-500 font-medium leading-tight truncate max-w-[72px]">
+                      <span className="text-[8px] text-zinc-500 font-medium leading-tight truncate max-w-[80px]">
                         {bk.name}
                       </span>
                     </div>
