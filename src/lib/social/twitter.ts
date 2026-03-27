@@ -34,13 +34,21 @@ async function getAccessToken(): Promise<string | null> {
 
   const refreshToken = await getRefreshToken();
   const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_PASS;
 
   // If we have a refresh token, use it to get a fresh access token
   if (refreshToken && clientId) {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+      if (clientSecret) {
+        headers['Authorization'] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+      }
+
       const res = await fetch('https://api.twitter.com/2/oauth2/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers,
         body: new URLSearchParams({
           grant_type: 'refresh_token',
           refresh_token: refreshToken,

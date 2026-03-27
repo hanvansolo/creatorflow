@@ -4,14 +4,8 @@ import { db, siteSettings } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Twitter OAuth 2.0 callback handler.
- * Exchanges the authorization code for access + refresh tokens.
- * Stores the refresh token in the database for persistent use.
- */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
-  const state = request.nextUrl.searchParams.get('state');
   const error = request.nextUrl.searchParams.get('error');
 
   if (error) {
@@ -23,21 +17,33 @@ export async function GET(request: NextRequest) {
   }
 
   const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_PASS;
+
   if (!clientId) {
     return NextResponse.json({ error: 'TWITTER_CLIENT_ID not configured' }, { status: 500 });
   }
 
   try {
-    // Exchange code for tokens
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com'}/api/auth/twitter/callback`;
+
+    // Build auth header — Basic Auth with client_id:client_secret
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+
+    if (clientSecret) {
+      headers['Authorization'] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+    }
+
     const tokenRes = await fetch('https://api.twitter.com/2/oauth2/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers,
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
         client_id: clientId,
-        redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com'}/api/auth/twitter/callback`,
-        code_verifier: 'challenge', // PKCE — must match what was used in the auth URL
+        redirect_uri: redirectUri,
+        code_verifier: 'challenge',
       }).toString(),
     });
 
@@ -59,14 +65,11 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(),
       }).onConflictDoUpdate({
         target: siteSettings.key,
-        set: {
-          value: tokenData.refresh_token,
-          updatedAt: new Date(),
-        },
+        set: { value: tokenData.refresh_token, updatedAt: new Date() },
       });
     }
 
-    // Store access token info
+    // Store access token
     if (tokenData.access_token) {
       await db.insert(siteSettings).values({
         key: 'twitter_access_token',
@@ -75,17 +78,13 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(),
       }).onConflictDoUpdate({
         target: siteSettings.key,
-        set: {
-          value: tokenData.access_token,
-          updatedAt: new Date(),
-        },
+        set: { value: tokenData.access_token, updatedAt: new Date() },
       });
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Twitter connected! Auto-posting is now active.',
-      token_type: tokenData.token_type,
+      message: 'Twitter/X connected! Auto-posting is now active.',
       expires_in: tokenData.expires_in,
       scope: tokenData.scope,
     });
