@@ -342,6 +342,11 @@ export default async function FixturesPage({ searchParams }: PageProps) {
                           </span>
                         </div>
 
+                        {/* Odds indicator for scheduled matches */}
+                        {match.status === 'scheduled' && (
+                          <span className="text-[9px] text-emerald-400 ml-2">Odds &rarr;</span>
+                        )}
+
                         {/* Referee (desktop only) */}
                         {match.referee && (
                           <span className="hidden lg:block text-[10px] text-zinc-600 ml-3 shrink-0">{match.referee}</span>

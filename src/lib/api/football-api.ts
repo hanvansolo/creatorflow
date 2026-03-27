@@ -279,6 +279,38 @@ export async function getFixtureStatistics(fixtureId: number) {
   return apiFetch<Array<{ team: { id: number; name: string }; statistics: Array<{ type: string; value: number | string | null }> }>>('/fixtures/statistics', { fixture: fixtureId });
 }
 
+/** Get pre-match odds for a fixture */
+export async function getFixtureOdds(fixtureId: number) {
+  return apiFetch<Array<{
+    league: { id: number; name: string; country: string; logo: string; season: number };
+    fixture: { id: number; timezone: string; date: string; timestamp: number };
+    update: string;
+    bookmakers: Array<{
+      id: number;
+      name: string;
+      bets: Array<{
+        id: number;
+        name: string; // "Match Winner", "Goals Over/Under", "Both Teams Score", etc.
+        values: Array<{ value: string; odd: string }>;
+      }>;
+    }>;
+  }>>('/odds', { fixture: fixtureId });
+}
+
+/** Get live/in-play odds for a fixture */
+export async function getLiveOdds(fixtureId: number) {
+  return apiFetch<Array<{
+    fixture: { id: number; status: { long: string; elapsed: number } };
+    league: { id: number; name: string };
+    update: string;
+    odds: Array<{
+      id: number;
+      name: string;
+      values: Array<{ value: string; odd: string; handicap: string | null; main: boolean | null; suspended: boolean }>;
+    }>;
+  }>>('/odds/live', { fixture: fixtureId });
+}
+
 /** Get lineups for a fixture */
 export async function getFixtureLineups(fixtureId: number) {
   return apiFetch<ApiLineup[]>('/fixtures/lineups', { fixture: fixtureId });

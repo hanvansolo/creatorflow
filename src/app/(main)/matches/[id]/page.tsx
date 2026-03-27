@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { matchEvents, matchStats, matchAnalysis, players, clubs } from '@/lib/db/schema';
 import { eq, desc, asc, sql } from 'drizzle-orm';
-import { getFixtureEvents, getFixtureStatistics, mapEventType } from '@/lib/api/football-api';
+import { getFixtureEvents, getFixtureStatistics, getFixtureOdds, getLiveOdds, mapEventType } from '@/lib/api/football-api';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -305,6 +305,49 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     }
   }
 
+  // Fetch betting odds for non-finished matches
+  let oddsData: any = null;
+  if (match.status !== 'finished' && match.api_football_id) {
+    try {
+      const isLiveMatch = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
+      if (isLiveMatch) {
+        const liveOddsRes = await getLiveOdds(match.api_football_id);
+        if (liveOddsRes.response && liveOddsRes.response.length > 0) {
+          const data = liveOddsRes.response[0];
+          // Transform live odds into bookmaker-style structure
+          const matchWinner = data.odds?.find((o: any) => o.name === 'Match Winner');
+          const goalsOU = data.odds?.find((o: any) => o.name === 'Goals Over/Under' || o.name === 'Over/Under');
+          const bts = data.odds?.find((o: any) => o.name === 'Both Teams Score');
+          oddsData = {
+            type: 'live',
+            update: data.update,
+            bookmakers: [{
+              id: 0,
+              name: 'Live Odds',
+              bets: [
+                ...(matchWinner ? [{ id: 1, name: 'Match Winner', values: matchWinner.values }] : []),
+                ...(goalsOU ? [{ id: 2, name: 'Goals Over/Under 2.5', values: goalsOU.values.filter((v: any) => v.value === 'Over 2.5' || v.value === 'Under 2.5') }] : []),
+                ...(bts ? [{ id: 3, name: 'Both Teams Score', values: bts.values }] : []),
+              ],
+            }],
+          };
+        }
+      } else {
+        const oddsRes = await getFixtureOdds(match.api_football_id);
+        if (oddsRes.response && oddsRes.response.length > 0) {
+          const data = oddsRes.response[0];
+          oddsData = {
+            type: 'pre-match',
+            update: data.update,
+            bookmakers: data.bookmakers,
+          };
+        }
+      }
+    } catch (e) {
+      console.error('[Match] Failed to fetch odds:', e);
+    }
+  }
+
   const homeStats = (stats as any[]).find((s: any) => s.club_name === match.home_name || s.club_id === match.home_club_id);
   const awayStats = (stats as any[]).find((s: any) => s.club_name === match.away_name || s.club_id === match.away_club_id);
   const latestAnalysis = (analyses as any[])[0] ?? null;
@@ -565,6 +608,162 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   )}
                 </div>
               </div>
+            </section>
+          );
+        })()}
+
+        {/* ===== BETTING ODDS ===== */}
+        {oddsData && oddsData.bookmakers?.length > 0 && (() => {
+          const primaryBookmaker = oddsData.bookmakers[0];
+          const matchWinnerBet = primaryBookmaker.bets?.find((b: any) => b.name === 'Match Winner');
+          const goalsOUBet = primaryBookmaker.bets?.find((b: any) =>
+            b.name?.includes('Over/Under') || b.name?.includes('Goals Over/Under')
+          );
+          const btsBet = primaryBookmaker.bets?.find((b: any) => b.name === 'Both Teams Score');
+
+          if (!matchWinnerBet) return null;
+
+          const homeOdd = matchWinnerBet.values?.find((v: any) => v.value === 'Home')?.odd;
+          const drawOdd = matchWinnerBet.values?.find((v: any) => v.value === 'Draw')?.odd;
+          const awayOdd = matchWinnerBet.values?.find((v: any) => v.value === 'Away')?.odd;
+
+          const odds = [
+            { label: 'Home Win', value: homeOdd },
+            { label: 'Draw', value: drawOdd },
+            { label: 'Away Win', value: awayOdd },
+          ].filter(o => o.value);
+
+          const minOdd = Math.min(...odds.map(o => parseFloat(o.value)));
+          const hasMultipleBookmakers = oddsData.bookmakers.length > 1;
+          const updateTime = oddsData.update
+            ? new Date(oddsData.update).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+            : null;
+
+          return (
+            <section className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                  <TrendingUp className="h-5 w-5 text-emerald-500" />
+                  Betting Odds
+                  {oddsData.type === 'live' && (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400 border border-red-500/30">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                      </span>
+                      LIVE
+                    </span>
+                  )}
+                </h2>
+                <div className="text-right">
+                  <p className="text-[10px] text-zinc-500">{primaryBookmaker.name}</p>
+                  {updateTime && (
+                    <p className="text-[10px] text-zinc-600">Last updated: {updateTime}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Main odds cards */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {odds.map((odd) => {
+                  const isFavourite = parseFloat(odd.value) === minOdd;
+                  return (
+                    <div
+                      key={odd.label}
+                      className={`rounded-lg border p-4 text-center transition-all ${
+                        isFavourite
+                          ? 'border-emerald-500/40 bg-emerald-500/10'
+                          : 'border-zinc-700/50 bg-zinc-800/80'
+                      }`}
+                    >
+                      <p className="text-[10px] uppercase tracking-wide text-zinc-500 mb-1">{odd.label}</p>
+                      <p className={`text-2xl font-black tabular-nums ${
+                        isFavourite ? 'text-emerald-400' : 'text-zinc-200'
+                      }`}>
+                        {parseFloat(odd.value).toFixed(2)}
+                      </p>
+                      {isFavourite && (
+                        <p className="text-[9px] text-emerald-500 mt-1 font-semibold">FAVOURITE</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Goals Over/Under + Both Teams Score */}
+              {(goalsOUBet || btsBet) && (
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {goalsOUBet && goalsOUBet.values?.length > 0 && (
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/80 p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-zinc-500 mb-2">Goals Over/Under 2.5</p>
+                      <div className="flex items-center justify-around">
+                        {goalsOUBet.values.filter((v: any) => v.value === 'Over 2.5' || v.value === 'Under 2.5').map((v: any) => (
+                          <div key={v.value} className="text-center">
+                            <p className="text-[9px] text-zinc-500">{v.value}</p>
+                            <p className="text-lg font-bold text-zinc-200 tabular-nums">{parseFloat(v.odd).toFixed(2)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {btsBet && btsBet.values?.length > 0 && (
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/80 p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-zinc-500 mb-2">Both Teams Score</p>
+                      <div className="flex items-center justify-around">
+                        {btsBet.values.map((v: any) => (
+                          <div key={v.value} className="text-center">
+                            <p className="text-[9px] text-zinc-500">{v.value}</p>
+                            <p className="text-lg font-bold text-zinc-200 tabular-nums">{parseFloat(v.odd).toFixed(2)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Compare odds from multiple bookmakers */}
+              {hasMultipleBookmakers && (
+                <details className="group mb-4">
+                  <summary className="cursor-pointer text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+                    Compare odds from {oddsData.bookmakers.length} bookmakers
+                  </summary>
+                  <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-700/50">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-zinc-700/50 bg-zinc-800/80">
+                          <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wide text-zinc-500 font-medium">Bookmaker</th>
+                          <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wide text-zinc-500 font-medium">Home</th>
+                          <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wide text-zinc-500 font-medium">Draw</th>
+                          <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wide text-zinc-500 font-medium">Away</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/50">
+                        {oddsData.bookmakers.map((bk: any) => {
+                          const mw = bk.bets?.find((b: any) => b.name === 'Match Winner');
+                          if (!mw) return null;
+                          const h = mw.values?.find((v: any) => v.value === 'Home')?.odd;
+                          const d = mw.values?.find((v: any) => v.value === 'Draw')?.odd;
+                          const a = mw.values?.find((v: any) => v.value === 'Away')?.odd;
+                          return (
+                            <tr key={bk.id} className="bg-zinc-900/50 hover:bg-zinc-800/50 transition-colors">
+                              <td className="px-3 py-2 text-xs text-zinc-300">{bk.name}</td>
+                              <td className="px-3 py-2 text-center text-xs font-semibold text-zinc-200 tabular-nums">{h ? parseFloat(h).toFixed(2) : '-'}</td>
+                              <td className="px-3 py-2 text-center text-xs font-semibold text-zinc-200 tabular-nums">{d ? parseFloat(d).toFixed(2) : '-'}</td>
+                              <td className="px-3 py-2 text-center text-xs font-semibold text-zinc-200 tabular-nums">{a ? parseFloat(a).toFixed(2) : '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
+
+              {/* Disclaimer */}
+              <p className="text-[10px] text-zinc-600 text-center">
+                Odds are for informational purposes only. Please gamble responsibly. 18+
+              </p>
             </section>
           );
         })()}
