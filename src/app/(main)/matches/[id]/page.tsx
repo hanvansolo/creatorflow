@@ -583,7 +583,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
               <div className="space-y-4">
                 {events.map((event: any, i: number) => {
-                  const isHome = event.club_id === match.home_club_id;
+                  const isHome = event.club_id === match.home_club_id
+                    || event.club_name === match.home_name
+                    || event.club_code === match.home_code;
                   const isGoal = isGoalEvent(event.event_type);
                   const playerName = getPlayerName(event);
                   const secondPlayer = getSecondPlayerName(event);
