@@ -320,7 +320,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           const goalsOU = data.odds?.find((o: any) => o.name === 'Goals Over/Under' || o.name === 'Over/Under');
           const bts = data.odds?.find((o: any) => o.name === 'Both Teams Score');
           oddsData = {
-            type: 'live',
+            isLive: true,
+            homeName: match.home_name,
+            awayName: match.away_name,
             update: data.update,
             bookmakers: [{
               id: 0,
@@ -338,7 +340,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         if (oddsRes.response && oddsRes.response.length > 0) {
           const data = oddsRes.response[0];
           oddsData = {
-            type: 'pre-match',
+            isLive: false,
+            homeName: match.home_name,
+            awayName: match.away_name,
             update: data.update,
             bookmakers: data.bookmakers,
           };
