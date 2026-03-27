@@ -98,12 +98,46 @@ export async function GET(
           .where(eq(matches.apiFootballId, apiFixtureId))
           .limit(1);
 
-        if (!existingMatch) {
-          console.log(`[live-sync] Match not found in DB for API fixture ${apiFixtureId}, skipping`);
-          continue;
-        }
+        let matchId: string;
 
-        const matchId = existingMatch.id;
+        if (!existingMatch) {
+          // Match not in DB — create it from the live fixture data
+          try {
+            // Find home and away clubs by API ID
+            const [homeClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.home.id)).limit(1);
+            const [awayClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.away.id)).limit(1);
+
+            if (!homeClub || !awayClub) {
+              console.log(`[live-sync] Clubs not found for fixture ${apiFixtureId}, skipping`);
+              continue;
+            }
+
+            const slug = `${homeClub.slug}-vs-${awayClub.slug}-${new Date(fixture.fixture.date).toISOString().split('T')[0]}`;
+            const [inserted] = await db.insert(matches).values({
+              apiFootballId: apiFixtureId,
+              homeClubId: homeClub.id,
+              awayClubId: awayClub.id,
+              kickoff: new Date(fixture.fixture.date),
+              status: mapFixtureStatus(fixture.fixture.status.short),
+              minute: fixture.fixture.status.elapsed,
+              homeScore: fixture.goals.home,
+              awayScore: fixture.goals.away,
+              homeScoreHt: fixture.score.halftime.home,
+              awayScoreHt: fixture.score.halftime.away,
+              referee: fixture.fixture.referee,
+              slug,
+              round: fixture.league.round,
+            }).returning({ id: matches.id });
+
+            matchId = inserted.id;
+            console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
+          } catch (insertErr) {
+            console.error(`[live-sync] Failed to create match ${apiFixtureId}:`, insertErr);
+            continue;
+          }
+        } else {
+          matchId = existingMatch.id;
+        }
 
         // 2a. Update match record (score, minute, status)
         const newStatus = mapFixtureStatus(fixture.fixture.status.short);
