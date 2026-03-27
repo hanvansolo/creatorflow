@@ -19,6 +19,7 @@ import {
   mapEventType,
 } from '@/lib/api/football-api';
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
+import { postCustomTweet } from '@/lib/social/twitter';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -85,6 +86,7 @@ export async function GET(
     console.log(`[live-sync] Found ${liveFixtures.length} live matches`);
 
     const matchesNeedingAnalysis: Array<{ matchId: string; trigger: string }> = [];
+    const kickoffTweets: Array<{ home: string; away: string; competition: string; matchId: string }> = [];
     let updatedCount = 0;
 
     for (const fixture of liveFixtures) {
@@ -131,12 +133,35 @@ export async function GET(
 
             matchId = inserted.id;
             console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
+
+            // New live match = kickoff just happened — queue tweet
+            kickoffTweets.push({
+              home: homeClub.name,
+              away: awayClub.name,
+              competition: fixture.league.name || '',
+              matchId,
+            });
           } catch (insertErr) {
             console.error(`[live-sync] Failed to create match ${apiFixtureId}:`, insertErr);
             continue;
           }
         } else {
           matchId = existingMatch.id;
+
+          // Detect kickoff: was scheduled, now live
+          if (existingMatch.status === 'scheduled' && fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 5) {
+            // Find club names for the tweet
+            const [hc] = await db.select({ name: clubs.name }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
+            const [ac] = await db.select({ name: clubs.name }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
+            if (hc && ac) {
+              kickoffTweets.push({
+                home: hc.name,
+                away: ac.name,
+                competition: fixture.league.name || '',
+                matchId,
+              });
+            }
+          }
         }
 
         // 2a. Update match record (score, minute, status)
@@ -336,8 +361,31 @@ export async function GET(
       }
     }
 
+    // Send kickoff tweets
+    let tweetsSent = 0;
+    for (const kick of kickoffTweets) {
+      try {
+        const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
+        const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
+        const compTag = kick.competition.replace(/[^a-zA-Z0-9]/g, '');
+        const matchUrl = `https://www.footy-feed.com/matches/${kick.matchId}`;
+
+        const tweet = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
+
+        const result = await postCustomTweet(tweet);
+        if (result.success) {
+          tweetsSent++;
+          console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away}`);
+        } else {
+          console.error(`[live-sync] Kickoff tweet failed: ${result.error}`);
+        }
+      } catch (err) {
+        console.error(`[live-sync] Kickoff tweet error:`, err);
+      }
+    }
+
     console.log(
-      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses generated`
+      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} kickoff tweets`
     );
 
     return NextResponse.json({
@@ -345,6 +393,7 @@ export async function GET(
       liveMatches: liveFixtures.length,
       updated: updatedCount,
       analysisGenerated: analysisCount,
+      kickoffTweets: tweetsSent,
     });
   } catch (error) {
     console.error('[live-sync] Fatal error:', error);

@@ -325,3 +325,44 @@ export async function postToTwitter(
     return { success: false, error: (e as Error).message };
   }
 }
+
+/**
+ * Post a custom tweet with exact text (no auto-formatting).
+ * Used for kickoff alerts, goal alerts, etc.
+ */
+export async function postCustomTweet(
+  text: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, error: 'Twitter credentials not configured' };
+  }
+
+  try {
+    const res = await fetch('https://api.twitter.com/2/tweets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: text.slice(0, 280) }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const responseText = await res.text();
+    let data;
+    try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
+
+    if (res.ok && data.data?.id) {
+      console.log(`[Twitter] Custom tweet posted: ${data.data.id}`);
+      return { success: true, id: data.data.id };
+    }
+
+    return {
+      success: false,
+      error: `${res.status}: ${data.detail || data.title || data.errors?.[0]?.message || responseText.slice(0, 200)}`,
+    };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
