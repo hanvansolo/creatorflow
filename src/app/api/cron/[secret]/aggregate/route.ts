@@ -236,7 +236,7 @@ export async function GET(
             credibilityRating,
           }).returning({ id: newsArticles.id });
           insertedCount++;
-          newArticleUrls.push(`https://footy-feed.com/news/${slug}`);
+          newArticleUrls.push(`https://www.footy-feed.com/news/${slug}`);
 
           // Generate AI image if article has no image
           let socialImageUrl = finalImageUrl;

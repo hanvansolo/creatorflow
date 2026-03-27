@@ -257,7 +257,7 @@ async function getRoundupSource(): Promise<string> {
       name: 'FootyFeed Daily Roundup',
       slug: 'footyfeed-roundup',
       type: 'roundup',
-      url: process.env.NEXT_PUBLIC_SITE_URL || 'https://footy-feed.com',
+      url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com',
       isActive: true,
       priority: 10,
     })

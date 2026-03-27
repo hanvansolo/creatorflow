@@ -18,4 +18,4 @@ export function getTransport(): nodemailer.Transporter {
 }
 
 export const FROM_EMAIL = process.env.SMTP_FROM || 'Footy Feed <noreply@footy-feed.com>';
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://footy-feed.com';
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';

@@ -5,7 +5,7 @@ export const SITE_CONFIG = {
   shortName: 'Footy Feed',
   description: 'Football news that gets straight to the point. Breaking news from 12+ sources, AI-powered match predictions, live scores, league tables, transfer tracker, tactical analysis, and What If scenarios. Everything you need to stay ahead of the game.',
   tagline: 'Football News Without the Waffle',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://footy-feed.com',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com',
   locale: 'en_US',
   themeColor: '#00B140',
   twitterHandle: '@FootyFeed',
