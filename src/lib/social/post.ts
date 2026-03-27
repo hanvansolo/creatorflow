@@ -23,7 +23,7 @@ export async function postToAllPlatforms(
   imageUrl?: string
 ): Promise<SocialPostResult> {
   const results = await Promise.allSettled([
-    process.env.TWITTER_API_KEY ? postToTwitter(title, slug, tags, imageUrl) : null,
+    (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) ? postToTwitter(title, slug, tags, imageUrl) : null,
     process.env.FACEBOOK_PAGE_ID ? postToFacebook(title, slug, summary, imageUrl) : null,
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
     process.env.THREADS_USER_ID ? postToThreads(title, slug, imageUrl) : null,
