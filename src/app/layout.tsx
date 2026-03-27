@@ -54,6 +54,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <JsonLdScript data={websiteStructuredData} />
+        <meta name="impact-site-verification" content="cfef735d-47e2-4c0b-8630-84ff2dc0ea39" />
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8717247095472771"
           crossOrigin="anonymous"
