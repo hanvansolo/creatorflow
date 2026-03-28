@@ -43,16 +43,16 @@ function eventDescription(evt: MatchEvent, match: MatchDetail): string {
     const suffix = t === 'own_goal' ? ' (Own Goal)' : t === 'penalty_scored' ? ' (Penalty)' : '';
     return `GOAL! ${name} scores for ${team}${suffix}.${assist}`;
   }
-  if (t === 'yellow card') {
+  if (t === 'yellow_card' || t === 'yellow card') {
     return `${name} (${team}) receives a yellow card.`;
   }
-  if (t === 'red card') {
+  if (t === 'red_card' || t === 'red card') {
     return `${name} (${team}) is shown a red card!`;
   }
-  if (t === 'yellowred' || t === 'second yellow') {
+  if (t === 'second_yellow' || t === 'yellowred' || t === 'second yellow') {
     return `${name} (${team}) receives a second yellow card and is sent off!`;
   }
-  if (t.includes('subst')) {
+  if (t.includes('subst') || t === 'substitution') {
     return `Substitution for ${team}: ${second ? `${second} replaces ${name}` : `${name} comes off`}.`;
   }
   if (t.includes('var')) {
@@ -63,12 +63,12 @@ function eventDescription(evt: MatchEvent, match: MatchDetail): string {
 
 function isGoal(type: string): boolean {
   const t = type?.toLowerCase() ?? '';
-  return t.includes('goal') || t === 'penalty_scored';
+  return t.includes('goal') || t === 'penalty_scored' || t === 'penalty scored';
 }
 
 function isCard(type: string): boolean {
   const t = type?.toLowerCase() ?? '';
-  return t === 'yellow card' || t === 'red card' || t === 'yellowred' || t === 'second yellow';
+  return t === 'yellow_card' || t === 'yellow card' || t === 'red_card' || t === 'red card' || t === 'second_yellow' || t === 'yellowred' || t === 'second yellow';
 }
 
 /* ---------- component ---------- */

@@ -269,6 +269,12 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                 injuries={data.injuries}
                 predictions={data.predictions}
               />
+              {/* Timeline on Summary tab */}
+              {events.length > 0 && (
+                <div className="mt-6">
+                  <TimelineTab match={match} events={events} />
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="livetext">
