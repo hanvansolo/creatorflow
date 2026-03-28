@@ -283,7 +283,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           const teamName = e.team?.name || e.team_name || null;
           const teamApiId = e.team?.id || null;
           // Determine if this event is for the home or away team
-          const isHome = teamApiId === match.home_api_id || teamName === match.home_name;
+          // Use String() comparison because Postgres may return numbers as strings
+          const isHome = (teamApiId && String(teamApiId) === String(match.home_api_id))
+            || teamName === match.home_name;
           return {
             event_type: mapEventType(e.type, e.detail),
             minute: e.time?.elapsed ?? e.elapsed ?? e.minute,
@@ -316,7 +318,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         stats = apiStats.response.map((team: any) => ({
           club_name: team.team.name,
           club_code: null,
-          club_id: team.team.id === match.home_api_id ? match.home_club_id : match.away_club_id,
+          club_id: String(team.team.id) === String(match.home_api_id) ? match.home_club_id : match.away_club_id,
           possession: parseVal(getStat(team.statistics, 'Ball Possession')),
           shots_total: parseVal(getStat(team.statistics, 'Total Shots')),
           shots_on_target: parseVal(getStat(team.statistics, 'Shots on Goal')),
@@ -760,7 +762,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
                   return (
                     <div
-                      key={event.id}
+                      key={event.id || `${event.minute}-${event.event_type}-${i}`}
                       className={`relative flex items-center gap-3 ${isHome ? 'flex-row' : 'flex-row-reverse'}`}
                     >
                       {/* Event card */}
