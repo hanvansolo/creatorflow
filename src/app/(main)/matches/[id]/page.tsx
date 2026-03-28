@@ -278,10 +278,12 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       const apiEvents = await getFixtureEvents(match.api_football_id);
       if (apiEvents.response && apiEvents.response.length > 0) {
         events = apiEvents.response.map((e: any) => {
-          // API-Football events structure varies — try all known paths
-          const playerName = e.player?.name || e.player_name || (typeof e.player === 'string' ? e.player : null);
-          const assistName = e.assist?.name || e.assist_name || (typeof e.assist === 'string' ? e.assist : null);
+          const playerName = e.player?.name || e.player_name || null;
+          const assistName = e.assist?.name || e.assist_name || null;
           const teamName = e.team?.name || e.team_name || null;
+          const teamApiId = e.team?.id || null;
+          // Determine if this event is for the home or away team
+          const isHome = teamApiId === match.home_api_id || teamName === match.home_name;
           return {
             event_type: mapEventType(e.type, e.detail),
             minute: e.time?.elapsed ?? e.elapsed ?? e.minute,
@@ -294,7 +296,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             second_player_last_name: null,
             club_name: teamName,
             club_code: null,
-            club_id: null,
+            club_id: isHome ? 'home' : 'away', // Flag for timeline rendering
+            is_home: isHome,
             description: e.detail || e.comments || null,
           };
         });
@@ -743,7 +746,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
               <div className="space-y-4">
                 {events.map((event: any, i: number) => {
-                  const isHome = event.club_id === match.home_club_id
+                  const isHome = event.is_home === true
+                    || event.club_id === 'home'
+                    || event.club_id === match.home_club_id
                     || event.club_name === match.home_name
                     || event.club_code === match.home_code;
                   const isGoal = isGoalEvent(event.event_type);
