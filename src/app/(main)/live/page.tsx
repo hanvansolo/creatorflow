@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Radio, ArrowRight, Zap, Calendar, Trophy, Goal } from 'lucide-react';
 import { COMPETITIONS } from '@/lib/constants/competitions';
 import { CompetitionSelector } from '@/components/competitions';
+import { LiveMatchCard } from '@/components/live/LiveMatchCard';
 
 const ALL_COMPETITIONS = COMPETITIONS.map(c => ({
   name: c.name,
@@ -257,109 +258,16 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
                 </div>
 
                 {/* Match cards */}
-                <div className="divide-y divide-zinc-800/50">
+                <div className="space-y-2 p-2">
                   {grouped[compName].map((match) => {
                     const matchGoals = eventsByMatch[match.id] || [];
-                    const homeGoals = matchGoals.filter(e => e.club_id === match.home_slug ? false : true); // filter below
-                    // Need club IDs not slugs — use raw approach
-                    // Goals are already linked by club_id but we display by home/away name
 
                     return (
-                      <Link
-                        href={`/matches/${match.id}`}
+                      <LiveMatchCard
                         key={match.id}
-                        className="block bg-zinc-900 hover:bg-zinc-800/50 transition-colors border-l-2 border-l-emerald-500 px-4 py-4"
-                      >
-                        {/* Match header with minute */}
-                        <div className="flex items-center justify-center gap-2 mb-3">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-400">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            </span>
-                            {match.status === 'halftime' ? 'HT' : match.status === 'extra_time' ? 'ET' : match.status === 'penalties' ? 'PEN' : `${match.minute || 0}'`}
-                          </span>
-                        </div>
-
-                        {/* Teams and score */}
-                        <div className="flex items-center justify-center">
-                          {/* Home team */}
-                          <div className="flex items-center gap-2.5 flex-1 justify-end">
-                            <span className="text-sm font-semibold text-white text-right truncate">
-                              <span className="hidden sm:inline">{match.home_name}</span>
-                              <span className="sm:hidden">{match.home_code || match.home_name?.slice(0, 3).toUpperCase()}</span>
-                            </span>
-                            {match.home_logo ? (
-                              <Image src={match.home_logo} alt={match.home_name} width={28} height={28} className="h-7 w-7 object-contain shrink-0" />
-                            ) : (
-                              <span className="h-5 w-5 rounded-full shrink-0" style={{ backgroundColor: match.home_color || '#52525b' }} />
-                            )}
-                          </div>
-
-                          {/* Score */}
-                          <div className="flex items-center gap-3 mx-5">
-                            <span className="text-2xl font-bold text-emerald-400">{match.home_score ?? 0}</span>
-                            <span className="text-zinc-600 text-sm">-</span>
-                            <span className="text-2xl font-bold text-emerald-400">{match.away_score ?? 0}</span>
-                          </div>
-
-                          {/* Away team */}
-                          <div className="flex items-center gap-2.5 flex-1">
-                            {match.away_logo ? (
-                              <Image src={match.away_logo} alt={match.away_name} width={28} height={28} className="h-7 w-7 object-contain shrink-0" />
-                            ) : (
-                              <span className="h-5 w-5 rounded-full shrink-0" style={{ backgroundColor: match.away_color || '#52525b' }} />
-                            )}
-                            <span className="text-sm font-semibold text-white truncate">
-                              <span className="hidden sm:inline">{match.away_name}</span>
-                              <span className="sm:hidden">{match.away_code || match.away_name?.slice(0, 3).toUpperCase()}</span>
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Half-time score */}
-                        {match.home_score_ht != null && match.away_score_ht != null && (
-                          <p className="text-center text-[10px] text-zinc-500 mt-1">
-                            HT: {match.home_score_ht} - {match.away_score_ht}
-                          </p>
-                        )}
-
-                        {/* Match timeline — all events */}
-                        {matchGoals.length > 0 && (
-                          <div className="mt-3 flex flex-col items-center gap-0.5">
-                            {matchGoals.map((evt, i) => {
-                              const isGoal = ['goal', 'own_goal', 'penalty_scored'].includes(evt.event_type);
-                              const isCard = ['yellow_card', 'second_yellow', 'red_card'].includes(evt.event_type);
-                              const isSub = evt.event_type === 'substitution';
-                              const isVar = evt.event_type === 'var_decision';
-
-                              let icon = <Goal className="h-3 w-3 text-emerald-500/70" />;
-                              let label = '';
-                              if (evt.event_type === 'own_goal') { icon = <Goal className="h-3 w-3 text-red-400/70" />; label = '(OG)'; }
-                              else if (evt.event_type === 'penalty_scored') { icon = <Goal className="h-3 w-3 text-emerald-500/70" />; label = '(P)'; }
-                              else if (evt.event_type === 'penalty_missed') { icon = <span className="h-3 w-3 text-[10px] text-red-400">✗</span>; label = '(Pen missed)'; }
-                              else if (evt.event_type === 'yellow_card') { icon = <span className="inline-block h-3 w-2 rounded-[1px] bg-yellow-400" />; }
-                              else if (evt.event_type === 'second_yellow') { icon = <span className="inline-block h-3 w-2 rounded-[1px] bg-yellow-400 ring-1 ring-red-500" />; }
-                              else if (evt.event_type === 'red_card') { icon = <span className="inline-block h-3 w-2 rounded-[1px] bg-red-500" />; }
-                              else if (isSub) { icon = <span className="text-[10px] text-emerald-400">↔</span>; }
-                              else if (isVar) { icon = <span className="text-[9px] font-bold text-blue-400">VAR</span>; }
-
-                              return (
-                              <div key={i} className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                                <span className="text-zinc-600 w-6 text-right font-mono text-[10px]">
-                                  {evt.minute}&apos;{evt.added_time ? `+${evt.added_time}` : ''}
-                                </span>
-                                {icon}
-                                <span>
-                                  {evt.player_name || 'Unknown'}
-                                  {label && <span className={`ml-1 ${evt.event_type === 'own_goal' ? 'text-red-400' : 'text-amber-400'}`}>{label}</span>}
-                                </span>
-                              </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </Link>
+                        match={match}
+                        events={matchGoals}
+                      />
                     );
                   })}
                 </div>
