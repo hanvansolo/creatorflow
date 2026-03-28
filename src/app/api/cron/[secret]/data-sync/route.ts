@@ -547,7 +547,7 @@ async function syncFixtures(
 
 // ===== STEP 5: Sync player squads =====
 
-async function syncPlayerSquads() {
+async function syncPlayerSquads(limit = 30, offset = 0) {
   const errors: string[] = [];
   let playersUpserted = 0;
 
@@ -568,8 +568,9 @@ async function syncPlayerSquads() {
     ORDER BY c.name
   `);
 
-  const clubList = (priorityClubs as any[]) || [];
-  console.log(`[syncPlayers] Found ${clubList.length} priority clubs to sync squads for`);
+  const allClubs = (priorityClubs as any[]) || [];
+  const clubList = allClubs.slice(offset, offset + limit);
+  console.log(`[syncPlayers] Found ${allClubs.length} priority clubs, syncing ${clubList.length} (offset=${offset}, limit=${limit})`);
 
   for (const club of clubList) {
     try {
@@ -709,17 +710,19 @@ export async function GET(
     console.log(`Step 4: Syncing fixtures for ${filteredMap.size} competitions...`);
     const { matchesUpserted, errors: fixtureErrors } = await syncFixtures(filteredMap);
 
-    // Step 5: Players (only on full sync — 1 API call per club)
+    // Step 5: Players (only when ?players=true — 1 API call per club)
     let playersUpserted = 0;
     let playerErrors: string[] = [];
-    const syncPlayers = url.searchParams.get('players') === 'true' || fullSync;
+    const syncPlayers = url.searchParams.get('players') === 'true';
+    const playerLimit = parseInt(url.searchParams.get('playerLimit') || '30');
+    const playerOffset = parseInt(url.searchParams.get('playerOffset') || '0');
     if (syncPlayers) {
-      console.log('Step 5: Syncing player squads...');
-      const result = await syncPlayerSquads();
+      console.log(`Step 5: Syncing player squads (limit=${playerLimit}, offset=${playerOffset})...`);
+      const result = await syncPlayerSquads(playerLimit, playerOffset);
       playersUpserted = result.playersUpserted;
       playerErrors = result.errors;
     } else {
-      console.log('Step 5: Skipped players (priority run)');
+      console.log('Step 5: Skipped players');
     }
 
     const allErrors = [...compErrors, ...clubErrors, ...standingErrors, ...fixtureErrors, ...playerErrors];
