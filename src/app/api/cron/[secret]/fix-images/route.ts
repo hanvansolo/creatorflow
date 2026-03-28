@@ -82,10 +82,10 @@ export async function GET(
           // Images under 15KB are likely tiny thumbnails (240x135 = ~8-12KB)
           try {
             const fstats = await fs.stat(filepath);
-            console.log(`[FixImages] File ${filename}: ${fstats.size} bytes at ${filepath}`);
-            if (fstats.size < 15000) {
+            console.log(`[FixImages] File ${filename}: ${ffstats.size} bytes at ${filepath}`);
+            if (ffstats.size < 15000) {
               // Tiny image — re-scrape og:image from source
-              console.log(`[FixImages] Tiny image (${stats.size}b): ${article.title.slice(0, 40)}... - re-scraping`);
+              console.log(`[FixImages] Tiny image (${fstats.size}b): ${article.title.slice(0, 40)}... - re-scraping`);
               if (article.originalUrl) {
                 const scrapedUrl = await scrapeArticleImage(article.originalUrl);
                 if (scrapedUrl) {
@@ -96,7 +96,7 @@ export async function GET(
                       .set({ imageUrl: downloadResult.localPath })
                       .where(eq(newsArticles.id, article.id));
                     fixed++;
-                    console.log(`[FixImages] Upgraded tiny → ${downloadResult.localPath} (${stats.size}b → full size)`);
+                    console.log(`[FixImages] Upgraded tiny → ${downloadResult.localPath} (${fstats.size}b → full size)`);
                     continue;
                   }
                 }
