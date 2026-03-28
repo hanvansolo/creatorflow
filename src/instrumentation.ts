@@ -25,6 +25,7 @@ const DEFAULT_JOBS = [
   { name: 'email-race-roundup', path: '/api/cron/{secret}/email-race-roundup', intervalMs: 12 * 60 * 60 * 1000, delayMs: 510_000  }, // Every 12h - checks for races in last 2 days
   { name: 'live-sync',          path: '/api/cron/{secret}/live-sync',          intervalMs: 60 * 1000,            delayMs: 30_000   }, // Every 1 min - live match scores, events, stats + AI analysis
   { name: 'fix-images',         path: '/api/cron/{secret}/fix-images',         intervalMs: 30 * 60 * 1000,      delayMs: 540_000  }, // Every 30 min - re-scrape missing article images
+  { name: 'respin',             path: '/api/cron/{secret}/respin?limit=10',    intervalMs: 30 * 60 * 1000,      delayMs: 570_000  }, // Every 30 min - expand short articles with AI
 ];
 
 async function loadSettingsFromDB(): Promise<Map<string, { intervalMs: number; enabled: boolean }>> {

@@ -145,8 +145,8 @@ export async function GET(
           continue;
         }
 
-        // Spin the article content if enabled (max 5 per run to avoid timeout)
-        const MAX_SPINS_PER_RUN = 5;
+        // Spin the article content if enabled
+        const MAX_SPINS_PER_RUN = 20;
         let finalTitle = article.title;
         let finalSummary = article.summary;
         let finalContent = article.content;

@@ -38,6 +38,7 @@ export async function GET(
     // Prefer articles that still have their originalTitle set (meaning they were
     // processed by the aggregator but may still contain fluff).
     // We use the original title + current content as source material.
+    // Only respin articles with short content (< 300 chars = RSS excerpt, not spun)
     const articles = await db
       .select({
         id: newsArticles.id,
@@ -47,7 +48,7 @@ export async function GET(
         summary: newsArticles.summary,
       })
       .from(newsArticles)
-      .where(isNotNull(newsArticles.content))
+      .where(sql`LENGTH(${newsArticles.content}) < 300`)
       .orderBy(sql`${newsArticles.publishedAt} DESC`)
       .limit(limit);
 
