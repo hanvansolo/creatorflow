@@ -43,8 +43,6 @@ export function generateBaseMetadata(seo: SEOMetadata): Metadata {
       images: [
         {
           url: image,
-          width: 1200,
-          height: 630,
           alt: imageAlt,
         },
       ],
