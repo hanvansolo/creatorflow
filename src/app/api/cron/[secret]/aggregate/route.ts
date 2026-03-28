@@ -205,6 +205,13 @@ export async function GET(
               }
             }
 
+            // Only spin if we have enough source material (300+ chars)
+            // Otherwise we'd just be padding a 1-sentence RSS excerpt with AI fluff
+            if (fullText.length < 300) {
+              console.log(`[Spinner] Skipping spin — only ${fullText.length} chars available for: ${article.title?.slice(0, 50)}`);
+              // Don't spin — use original content as-is
+            } else {
+
             const spun = await spinArticle(
               article.title,
               fullText,
@@ -214,6 +221,8 @@ export async function GET(
             finalSummary = spun.summary;
             finalContent = spun.content;
             spunCount++;
+
+            } // end of else (enough source material)
           } catch (error) {
             console.error('Spinning failed, using original:', error);
           }
