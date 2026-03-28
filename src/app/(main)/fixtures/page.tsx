@@ -12,12 +12,26 @@ import { AdSlot } from '@/components/ads/AdSlot';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = createPageMetadata(
-  'Fixtures & Results - Football Matches',
-  'Today\'s football fixtures and results. Live scores, upcoming matches, and recent results across all major leagues.',
-  '/fixtures',
-  ['football fixtures', 'match results', 'today football', 'upcoming matches', 'live scores']
-);
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const { date, competition } = await searchParams;
+  const activeDate = date || new Date().toISOString().split('T')[0];
+  const displayDate = new Date(activeDate + 'T12:00:00Z').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+  const comp = competition ? COMPETITIONS.find(c => c.slug === competition) : null;
+  const compName = comp ? comp.name : 'All Leagues';
+
+  return createPageMetadata(
+    `${compName} Fixtures & Live Scores — ${displayDate}`,
+    `Football fixtures, live scores, and results for ${displayDate}. ${compName} schedule with kick-off times, head-to-head records, and match previews. Follow every goal as it happens.`,
+    `/fixtures${date ? `?date=${date}` : ''}${competition ? `&competition=${competition}` : ''}`,
+    [
+      'football fixtures', 'live scores', 'match results', displayDate,
+      ...(comp ? [comp.name, `${comp.name} fixtures`, `${comp.name} results`] : ['Premier League fixtures', 'Champions League fixtures']),
+      'kick-off times', 'head to head', 'match preview', 'today football',
+    ]
+  );
+}
 
 interface PageProps {
   searchParams: Promise<{ date?: string; competition?: string }>;
@@ -173,6 +187,40 @@ export default async function FixturesPage({ searchParams }: PageProps) {
   const grouped = groupByCompetition(matches);
   const competitionNames = Object.keys(grouped);
 
+  // Fetch H2H summaries for scheduled matches (brief "X wins, Y draws, Z wins from last N")
+  const h2hMap: Record<string, { homeWins: number; draws: number; awayWins: number; total: number }> = {};
+  const scheduledMatches = matches.filter(m => m.status === 'scheduled').slice(0, 20); // limit to avoid too many queries
+  if (scheduledMatches.length > 0) {
+    try {
+      for (const m of scheduledMatches) {
+        const h2h = await db.execute(sql`
+          SELECT
+            CASE
+              WHEN (m.home_club_id = hc.id AND m.home_score > m.away_score) OR (m.away_club_id = hc.id AND m.away_score > m.home_score) THEN 'home_win'
+              WHEN m.home_score = m.away_score THEN 'draw'
+              ELSE 'away_win'
+            END as result
+          FROM matches m
+          INNER JOIN clubs hc ON hc.slug = ${m.home_slug}
+          INNER JOIN clubs ac ON ac.slug = ${m.away_slug}
+          WHERE m.status = 'finished'
+            AND ((m.home_club_id = hc.id AND m.away_club_id = ac.id) OR (m.home_club_id = ac.id AND m.away_club_id = hc.id))
+          ORDER BY m.kickoff DESC
+          LIMIT 5
+        `);
+        const results = h2h as any[];
+        if (results.length > 0) {
+          h2hMap[m.id] = {
+            homeWins: results.filter(r => r.result === 'home_win').length,
+            draws: results.filter(r => r.result === 'draw').length,
+            awayWins: results.filter(r => r.result === 'away_win').length,
+            total: results.length,
+          };
+        }
+      }
+    } catch { /* H2H query failed silently */ }
+  }
+
   // Format display date
   const displayDate = new Date(activeDate + 'T12:00:00Z').toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -294,9 +342,9 @@ export default async function FixturesPage({ searchParams }: PageProps) {
                     const isScheduled = match.status === 'scheduled';
 
                     return (
+                      <div key={match.id}>
                       <Link
                         href={`/matches/${match.id}`}
-                        key={match.id}
                         className={`flex items-center px-4 py-3 bg-zinc-900 hover:bg-zinc-800/50 transition-colors ${
                           isLive ? 'border-l-2 border-l-emerald-500' : ''
                         }`}
@@ -358,6 +406,20 @@ export default async function FixturesPage({ searchParams }: PageProps) {
                           <span className="hidden lg:block text-[10px] text-zinc-600 ml-3 shrink-0">{match.referee}</span>
                         )}
                       </Link>
+                      {/* H2H snippet for scheduled matches */}
+                      {isScheduled && h2hMap[match.id] && (
+                        <div className="px-4 pb-2 -mt-1 bg-zinc-900">
+                          <p className="text-[10px] text-zinc-500 text-center">
+                            Last {h2hMap[match.id].total} meetings: {' '}
+                            <span className="text-zinc-400">{match.home_name} {h2hMap[match.id].homeWins}W</span>
+                            {' · '}
+                            <span className="text-zinc-400">{h2hMap[match.id].draws}D</span>
+                            {' · '}
+                            <span className="text-zinc-400">{match.away_name} {h2hMap[match.id].awayWins}W</span>
+                          </p>
+                        </div>
+                      )}
+                      </div>
                     );
                   })}
                 </div>
