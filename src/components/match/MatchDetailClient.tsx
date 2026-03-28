@@ -7,9 +7,6 @@ import Image from 'next/image';
 import {
   ArrowLeft,
   ArrowUpRight,
-  Shield,
-  Clock,
-  MapPin,
   Radio,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -19,17 +16,12 @@ import LineupsTab from './tabs/LineupsTab';
 import StatsTab from './tabs/StatsTab';
 import OddsTab from './tabs/OddsTab';
 import NewsTab from './tabs/NewsTab';
+import HeadToHeadTab from './tabs/HeadToHeadTab';
 import { AdSlot } from '@/components/ads/AdSlot';
 import type { MatchPageData, LiveRefreshData, MatchEvent, TeamStats, MatchAnalysisRow } from './types';
 
 function isLiveStatus(status: string) {
   return ['live', 'halftime', 'extra_time', 'penalties'].includes(status);
-}
-
-function formatKickoff(kickoff: string) {
-  const d = new Date(kickoff);
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 interface MatchDetailClientProps {
@@ -82,7 +74,6 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
 
   const isLive = isLiveStatus(match.status);
   const isFinished = match.status === 'finished';
-  const isScheduled = match.status === 'scheduled';
   const score = match.home_score != null ? `${match.home_score} - ${match.away_score}` : null;
 
   // Extract goal scorers from events
@@ -121,7 +112,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
             {match.competition_name && (
               <>
                 <span className="mx-2 text-zinc-600">&middot;</span>
-                <Link href={`/tables?competition=${match.competition_slug}`} className="hover:text-emerald-400 transition-colors">
+                <Link href={`/tables?competition=${match.competition_slug}`} className="hover:text-yellow-400 transition-colors">
                   {match.competition_name}
                 </Link>
               </>
@@ -132,7 +123,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
           <div className="flex items-center justify-center gap-3 sm:gap-6">
             {/* Home team */}
             <Link href={`/teams/${match.home_slug}`} className="group flex items-center gap-2 sm:gap-3 flex-1 justify-end min-w-0">
-              <span className="text-base sm:text-xl font-bold text-white text-right truncate group-hover:text-emerald-400 transition-colors">
+              <span className="text-base sm:text-xl font-bold text-white text-right truncate group-hover:text-yellow-400 transition-colors">
                 {match.home_name}
               </span>
               {match.home_logo ? (
@@ -151,7 +142,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                   <span className="text-4xl sm:text-5xl font-black text-white tabular-nums">{match.away_score}</span>
                 </div>
               ) : (
-                <span className="text-2xl font-bold text-emerald-400">
+                <span className="text-2xl font-bold text-yellow-400">
                   {new Date(match.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -167,7 +158,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                 </span>
               )}
               {isFinished && (
-                <span className="mt-1 text-xs font-semibold text-emerald-400">FT</span>
+                <span className="mt-1 text-xs font-semibold text-yellow-400">FT</span>
               )}
 
               {/* HT */}
@@ -183,7 +174,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
               ) : (
                 <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: match.away_color || '#52525b' }} />
               )}
-              <span className="text-base sm:text-xl font-bold text-white truncate group-hover:text-emerald-400 transition-colors">
+              <span className="text-base sm:text-xl font-bold text-white truncate group-hover:text-yellow-400 transition-colors">
                 {match.away_name}
               </span>
             </Link>
@@ -235,7 +226,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
               <span>{match.referee}</span>
             )}
             {isLive && isRefreshing && (
-              <span className="text-emerald-400 flex items-center gap-1">
+              <span className="text-yellow-400 flex items-center gap-1">
                 <Radio className="h-3 w-3 animate-pulse" />
                 Updating...
               </span>
@@ -250,16 +241,17 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
           <TabsList className="w-full flex overflow-x-auto border-b border-zinc-800 bg-transparent gap-0 rounded-none p-0 scrollbar-hide">
             {[
               { value: 'summary', label: 'Summary' },
-              { value: 'timeline', label: 'Timeline' },
-              { value: 'lineups', label: 'Lineups' },
-              { value: 'stats', label: 'Stats' },
+              { value: 'livetext', label: 'Live Text' },
+              { value: 'lineups', label: 'Line-ups' },
+              { value: 'stats', label: 'Match Stats' },
+              { value: 'h2h', label: 'Head-to-head' },
               { value: 'odds', label: 'Odds' },
               { value: 'news', label: 'News' },
             ].map(tab => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex-shrink-0 rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-400 data-[state=active]:bg-transparent"
+                className="flex-shrink-0 rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200 data-[state=active]:border-yellow-400 data-[state=active]:text-yellow-400 data-[state=active]:bg-transparent"
               >
                 {tab.label}
               </TabsTrigger>
@@ -277,13 +269,9 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                 injuries={data.injuries}
                 predictions={data.predictions}
               />
-              {/* Full timeline on Summary tab */}
-              <div className="mt-6">
-                <TimelineTab match={match} events={events} />
-              </div>
             </TabsContent>
 
-            <TabsContent value="timeline">
+            <TabsContent value="livetext">
               <TimelineTab match={match} events={events} />
             </TabsContent>
 
@@ -293,6 +281,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                 lineups={data.lineups}
                 homeSquad={data.homeSquad}
                 awaySquad={data.awaySquad}
+                events={events}
               />
             </TabsContent>
 
@@ -302,6 +291,13 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                 homeStats={homeStats}
                 awayStats={awayStats}
                 playerRatings={data.playerRatings}
+                predictions={data.predictions}
+              />
+            </TabsContent>
+
+            <TabsContent value="h2h">
+              <HeadToHeadTab
+                match={match}
                 predictions={data.predictions}
               />
             </TabsContent>
@@ -328,30 +324,30 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
         {/* Footer links */}
         <section className="grid gap-3 sm:grid-cols-3 mt-4">
           <Link
-            className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-all group"
+            className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-yellow-400/30 hover:text-yellow-400 transition-all group"
             href={`/teams/${match.home_slug}`}
           >
             <span>View {match.home_name}</span>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-yellow-400 transition-colors" />
           </Link>
           <Link
-            className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-all group"
+            className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-yellow-400/30 hover:text-yellow-400 transition-all group"
             href={`/teams/${match.away_slug}`}
           >
             <span>View {match.away_name}</span>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-yellow-400 transition-colors" />
           </Link>
           <Link
-            className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-all group"
+            className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-yellow-400/30 hover:text-yellow-400 transition-all group"
             href={`/compare?home=${match.home_slug}&away=${match.away_slug}`}
           >
             <span>Head to Head</span>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-yellow-400 transition-colors" />
           </Link>
         </section>
 
         <div className="text-center mt-6 mb-8">
-          <Link className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors" href="/fixtures">
+          <Link className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-yellow-400 transition-colors" href="/fixtures">
             <ArrowLeft className="h-4 w-4" />
             Back to Fixtures
           </Link>

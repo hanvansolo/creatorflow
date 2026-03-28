@@ -52,7 +52,7 @@ export default function NewsTab({
         <Link
           key={article.id}
           href={`/news/${article.slug}`}
-          className="group flex gap-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 transition-colors hover:border-zinc-700 hover:bg-zinc-800/60 sm:flex-row flex-col"
+          className="group flex gap-4 rounded-lg bg-zinc-800 p-3 transition-colors hover:bg-zinc-700/60 sm:flex-row flex-col"
         >
           {/* thumbnail */}
           {article.imageUrl && (
@@ -69,7 +69,7 @@ export default function NewsTab({
           {/* content */}
           <div className="flex min-w-0 flex-1 flex-col justify-between">
             <div>
-              <h4 className="mb-1 text-sm font-semibold leading-snug text-zinc-200 group-hover:text-emerald-400 transition-colors line-clamp-2">
+              <h4 className="mb-1 text-sm font-semibold leading-snug text-zinc-200 group-hover:text-yellow-400 transition-colors line-clamp-2">
                 {article.title}
               </h4>
               {article.summary && (

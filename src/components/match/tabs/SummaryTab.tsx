@@ -7,8 +7,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Activity,
-  Shield,
   Brain,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -21,82 +19,56 @@ import type {
   PredictionData,
 } from '@/components/match/types';
 
-/* ---------- inline StatBar ---------- */
+/* ---------- BBC-style center-out StatBar ---------- */
 
 function StatBar({
   label,
   homeValue,
   awayValue,
-  homeColor,
-  awayColor,
   isPercentage = false,
 }: {
   label: string;
   homeValue: number;
   awayValue: number;
-  homeColor: string;
-  awayColor: string;
   isPercentage?: boolean;
 }) {
   const total = homeValue + awayValue;
   const homePct = total > 0 ? (homeValue / total) * 100 : 50;
   const awayPct = total > 0 ? (awayValue / total) * 100 : 50;
+  const homeHigher = homeValue > awayValue;
+  const awayHigher = awayValue > homeValue;
 
   const fmt = (v: number) =>
     isPercentage ? `${v}%` : Number.isInteger(v) ? String(v) : v.toFixed(1);
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-zinc-400">
-        <span className="font-medium text-zinc-200">{fmt(homeValue)}</span>
-        <span className="uppercase tracking-wide">{label}</span>
-        <span className="font-medium text-zinc-200">{fmt(awayValue)}</span>
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className={`font-bold tabular-nums ${homeHigher ? 'text-yellow-400' : 'text-zinc-300'}`}>
+          {fmt(homeValue)}
+        </span>
+        <span className="text-xs uppercase tracking-wider text-zinc-400">{label}</span>
+        <span className={`font-bold tabular-nums ${awayHigher ? 'text-yellow-400' : 'text-zinc-300'}`}>
+          {fmt(awayValue)}
+        </span>
       </div>
-      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
-        <div
-          className="rounded-l-full transition-all duration-700"
-          style={{ width: `${homePct}%`, backgroundColor: homeColor }}
-        />
-        <div
-          className="rounded-r-full transition-all duration-700"
-          style={{ width: `${awayPct}%`, backgroundColor: awayColor }}
-        />
+      <div className="flex h-2 gap-0.5">
+        {/* Home bar grows from right (center) to left */}
+        <div className="flex-1 flex justify-end">
+          <div
+            className="h-full rounded-l bg-yellow-400 transition-all duration-700"
+            style={{ width: `${homePct}%` }}
+          />
+        </div>
+        {/* Away bar grows from left (center) to right */}
+        <div className="flex-1">
+          <div
+            className="h-full rounded-r bg-zinc-500 transition-all duration-700"
+            style={{ width: `${awayPct}%` }}
+          />
+        </div>
       </div>
     </div>
-  );
-}
-
-/* ---------- helpers ---------- */
-
-function playerName(evt: MatchEvent): string {
-  return (
-    evt.player_known_as ||
-    [evt.player_first_name, evt.player_last_name].filter(Boolean).join(' ') ||
-    evt.club_name ||
-    'Goal'
-  );
-}
-
-function eventIcon(type: string): string {
-  switch (type) {
-    case 'Goal':
-      return '\u26BD';
-    case 'Penalty':
-      return '\uD83C\uDFAF';
-    case 'Red Card':
-      return '\uD83D\uDFE5';
-    default:
-      return '\u26BD';
-  }
-}
-
-function isKeyEvent(evt: MatchEvent): boolean {
-  const t = evt.event_type?.toLowerCase() ?? '';
-  return (
-    t.includes('goal') ||
-    t === 'red card' ||
-    t === 'penalty' ||
-    t.includes('own goal')
   );
 }
 
@@ -121,17 +93,6 @@ export default function SummaryTab({
   injuries,
   predictions,
 }: SummaryTabProps) {
-  const homeColor = match.home_color || '#10b981';
-  const awayColor = match.away_color || '#3b82f6';
-
-  const keyEvents = useMemo(
-    () =>
-      events
-        .filter(isKeyEvent)
-        .sort((a, b) => a.minute - b.minute),
-    [events],
-  );
-
   const homeInjuries = useMemo(
     () => injuries.filter((i) => i.team.id === match.home_api_id),
     [injuries, match.home_api_id],
@@ -144,88 +105,26 @@ export default function SummaryTab({
   const isFinished =
     match.status === 'FT' ||
     match.status === 'AET' ||
-    match.status === 'PEN';
+    match.status === 'PEN' ||
+    match.status === 'finished';
 
-  /* quick stats data */
+  /* Quick stats — top 4 */
   const quickStats = useMemo(() => {
     if (!homeStats || !awayStats) return [];
     return [
-      {
-        label: 'Possession',
-        home: homeStats.possession ?? 0,
-        away: awayStats.possession ?? 0,
-        pct: true,
-      },
-      {
-        label: 'Shots on Target',
-        home: homeStats.shots_on_target ?? 0,
-        away: awayStats.shots_on_target ?? 0,
-      },
-      {
-        label: 'xG',
-        home: homeStats.expected_goals ?? 0,
-        away: awayStats.expected_goals ?? 0,
-      },
-      {
-        label: 'Corners',
-        home: homeStats.corners ?? 0,
-        away: awayStats.corners ?? 0,
-      },
-      {
-        label: 'Passes',
-        home: homeStats.passes_total ?? 0,
-        away: awayStats.passes_total ?? 0,
-      },
+      { label: 'Possession', home: homeStats.possession ?? 0, away: awayStats.possession ?? 0, pct: true },
+      { label: 'Shots', home: homeStats.shots_total ?? 0, away: awayStats.shots_total ?? 0 },
+      { label: 'Shots on Target', home: homeStats.shots_on_target ?? 0, away: awayStats.shots_on_target ?? 0 },
+      { label: 'Corners', home: homeStats.corners ?? 0, away: awayStats.corners ?? 0 },
     ];
   }, [homeStats, awayStats]);
 
   return (
-    <div className="space-y-6">
-      {/* ---- Key Events ---- */}
-      {keyEvents.length > 0 && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            <Activity className="h-4 w-4 text-emerald-400" />
-            Key Events
-          </h3>
-          <div className="space-y-2">
-            {keyEvents.map((evt, i) => {
-              const isHome =
-                evt.is_home ??
-                evt.club_name === match.home_name;
-              return (
-                <div
-                  key={evt.id ?? i}
-                  className={`flex items-center gap-3 ${
-                    isHome ? 'flex-row' : 'flex-row-reverse'
-                  }`}
-                >
-                  <span
-                    className={`shrink-0 text-xs font-bold ${
-                      isHome ? 'text-right' : 'text-left'
-                    } w-full max-w-[40%] truncate text-zinc-200`}
-                  >
-                    {playerName(evt)}
-                  </span>
-                  <span className="shrink-0 text-base">
-                    {eventIcon(evt.event_type)}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                    {evt.minute}&apos;
-                    {evt.added_time ? `+${evt.added_time}` : ''}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
+    <div className="space-y-4">
       {/* ---- Quick Stats ---- */}
       {quickStats.length > 0 && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            <Shield className="h-4 w-4 text-emerald-400" />
+        <section className="rounded-lg bg-zinc-800 p-4">
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-yellow-400">
             Quick Stats
           </h3>
           <div className="space-y-4">
@@ -235,8 +134,6 @@ export default function SummaryTab({
                 label={s.label}
                 homeValue={s.home}
                 awayValue={s.away}
-                homeColor={homeColor}
-                awayColor={awayColor}
                 isPercentage={s.pct}
               />
             ))}
@@ -246,30 +143,18 @@ export default function SummaryTab({
 
       {/* ---- AI Prediction ---- */}
       {latestAnalysis && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            <Brain className="h-4 w-4 text-emerald-400" />
+        <section className="rounded-lg bg-zinc-800 p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
+            <Brain className="h-4 w-4" />
             AI Prediction
           </h3>
 
           {/* probability bars */}
-          <div className="mb-4 space-y-2">
+          <div className="mb-4 space-y-2.5">
             {[
-              {
-                label: match.home_name,
-                value: latestAnalysis.home_win,
-                color: 'bg-emerald-500',
-              },
-              {
-                label: 'Draw',
-                value: latestAnalysis.draw,
-                color: 'bg-zinc-500',
-              },
-              {
-                label: match.away_name,
-                value: latestAnalysis.away_win,
-                color: 'bg-blue-500',
-              },
+              { label: match.home_name, value: latestAnalysis.home_win, accent: true },
+              { label: 'Draw', value: latestAnalysis.draw, accent: false },
+              { label: match.away_name, value: latestAnalysis.away_win, accent: false },
             ].map((row) => (
               <div key={row.label} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
@@ -278,9 +163,11 @@ export default function SummaryTab({
                     {row.value != null ? `${row.value}%` : '-'}
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                <div className="h-2 w-full overflow-hidden rounded bg-zinc-700">
                   <div
-                    className={`h-full rounded-full transition-all duration-700 ${row.color}`}
+                    className={`h-full rounded transition-all duration-700 ${
+                      row.accent ? 'bg-yellow-400' : 'bg-zinc-500'
+                    }`}
                     style={{ width: `${row.value ?? 0}%` }}
                   />
                 </div>
@@ -290,7 +177,7 @@ export default function SummaryTab({
 
           {/* key insight */}
           {latestAnalysis.key_insight && (
-            <p className="mb-3 rounded-lg bg-zinc-800/60 px-3 py-2 text-sm italic text-zinc-300">
+            <p className="mb-3 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm italic text-zinc-300">
               &ldquo;{latestAnalysis.key_insight}&rdquo;
             </p>
           )}
@@ -300,7 +187,7 @@ export default function SummaryTab({
             {latestAnalysis.confidence != null && (
               <span className="flex items-center gap-1">
                 Confidence:{' '}
-                <span className="font-bold text-emerald-400">
+                <span className="font-bold text-yellow-400">
                   {latestAnalysis.confidence}%
                 </span>
               </span>
@@ -309,10 +196,10 @@ export default function SummaryTab({
               <span className="flex items-center gap-1">
                 Momentum:{' '}
                 {latestAnalysis.momentum === 'home' && (
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                  <TrendingUp className="h-3.5 w-3.5 text-yellow-400" />
                 )}
                 {latestAnalysis.momentum === 'away' && (
-                  <TrendingDown className="h-3.5 w-3.5 text-blue-400" />
+                  <TrendingDown className="h-3.5 w-3.5 text-zinc-400" />
                 )}
                 {latestAnalysis.momentum === 'neutral' && (
                   <Minus className="h-3.5 w-3.5 text-zinc-500" />
@@ -328,8 +215,8 @@ export default function SummaryTab({
 
       {/* ---- Injuries ---- */}
       {(homeInjuries.length > 0 || awayInjuries.length > 0) && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+        <section className="rounded-lg bg-zinc-800 p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
             <AlertTriangle className="h-4 w-4 text-red-400" />
             Injuries
           </h3>
@@ -346,10 +233,7 @@ export default function SummaryTab({
                     </p>
                     <ul className="space-y-1.5">
                       {list.map((inj) => (
-                        <li
-                          key={inj.player.id}
-                          className="flex items-center gap-2"
-                        >
+                        <li key={inj.player.id} className="flex items-center gap-2">
                           {inj.player.photo && (
                             <Image
                               src={inj.player.photo}
@@ -359,12 +243,8 @@ export default function SummaryTab({
                               className="rounded-full"
                             />
                           )}
-                          <span className="text-sm text-zinc-200">
-                            {inj.player.name}
-                          </span>
-                          <span className="ml-auto text-[10px] text-zinc-500">
-                            {inj.player.reason}
-                          </span>
+                          <span className="text-sm text-zinc-200">{inj.player.name}</span>
+                          <span className="ml-auto text-[10px] text-zinc-500">{inj.player.reason}</span>
                         </li>
                       ))}
                     </ul>
@@ -377,8 +257,8 @@ export default function SummaryTab({
 
       {/* ---- Post-Match Summary ---- */}
       {isFinished && latestAnalysis?.analysis && (
-        <section className="rounded-xl border border-emerald-900/40 bg-zinc-900/80 p-4">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-400">
+        <section className="rounded-lg border-l-4 border-yellow-400 bg-zinc-800 p-4">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-yellow-400">
             Post-Match Analysis
           </h3>
           <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-300">

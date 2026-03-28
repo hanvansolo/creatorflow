@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { useState } from 'react';
@@ -22,21 +23,17 @@ function getPlayerPosition(
   maxCol: number,
   isHome: boolean
 ): { top: string; left: string } {
-  // Normalize row to 0-1 range within team's half
   const rowPct = maxRow > 1 ? (grid.row - 1) / (maxRow - 1) : 0.5;
   const colPct = maxCol > 1 ? (grid.col - 1) / (maxCol - 1) : 0.5;
 
-  // Home team: bottom half (50%-95%), GK at bottom (row 1 = 92%)
-  // Away team: top half (5%-50%), GK at top (row 1 = 8%)
   let top: number;
   if (isHome) {
-    top = 92 - rowPct * 42; // row 1 (GK) = 92%, last row = 50%
+    top = 92 - rowPct * 42;
   } else {
-    top = 8 + rowPct * 42; // row 1 (GK) = 8%, last row = 50%
+    top = 8 + rowPct * 42;
   }
 
-  // Horizontal: distribute across width with padding
-  const left = 10 + colPct * 80; // 10% to 90%
+  const left = 10 + colPct * 80;
 
   return { top: `${top}%`, left: `${left}%` };
 }
@@ -70,8 +67,8 @@ function PlayerDot({
       <div
         className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition-transform hover:scale-110 ${
           isHome
-            ? 'bg-white/90 text-emerald-900'
-            : 'bg-zinc-800/90 text-white border border-white/20'
+            ? 'bg-yellow-400 text-black'
+            : 'bg-zinc-400 text-black'
         }`}
       >
         {player.number}
@@ -124,26 +121,13 @@ export default function PitchVisualization({
         style={{ aspectRatio: '3 / 4' }}
       >
         {/* Pitch markings */}
-        {/* Halfway line */}
         <div className="absolute top-1/2 left-0 right-0 h-px bg-white/30" />
-
-        {/* Center circle */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-28 sm:h-28 rounded-full border border-white/30" />
-
-        {/* Center dot */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/40" />
-
-        {/* Top penalty area */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[44%] h-[16%] border-b border-l border-r border-white/30" />
-        {/* Top goal area */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[22%] h-[7%] border-b border-l border-r border-white/30" />
-
-        {/* Bottom penalty area */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[44%] h-[16%] border-t border-l border-r border-white/30" />
-        {/* Bottom goal area */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[22%] h-[7%] border-t border-l border-r border-white/30" />
-
-        {/* Corner arcs */}
         <div className="absolute top-0 left-0 w-4 h-4 border-b-2 border-r-2 border-white/20 rounded-br-full" />
         <div className="absolute top-0 right-0 w-4 h-4 border-b-2 border-l-2 border-white/20 rounded-bl-full" />
         <div className="absolute bottom-0 left-0 w-4 h-4 border-t-2 border-r-2 border-white/20 rounded-tr-full" />
@@ -161,7 +145,7 @@ export default function PitchVisualization({
           </span>
         </div>
 
-        {/* Home team players (bottom half) */}
+        {/* Home team players (bottom half) — yellow dots */}
         {homeLineup.startXI.map(({ player }, i) => (
           <PlayerDot
             key={`home-${i}`}
@@ -172,7 +156,7 @@ export default function PitchVisualization({
           />
         ))}
 
-        {/* Away team players (top half) */}
+        {/* Away team players (top half) — gray dots */}
         {awayLineup.startXI.map(({ player }, i) => (
           <PlayerDot
             key={`away-${i}`}

@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart3, Star, TrendingUp } from 'lucide-react';
+import { BarChart3, Star } from 'lucide-react';
 import Image from 'next/image';
 import type {
   MatchDetail,
@@ -11,47 +11,67 @@ import type {
   PredictionData,
 } from '@/components/match/types';
 
-/* ---------- StatBar ---------- */
+/* ---------- BBC center-out stat row ---------- */
 
-function StatBar({
+function StatRow({
   label,
   homeValue,
   awayValue,
-  homeColor,
-  awayColor,
   isPercentage = false,
 }: {
   label: string;
   homeValue: number;
   awayValue: number;
-  homeColor: string;
-  awayColor: string;
   isPercentage?: boolean;
 }) {
   const total = homeValue + awayValue;
   const homePct = total > 0 ? (homeValue / total) * 100 : 50;
   const awayPct = total > 0 ? (awayValue / total) * 100 : 50;
+  const homeHigher = homeValue > awayValue;
+  const awayHigher = awayValue > homeValue;
 
   const fmt = (v: number) =>
     isPercentage ? `${v}%` : Number.isInteger(v) ? String(v) : v.toFixed(1);
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-zinc-400">
-        <span className="font-medium text-zinc-200">{fmt(homeValue)}</span>
-        <span className="uppercase tracking-wide">{label}</span>
-        <span className="font-medium text-zinc-200">{fmt(awayValue)}</span>
+    <div className="py-2">
+      {/* Values + label */}
+      <div className="flex items-center justify-between mb-1">
+        <span className={`text-sm font-bold tabular-nums w-12 ${homeHigher ? 'text-yellow-400' : 'text-zinc-300'}`}>
+          {fmt(homeValue)}
+        </span>
+        <span className="text-xs text-zinc-400 uppercase tracking-wider flex-1 text-center">
+          {label}
+        </span>
+        <span className={`text-sm font-bold tabular-nums w-12 text-right ${awayHigher ? 'text-yellow-400' : 'text-zinc-300'}`}>
+          {fmt(awayValue)}
+        </span>
       </div>
-      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
-        <div
-          className="rounded-l-full transition-all duration-700"
-          style={{ width: `${homePct}%`, backgroundColor: homeColor }}
-        />
-        <div
-          className="rounded-r-full transition-all duration-700"
-          style={{ width: `${awayPct}%`, backgroundColor: awayColor }}
-        />
+      {/* Bars growing from center */}
+      <div className="flex h-2 gap-0.5">
+        <div className="flex-1 flex justify-end">
+          <div
+            className="h-full rounded-l bg-yellow-400 transition-all duration-700"
+            style={{ width: `${homePct}%` }}
+          />
+        </div>
+        <div className="flex-1">
+          <div
+            className="h-full rounded-r bg-zinc-500 transition-all duration-700"
+            style={{ width: `${awayPct}%` }}
+          />
+        </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- Section Header ---------- */
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <div className="rounded-lg bg-zinc-800 px-4 py-2 mt-4 first:mt-0">
+      <h4 className="text-sm font-bold uppercase tracking-wider text-yellow-400">{title}</h4>
     </div>
   );
 }
@@ -59,26 +79,15 @@ function StatBar({
 /* ---------- rating color ---------- */
 
 function ratingColor(rating: number): string {
-  if (rating >= 7.5) return 'text-emerald-400';
+  if (rating >= 7.5) return 'text-yellow-400';
   if (rating >= 6.5) return 'text-amber-400';
   return 'text-red-400';
 }
 
 function ratingBg(rating: number): string {
-  if (rating >= 7.5) return 'bg-emerald-900/30';
+  if (rating >= 7.5) return 'bg-yellow-900/30';
   if (rating >= 6.5) return 'bg-amber-900/30';
   return 'bg-red-900/30';
-}
-
-/* ---------- form badge ---------- */
-
-function FormBadge({ result }: { result: string }) {
-  const r = result.toUpperCase();
-  let classes = 'h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ';
-  if (r === 'W') classes += 'bg-emerald-600 text-white';
-  else if (r === 'D') classes += 'bg-zinc-600 text-zinc-200';
-  else classes += 'bg-red-600 text-white';
-  return <span className={classes}>{r}</span>;
 }
 
 /* ---------- component ---------- */
@@ -98,25 +107,37 @@ export default function StatsTab({
   playerRatings,
   predictions,
 }: StatsTabProps) {
-  const homeColor = match.home_color || '#10b981';
-  const awayColor = match.away_color || '#3b82f6';
-
-  const allStats = useMemo(() => {
+  const statGroups = useMemo(() => {
     if (!homeStats || !awayStats) return [];
     return [
-      { label: 'Possession', home: homeStats.possession ?? 0, away: awayStats.possession ?? 0, pct: true },
-      { label: 'Shots Total', home: homeStats.shots_total ?? 0, away: awayStats.shots_total ?? 0 },
-      { label: 'Shots on Target', home: homeStats.shots_on_target ?? 0, away: awayStats.shots_on_target ?? 0 },
-      { label: 'Shots off Target', home: homeStats.shots_off_target ?? 0, away: awayStats.shots_off_target ?? 0 },
-      { label: 'xG', home: homeStats.expected_goals ?? 0, away: awayStats.expected_goals ?? 0 },
-      { label: 'Corners', home: homeStats.corners ?? 0, away: awayStats.corners ?? 0 },
-      { label: 'Fouls', home: homeStats.fouls ?? 0, away: awayStats.fouls ?? 0 },
-      { label: 'Offsides', home: homeStats.offsides ?? 0, away: awayStats.offsides ?? 0 },
-      { label: 'Yellow Cards', home: homeStats.yellow_cards ?? 0, away: awayStats.yellow_cards ?? 0 },
-      { label: 'Red Cards', home: homeStats.red_cards ?? 0, away: awayStats.red_cards ?? 0 },
-      { label: 'Saves', home: homeStats.saves ?? 0, away: awayStats.saves ?? 0 },
-      { label: 'Total Passes', home: homeStats.passes_total ?? 0, away: awayStats.passes_total ?? 0 },
-      { label: 'Accurate Passes', home: homeStats.passes_accurate ?? 0, away: awayStats.passes_accurate ?? 0 },
+      {
+        title: 'Attack',
+        stats: [
+          { label: 'Shots', home: homeStats.shots_total ?? 0, away: awayStats.shots_total ?? 0 },
+          { label: 'Shots on target', home: homeStats.shots_on_target ?? 0, away: awayStats.shots_on_target ?? 0 },
+          { label: 'Shots off target', home: homeStats.shots_off_target ?? 0, away: awayStats.shots_off_target ?? 0 },
+          { label: 'Corners', home: homeStats.corners ?? 0, away: awayStats.corners ?? 0 },
+          { label: 'Offsides', home: homeStats.offsides ?? 0, away: awayStats.offsides ?? 0 },
+        ],
+      },
+      {
+        title: 'Distribution',
+        stats: [
+          { label: 'Possession', home: homeStats.possession ?? 0, away: awayStats.possession ?? 0, pct: true },
+          { label: 'Total passes', home: homeStats.passes_total ?? 0, away: awayStats.passes_total ?? 0 },
+          { label: 'Accurate passes', home: homeStats.passes_accurate ?? 0, away: awayStats.passes_accurate ?? 0 },
+          { label: 'Expected goals (xG)', home: homeStats.expected_goals ?? 0, away: awayStats.expected_goals ?? 0 },
+        ],
+      },
+      {
+        title: 'Defence',
+        stats: [
+          { label: 'Fouls', home: homeStats.fouls ?? 0, away: awayStats.fouls ?? 0 },
+          { label: 'Yellow cards', home: homeStats.yellow_cards ?? 0, away: awayStats.yellow_cards ?? 0 },
+          { label: 'Red cards', home: homeStats.red_cards ?? 0, away: awayStats.red_cards ?? 0 },
+          { label: 'Saves', home: homeStats.saves ?? 0, away: awayStats.saves ?? 0 },
+        ],
+      },
     ];
   }, [homeStats, awayStats]);
 
@@ -136,11 +157,6 @@ export default function StatsTab({
     [playerRatings, match.away_api_id],
   );
 
-  /* form data */
-  const homeForm = predictions?.teams?.home?.last_5?.form?.split('') ?? [];
-  const awayForm = predictions?.teams?.away?.last_5?.form?.split('') ?? [];
-  const comparison = predictions?.comparison ?? {};
-
   if (!homeStats && !awayStats && playerRatings.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-16 text-zinc-500">
@@ -151,35 +167,47 @@ export default function StatsTab({
   }
 
   return (
-    <div className="space-y-6">
-      {/* ---- All Stats ---- */}
-      {allStats.length > 0 && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            <BarChart3 className="h-4 w-4 text-emerald-400" />
-            Match Statistics
-          </h3>
-          <div className="space-y-4">
-            {allStats.map((s) => (
-              <StatBar
+    <div className="space-y-4">
+      {/* ---- Team Key Header ---- */}
+      {statGroups.length > 0 && (
+        <div className="rounded-lg bg-zinc-800 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-sm bg-yellow-400" />
+              <span className="text-sm font-semibold text-zinc-200">{match.home_name}</span>
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Key</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-zinc-200">{match.away_name}</span>
+              <span className="inline-block h-3 w-3 rounded-sm bg-zinc-500" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Grouped Stats ---- */}
+      {statGroups.map((group) => (
+        <div key={group.title}>
+          <SectionHeader title={group.title} />
+          <div className="rounded-b-lg bg-zinc-900 px-4 divide-y divide-zinc-800">
+            {group.stats.map((s) => (
+              <StatRow
                 key={s.label}
                 label={s.label}
                 homeValue={s.home}
                 awayValue={s.away}
-                homeColor={homeColor}
-                awayColor={awayColor}
                 isPercentage={s.pct}
               />
             ))}
           </div>
-        </section>
-      )}
+        </div>
+      ))}
 
       {/* ---- Player Ratings ---- */}
       {(homeRatings.length > 0 || awayRatings.length > 0) && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            <Star className="h-4 w-4 text-emerald-400" />
+        <section className="rounded-lg bg-zinc-800 p-4 mt-4">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
+            <Star className="h-4 w-4" />
             Player Ratings
           </h3>
 
@@ -212,7 +240,7 @@ export default function StatsTab({
                       return (
                         <div
                           key={p.name + p.teamId}
-                          className="grid grid-cols-[1fr_40px_48px_36px_36px_36px_40px_40px] gap-1 rounded-lg px-1 py-1 text-xs hover:bg-zinc-800/40"
+                          className="grid grid-cols-[1fr_40px_48px_36px_36px_36px_40px_40px] gap-1 rounded-lg px-1 py-1 text-xs hover:bg-zinc-700/40"
                         >
                           <div className="flex items-center gap-1.5 truncate">
                             {p.photo && (
@@ -224,89 +252,23 @@ export default function StatsTab({
                                 className="rounded-full"
                               />
                             )}
-                            <span className="truncate text-zinc-200">
-                              {p.name}
-                            </span>
+                            <span className="truncate text-zinc-200">{p.name}</span>
                           </div>
-                          <span className="text-center text-zinc-500">
-                            {p.position}
-                          </span>
-                          <span
-                            className={`text-center font-bold ${ratingColor(r)} ${ratingBg(r)} rounded`}
-                          >
+                          <span className="text-center text-zinc-500">{p.position}</span>
+                          <span className={`text-center font-bold ${ratingColor(r)} ${ratingBg(r)} rounded`}>
                             {p.rating ?? '-'}
                           </span>
-                          <span className="text-center text-zinc-400">
-                            {p.goals ?? '-'}
-                          </span>
-                          <span className="text-center text-zinc-400">
-                            {p.assists ?? '-'}
-                          </span>
-                          <span className="text-center text-zinc-400">
-                            {p.shots ?? '-'}
-                          </span>
-                          <span className="text-center text-zinc-400">
-                            {p.passes ?? '-'}
-                          </span>
-                          <span className="text-center text-zinc-400">
-                            {p.tackles ?? '-'}
-                          </span>
+                          <span className="text-center text-zinc-400">{p.goals ?? '-'}</span>
+                          <span className="text-center text-zinc-400">{p.assists ?? '-'}</span>
+                          <span className="text-center text-zinc-400">{p.shots ?? '-'}</span>
+                          <span className="text-center text-zinc-400">{p.passes ?? '-'}</span>
+                          <span className="text-center text-zinc-400">{p.tackles ?? '-'}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
               ),
-          )}
-        </section>
-      )}
-
-      {/* ---- Form Comparison ---- */}
-      {predictions && (homeForm.length > 0 || awayForm.length > 0) && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-            Form Comparison
-          </h3>
-
-          {/* last 5 form */}
-          <div className="mb-6 grid gap-4 sm:grid-cols-2">
-            {[
-              { team: match.home_name, form: homeForm },
-              { team: match.away_name, form: awayForm },
-            ].map(({ team, form }) => (
-              <div key={team}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  {team} — Last 5
-                </p>
-                <div className="flex gap-1.5">
-                  {form.map((r, i) => (
-                    <FormBadge key={i} result={r} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* radar-style comparison bars */}
-          {Object.keys(comparison).length > 0 && (
-            <div className="space-y-3">
-              {Object.entries(comparison).map(([key, val]) => {
-                const hNum = parseInt(val.home) || 0;
-                const aNum = parseInt(val.away) || 0;
-                return (
-                  <StatBar
-                    key={key}
-                    label={key.replace(/_/g, ' ')}
-                    homeValue={hNum}
-                    awayValue={aNum}
-                    homeColor={homeColor}
-                    awayColor={awayColor}
-                    isPercentage={true}
-                  />
-                );
-              })}
-            </div>
           )}
         </section>
       )}
