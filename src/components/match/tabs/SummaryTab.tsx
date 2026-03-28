@@ -149,49 +149,60 @@ export default function SummaryTab({
             AI Prediction
           </h3>
 
-          {/* probability bars */}
-          <div className="mb-4 space-y-2.5">
-            {[
-              { label: match.home_name, value: latestAnalysis.home_win, accent: true },
-              { label: 'Draw', value: latestAnalysis.draw, accent: false },
-              { label: match.away_name, value: latestAnalysis.away_win, accent: false },
-            ].map((row) => (
-              <div key={row.label} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-300">{row.label}</span>
-                  <span className="font-bold text-zinc-200">
-                    {row.value != null ? `${row.value}%` : '-'}
-                  </span>
+          {/* probability bars — data is in prediction JSON field */}
+          {(() => {
+            const pred = latestAnalysis.prediction || {};
+            const homeWin = pred.homeWinPct ?? latestAnalysis.home_win ?? 0;
+            const draw = pred.drawPct ?? latestAnalysis.draw ?? 0;
+            const awayWin = pred.awayWinPct ?? latestAnalysis.away_win ?? 0;
+            const confidence = pred.confidence ?? latestAnalysis.confidence ?? 0;
+            return (
+              <>
+                <div className="mb-4 space-y-2.5">
+                  {[
+                    { label: match.home_name, value: homeWin, accent: true },
+                    { label: 'Draw', value: draw, accent: false },
+                    { label: match.away_name, value: awayWin, accent: false },
+                  ].map((row) => (
+                    <div key={row.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-300">{row.label}</span>
+                        <span className="font-bold text-zinc-200">
+                          {row.value > 0 ? `${row.value}%` : '-'}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded bg-zinc-700">
+                        <div
+                          className={`h-full rounded transition-all duration-700 ${
+                            row.accent ? 'bg-yellow-400' : 'bg-zinc-500'
+                          }`}
+                          style={{ width: `${row.value}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded bg-zinc-700">
-                  <div
-                    className={`h-full rounded transition-all duration-700 ${
-                      row.accent ? 'bg-yellow-400' : 'bg-zinc-500'
-                    }`}
-                    style={{ width: `${row.value ?? 0}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* key insight */}
-          {latestAnalysis.key_insight && (
-            <p className="mb-3 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm italic text-zinc-300">
-              &ldquo;{latestAnalysis.key_insight}&rdquo;
-            </p>
-          )}
+                {/* key insight */}
+                {latestAnalysis.key_insight && (
+                  <p className="mb-3 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm italic text-zinc-300">
+                    &ldquo;{latestAnalysis.key_insight}&rdquo;
+                  </p>
+                )}
 
-          {/* confidence + momentum */}
-          <div className="flex items-center gap-4 text-xs text-zinc-400">
-            {latestAnalysis.confidence != null && (
-              <span className="flex items-center gap-1">
-                Confidence:{' '}
-                <span className="font-bold text-yellow-400">
-                  {latestAnalysis.confidence}%
-                </span>
-              </span>
-            )}
+                {/* confidence + momentum */}
+                <div className="flex items-center gap-4 text-xs text-zinc-400">
+                  {confidence > 0 && (
+                    <span className="flex items-center gap-1">
+                      Confidence:{' '}
+                      <span className="font-bold text-yellow-400">
+                        {confidence}%
+                      </span>
+                    </span>
+                  )}
+              </>
+            );
+          })()}
             {latestAnalysis.momentum && (
               <span className="flex items-center gap-1">
                 Momentum:{' '}
