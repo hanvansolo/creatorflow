@@ -27,7 +27,7 @@ export function generateBaseMetadata(seo: SEOMetadata): Metadata {
   if (description.length > 155) {
     description = description.slice(0, 155).replace(/\s+\S*$/, '') + '...';
   }
-  const rawImage = seo.image || '/images/og-default.png';
+  const rawImage = seo.image || '/api/og/default';
   // Ensure absolute URL for OG/Twitter — relative URLs don't work for social crawlers
   const image = rawImage.startsWith('http') ? rawImage : `${SITE_CONFIG.url}${rawImage}`;
   const imageAlt = seo.imageAlt || seo.title;

@@ -213,7 +213,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
     generateArticleStructuredData({
       headline: article.title,
       description: article.summary || article.content?.slice(0, 160) || '',
-      image: articleImage || '/images/og-default.png',
+      image: articleImage || '/api/og/default',
       datePublished: article.publishedAt?.toISOString() || new Date().toISOString(),
       authorName: article.author || article.sourceName || 'Footy Feed',
       url: `${SITE_CONFIG.url}/news/${slug}`,

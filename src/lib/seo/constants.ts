@@ -96,8 +96,8 @@ export const DEFAULT_METADATA: Metadata = {
     description: SITE_CONFIG.description,
     images: [
       {
-        // TODO: Create /public/images/og-default.png (1200x630px) — branded OG image for social sharing
-        url: '/images/og-default.png',
+        // TODO: Create /public/api/og/default (1200x630px) — branded OG image for social sharing
+        url: '/api/og/default',
         width: 1200,
         height: 630,
         alt: SITE_CONFIG.name,
@@ -110,7 +110,7 @@ export const DEFAULT_METADATA: Metadata = {
     creator: SITE_CONFIG.twitterHandle,
     title: SITE_CONFIG.name,
     description: SITE_CONFIG.description,
-    images: ['/images/og-default.png'],
+    images: ['/api/og/default'],
   },
   robots: {
     index: true,
