@@ -200,10 +200,7 @@ export default function SummaryTab({
                       </span>
                     </span>
                   )}
-              </>
-            );
-          })()}
-            {latestAnalysis.momentum && (
+                  {latestAnalysis.momentum && (
               <span className="flex items-center gap-1">
                 Momentum:{' '}
                 {latestAnalysis.momentum === 'home' && (
@@ -220,7 +217,10 @@ export default function SummaryTab({
                 </span>
               </span>
             )}
-          </div>
+                </div>
+              </>
+            );
+          })()}
         </section>
       )}
 
