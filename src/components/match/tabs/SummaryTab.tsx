@@ -159,28 +159,33 @@ export default function SummaryTab({
             return (
               <>
                 <div className="mb-4 space-y-2.5">
-                  {[
-                    { label: match.home_name, value: homeWin, accent: true },
-                    { label: 'Draw', value: draw, accent: false },
-                    { label: match.away_name, value: awayWin, accent: false },
-                  ].map((row) => (
-                    <div key={row.label} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-300">{row.label}</span>
-                        <span className="font-bold text-zinc-200">
-                          {row.value > 0 ? `${row.value}%` : '-'}
-                        </span>
+                  {(() => {
+                    const maxVal = Math.max(homeWin, draw, awayWin);
+                    return [
+                      { label: match.home_name, value: homeWin },
+                      { label: 'Draw', value: draw },
+                      { label: match.away_name, value: awayWin },
+                    ].map((row) => (
+                      <div key={row.label} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={row.value === maxVal && maxVal > 0 ? 'text-yellow-400 font-bold' : 'text-zinc-300'}>
+                            {row.label}
+                          </span>
+                          <span className={`font-bold ${row.value === maxVal && maxVal > 0 ? 'text-yellow-400' : 'text-zinc-200'}`}>
+                            {row.value > 0 ? `${row.value}%` : '-'}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded bg-zinc-700">
+                          <div
+                            className={`h-full rounded transition-all duration-700 ${
+                              row.value === maxVal && maxVal > 0 ? 'bg-yellow-400' : 'bg-zinc-500'
+                            }`}
+                            style={{ width: `${row.value}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded bg-zinc-700">
-                        <div
-                          className={`h-full rounded transition-all duration-700 ${
-                            row.accent ? 'bg-yellow-400' : 'bg-zinc-500'
-                          }`}
-                          style={{ width: `${row.value}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
 
                 {/* key insight */}
