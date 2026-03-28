@@ -5,73 +5,65 @@ import { useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import type { MatchDetail, MatchEvent } from '@/components/match/types';
 
-/* ---------- helpers ---------- */
-
 function playerName(evt: MatchEvent): string {
   return (
     evt.player_known_as ||
     [evt.player_first_name, evt.player_last_name].filter(Boolean).join(' ') ||
     evt.club_name ||
-    'Unknown'
+    'Goal'
   );
 }
 
-function secondPlayerName(evt: MatchEvent): string | null {
-  const name =
-    evt.second_player_known_as ||
-    [evt.second_player_first_name, evt.second_player_last_name]
-      .filter(Boolean)
-      .join(' ');
-  return name || null;
+function secondPlayer(evt: MatchEvent): string | null {
+  return evt.second_player_known_as ||
+    [evt.second_player_first_name, evt.second_player_last_name].filter(Boolean).join(' ') || null;
 }
 
 function minuteLabel(evt: MatchEvent): string {
   return `${evt.minute}'${evt.added_time ? `+${evt.added_time}` : ''}`;
 }
 
-/* ---------- event rendering ---------- */
+function isGoalEvent(t: string): boolean {
+  const type = t?.toLowerCase() ?? '';
+  return type.includes('goal') || type === 'penalty_scored';
+}
 
-function eventDescription(evt: MatchEvent, match: MatchDetail): string {
+function isCardEvent(t: string): boolean {
+  const type = t?.toLowerCase() ?? '';
+  return type.includes('yellow') || type.includes('red') || type === 'second_yellow';
+}
+
+function isSubEvent(t: string): boolean {
+  const type = t?.toLowerCase() ?? '';
+  return type.includes('subst');
+}
+
+function eventIcon(type: string): string {
+  const t = type?.toLowerCase() ?? '';
+  if (t.includes('goal') || t === 'penalty_scored') return '⚽';
+  if (t === 'own_goal') return '⚽';
+  if (t === 'yellow_card' || t === 'yellow card') return '🟨';
+  if (t === 'red_card' || t === 'red card') return '🟥';
+  if (t === 'second_yellow' || t === 'yellowred') return '🟨🟥';
+  if (t.includes('subst')) return '🔄';
+  if (t.includes('var')) return '📺';
+  if (t === 'penalty_missed') return '❌';
+  return '•';
+}
+
+function eventLabel(evt: MatchEvent): string {
   const t = evt.event_type?.toLowerCase() ?? '';
-  const name = playerName(evt);
-  const second = secondPlayerName(evt);
-  const isHome = evt.is_home ?? evt.club_name === match.home_name;
-  const team = isHome ? match.home_name : match.away_name;
-
-  if (t.includes('goal') || t === 'penalty_scored') {
-    const assist = second ? ` Assisted by ${second}.` : '';
-    const suffix = t === 'own_goal' ? ' (Own Goal)' : t === 'penalty_scored' ? ' (Penalty)' : '';
-    return `GOAL! ${name} scores for ${team}${suffix}.${assist}`;
-  }
-  if (t === 'yellow_card' || t === 'yellow card') {
-    return `${name} (${team}) receives a yellow card.`;
-  }
-  if (t === 'red_card' || t === 'red card') {
-    return `${name} (${team}) is shown a red card!`;
-  }
-  if (t === 'second_yellow' || t === 'yellowred' || t === 'second yellow') {
-    return `${name} (${team}) receives a second yellow card and is sent off!`;
-  }
-  if (t.includes('subst') || t === 'substitution') {
-    return `Substitution for ${team}: ${second ? `${second} replaces ${name}` : `${name} comes off`}.`;
-  }
-  if (t.includes('var')) {
-    return `VAR Review: ${evt.description || name}`;
-  }
-  return evt.description || `${name} — ${evt.event_type}`;
+  if (t === 'own_goal') return 'Own Goal';
+  if (t === 'penalty_scored') return 'Penalty';
+  if (t === 'penalty_missed') return 'Penalty Missed';
+  if (t === 'yellow_card' || t === 'yellow card') return 'Yellow Card';
+  if (t === 'red_card' || t === 'red card') return 'Red Card';
+  if (t === 'second_yellow' || t === 'yellowred') return 'Second Yellow';
+  if (t.includes('subst')) return evt.description || 'Substitution';
+  if (t.includes('var')) return 'VAR Decision';
+  if (t.includes('goal')) return 'Normal Goal';
+  return evt.description || evt.event_type || '';
 }
-
-function isGoal(type: string): boolean {
-  const t = type?.toLowerCase() ?? '';
-  return t.includes('goal') || t === 'penalty_scored' || t === 'penalty scored';
-}
-
-function isCard(type: string): boolean {
-  const t = type?.toLowerCase() ?? '';
-  return t === 'yellow_card' || t === 'yellow card' || t === 'red_card' || t === 'red card' || t === 'second_yellow' || t === 'yellowred' || t === 'second yellow';
-}
-
-/* ---------- component ---------- */
 
 interface TimelineTabProps {
   match: MatchDetail;
@@ -79,18 +71,14 @@ interface TimelineTabProps {
 }
 
 export default function TimelineTab({ match, events }: TimelineTabProps) {
-  // Sort DESCENDING (newest first, like BBC Live Text)
   const sorted = useMemo(
     () => [...events].sort((a, b) => {
-      const minDiff = b.minute - a.minute;
+      const minDiff = a.minute - b.minute;
       if (minDiff !== 0) return minDiff;
-      return (b.added_time ?? 0) - (a.added_time ?? 0);
+      return (a.added_time ?? 0) - (b.added_time ?? 0);
     }),
     [events],
   );
-
-  // Determine "live" minute for NEW badge
-  const currentMinute = match.minute ?? 0;
 
   if (sorted.length === 0) {
     return (
@@ -102,44 +90,85 @@ export default function TimelineTab({ match, events }: TimelineTabProps) {
   }
 
   return (
-    <div className="space-y-3">
-      {sorted.map((evt, i) => {
-        const goal = isGoal(evt.event_type);
-        const card = isCard(evt.event_type);
-        const isRecent = currentMinute > 0 && evt.minute >= currentMinute - 2;
+    <div className="relative py-4">
+      {/* Center line */}
+      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-zinc-700 -translate-x-1/2" />
 
-        return (
-          <div
-            key={evt.id ?? i}
-            className={`relative rounded-lg bg-zinc-800 border-t-2 ${
-              goal ? 'border-yellow-400' : card ? 'border-red-500' : 'border-zinc-700'
-            } p-4`}
-          >
-            {/* Minute badge + optional NEW */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block bg-yellow-400 text-black font-bold px-2 py-0.5 text-sm rounded">
-                {minuteLabel(evt)}
-              </span>
-              {isRecent && (
-                <span className="inline-block bg-cyan-500 text-black font-bold px-1.5 py-0.5 text-[10px] rounded uppercase">
-                  New
+      <div className="space-y-4">
+        {sorted.map((evt, i) => {
+          const isHome = evt.is_home === true || evt.club_id === 'home' || evt.club_name === match.home_name;
+          const isGoal = isGoalEvent(evt.event_type);
+          const isCard = isCardEvent(evt.event_type);
+          const isSub = isSubEvent(evt.event_type);
+          const icon = eventIcon(evt.event_type);
+          const name = playerName(evt);
+          const second = secondPlayer(evt);
+          const label = eventLabel(evt);
+
+          return (
+            <div
+              key={evt.id ?? `${evt.minute}-${evt.event_type}-${i}`}
+              className={`relative flex items-start gap-3 ${isHome ? 'flex-row' : 'flex-row-reverse'}`}
+            >
+              {/* Event card */}
+              <div className={`flex-1 ${isHome ? 'pr-8 text-right' : 'pl-8 text-left'}`}>
+                <div
+                  className={`inline-block rounded-lg px-4 py-3 max-w-[90%] ${
+                    isGoal
+                      ? 'bg-emerald-900/60 border border-emerald-500/30'
+                      : isCard
+                      ? 'bg-zinc-800 border border-zinc-700/50'
+                      : 'bg-zinc-800/60'
+                  }`}
+                >
+                  {/* Player name + icon */}
+                  <div className={`flex items-center gap-2 ${isHome ? 'justify-end' : 'justify-start'}`}>
+                    {!isHome && <span className="text-lg">{icon}</span>}
+                    <span className={`font-semibold ${isGoal ? 'text-white text-base' : 'text-zinc-200 text-sm'}`}>
+                      {name}
+                    </span>
+                    {isHome && <span className="text-lg">{icon}</span>}
+                  </div>
+
+                  {/* Assist / second player */}
+                  {second && (
+                    <p className={`text-xs text-zinc-400 mt-0.5 ${isHome ? 'text-right' : 'text-left'}`}>
+                      {isSub ? (
+                        <>🔻 <span className="text-zinc-500">{second}</span></>
+                      ) : (
+                        <>Assist: {second}</>
+                      )}
+                    </p>
+                  )}
+
+                  {/* Event label */}
+                  <p className={`text-xs mt-0.5 ${
+                    isGoal ? 'text-emerald-400' : isCard ? 'text-yellow-400' : 'text-zinc-500'
+                  } ${isHome ? 'text-right' : 'text-left'}`}>
+                    {label}
+                  </p>
+                </div>
+              </div>
+
+              {/* Minute badge - centered on the line */}
+              <div className="absolute left-1/2 -translate-x-1/2 z-10">
+                <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-bold ${
+                  isGoal
+                    ? 'bg-emerald-500 text-white'
+                    : isCard
+                    ? 'bg-yellow-400 text-black'
+                    : 'bg-zinc-700 text-zinc-300'
+                }`}>
+                  {minuteLabel(evt)}
                 </span>
-              )}
-              {goal && <span className="text-lg">⚽</span>}
+              </div>
+
+              {/* Empty space for the other side */}
+              <div className="flex-1" />
             </div>
-
-            {/* Event text */}
-            <p className={`leading-relaxed ${goal ? 'text-base font-semibold text-white' : 'text-sm text-zinc-300'}`}>
-              {eventDescription(evt, match)}
-            </p>
-
-            {/* Extra description if present and not already used */}
-            {evt.description && !isGoal(evt.event_type) && !evt.event_type?.toLowerCase().includes('subst') && !evt.event_type?.toLowerCase().includes('var') && (
-              <p className="mt-1 text-xs text-zinc-500">{evt.description}</p>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
