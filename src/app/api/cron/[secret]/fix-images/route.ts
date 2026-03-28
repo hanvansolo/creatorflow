@@ -81,8 +81,9 @@ export async function GET(
           // Check file size — X/Twitter requires minimum 300x157px
           // Images under 15KB are likely tiny thumbnails (240x135 = ~8-12KB)
           try {
-            const stats = await fs.stat(filepath);
-            if (stats.size < 15000) {
+            const fstats = await fs.stat(filepath);
+            console.log(`[FixImages] File ${filename}: ${fstats.size} bytes at ${filepath}`);
+            if (fstats.size < 15000) {
               // Tiny image — re-scrape og:image from source
               console.log(`[FixImages] Tiny image (${stats.size}b): ${article.title.slice(0, 40)}... - re-scraping`);
               if (article.originalUrl) {
@@ -101,7 +102,7 @@ export async function GET(
                 }
               }
             }
-          } catch { /* stat failed, treat as OK */ }
+          } catch (statErr) { console.log(`[FixImages] stat failed for ${filepath}:`, (statErr as Error).message); }
           alreadyOk++;
           continue;
         }
