@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Shield, MapPin, Calendar, Users, ArrowRight, Newspaper, GitCompareArrows, Trophy, Shirt, Swords } from 'lucide-react';
 import { db, clubs, venues, newsArticles, players, leagueStandings, competitionSeasons, competitions, matches } from '@/lib/db';
 import { eq, ilike, or, desc, sql, and, asc } from 'drizzle-orm';
+import { getOrLoadSquad } from '@/lib/api/player-loader';
 import { createPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -64,11 +65,17 @@ export default async function TeamDetailPage({ params }: PageProps) {
     });
   }
 
-  // Fetch squad players grouped by position
-  const squad = await db.query.players.findMany({
-    where: and(eq(players.currentClubId, club.id), eq(players.isActive, true)),
-    orderBy: [asc(players.position), asc(players.lastName)],
-  });
+  // Fetch squad players — on-demand loader fetches from API if not cached
+  const allSquad = await getOrLoadSquad(club.id);
+  const squad = allSquad
+    .filter((p: any) => p.isActive !== false)
+    .sort((a: any, b: any) => {
+      const posOrder = ['GK', 'DEF', 'MID', 'FWD'];
+      const posA = posOrder.indexOf(a.position) >= 0 ? posOrder.indexOf(a.position) : 99;
+      const posB = posOrder.indexOf(b.position) >= 0 ? posOrder.indexOf(b.position) : 99;
+      if (posA !== posB) return posA - posB;
+      return (a.lastName || '').localeCompare(b.lastName || '');
+    });
 
   // Fetch league standings for this club
   const standings = await db

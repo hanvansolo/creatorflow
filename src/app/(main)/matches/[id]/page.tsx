@@ -26,8 +26,10 @@ import {
   Star,
   Brain,
   AlertTriangle,
+  Shirt,
 } from 'lucide-react';
 import { OddsPanel } from '@/components/odds';
+import { getOrLoadSquad } from '@/lib/api/player-loader';
 
 export const dynamic = 'force-dynamic';
 
@@ -430,6 +432,43 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const isFinished = match.status === 'finished';
 
   const homeColor = match.home_color || '#10b981';
+
+  // Load squads for both teams (on-demand from API if not cached)
+  const [homeSquadRaw, awaySquadRaw] = await Promise.all([
+    match.home_club_id ? getOrLoadSquad(match.home_club_id) : Promise.resolve([]),
+    match.away_club_id ? getOrLoadSquad(match.away_club_id) : Promise.resolve([]),
+  ]);
+
+  const SQUAD_POSITION_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
+  const SQUAD_POSITION_STYLES: Record<string, { color: string; bg: string; label: string }> = {
+    GK: { color: 'text-yellow-400', bg: 'bg-yellow-500/15 border-yellow-500/30', label: 'Goalkeepers' },
+    DEF: { color: 'text-blue-400', bg: 'bg-blue-500/15 border-blue-500/30', label: 'Defenders' },
+    MID: { color: 'text-green-400', bg: 'bg-green-500/15 border-green-500/30', label: 'Midfielders' },
+    FWD: { color: 'text-red-400', bg: 'bg-red-500/15 border-red-500/30', label: 'Forwards' },
+  };
+
+  function groupByPosition(squadArr: any[]) {
+    const grouped: Record<string, any[]> = {};
+    for (const pos of SQUAD_POSITION_ORDER) {
+      const posPlayers = squadArr.filter((p: any) => p.position === pos);
+      if (posPlayers.length > 0) grouped[pos] = posPlayers;
+    }
+    return grouped;
+  }
+
+  function calcPlayerAge(dob: string | null): number | null {
+    if (!dob) return null;
+    const d = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+    return age;
+  }
+
+  const homeSquadByPos = groupByPosition(homeSquadRaw);
+  const awaySquadByPos = groupByPosition(awaySquadRaw);
+  const hasSquads = Object.keys(homeSquadByPos).length > 0 || Object.keys(awaySquadByPos).length > 0;
 
   return (
     <div className="min-h-screen bg-zinc-900">
@@ -1255,6 +1294,87 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             </section>
           );
         })()}
+
+        {/* ===== SQUADS ===== */}
+        {hasSquads && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
+              <Shirt className="h-5 w-5 text-emerald-500" />
+              Squads
+            </h2>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {[
+                { label: match.home_name, logo: match.home_logo, squadByPos: homeSquadByPos },
+                { label: match.away_name, logo: match.away_logo, squadByPos: awaySquadByPos },
+              ].map((side, sideIdx) => (
+                <div key={sideIdx} className="rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
+                  <div className="mb-4 flex items-center gap-2">
+                    {side.logo && (
+                      <Image src={side.logo} alt={side.label} width={24} height={24} className="h-6 w-6 object-contain" />
+                    )}
+                    <span className="font-semibold text-zinc-100">{side.label}</span>
+                  </div>
+                  {Object.keys(side.squadByPos).length > 0 ? (
+                    <div className="space-y-4">
+                      {SQUAD_POSITION_ORDER.map((pos) => {
+                        const group = side.squadByPos[pos];
+                        if (!group) return null;
+                        const style = SQUAD_POSITION_STYLES[pos];
+                        return (
+                          <div key={pos}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${style.bg} ${style.color}`}>
+                                {style.label}
+                              </span>
+                              <span className="text-[10px] text-zinc-600">{group.length}</span>
+                            </div>
+                            <div className="space-y-1">
+                              {group.map((p: any) => {
+                                const age = calcPlayerAge(p.dateOfBirth || p.date_of_birth);
+                                const playerName = p.knownAs || p.known_as || `${p.firstName || p.first_name || ''} ${p.lastName || p.last_name || ''}`.trim();
+                                const playerSlug = p.slug;
+                                const shirtNum = p.shirtNumber ?? p.shirt_number;
+                                const headshot = p.headshotUrl || p.headshot_url;
+                                return (
+                                  <div key={p.id} className="flex items-center gap-2.5 rounded px-2 py-1.5 hover:bg-zinc-800/60 transition-colors">
+                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-800 border border-zinc-700/50 overflow-hidden">
+                                      {headshot ? (
+                                        <img src={headshot} alt={playerName} className="h-full w-full object-cover" />
+                                      ) : (
+                                        <Shield className="h-4 w-4 text-zinc-600" />
+                                      )}
+                                    </div>
+                                    <span className="w-7 text-right text-xs font-bold text-zinc-500 flex-shrink-0">
+                                      {shirtNum ?? '-'}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      {playerSlug ? (
+                                        <Link href={`/players/${playerSlug}`} className="text-sm font-medium text-zinc-200 hover:text-emerald-400 transition-colors truncate block">
+                                          {playerName}
+                                        </Link>
+                                      ) : (
+                                        <span className="text-sm font-medium text-zinc-200 truncate block">{playerName}</span>
+                                      )}
+                                    </div>
+                                    {age != null && (
+                                      <span className="text-[10px] text-zinc-500 flex-shrink-0">{age}y</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500 text-center py-4">No squad data available</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ===== LINKS ===== */}
         <section className="grid gap-3 sm:grid-cols-3">
