@@ -85,125 +85,160 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
   const isScheduled = match.status === 'scheduled';
   const score = match.home_score != null ? `${match.home_score} - ${match.away_score}` : null;
 
+  // Extract goal scorers from events
+  const homeGoals = events.filter(e =>
+    ['goal', 'own_goal', 'penalty_scored'].includes(e.event_type) &&
+    (e.is_home === true || e.club_id === 'home' || e.club_name === match.home_name)
+  );
+  const awayGoals = events.filter(e =>
+    ['goal', 'own_goal', 'penalty_scored'].includes(e.event_type) &&
+    (e.is_home === false || e.club_id === 'away' || e.club_name === match.away_name)
+  );
+  const homeAssists = events.filter(e =>
+    ['goal', 'penalty_scored'].includes(e.event_type) && e.second_player_known_as &&
+    (e.is_home === true || e.club_id === 'home' || e.club_name === match.home_name)
+  );
+  const awayAssists = events.filter(e =>
+    ['goal', 'penalty_scored'].includes(e.event_type) && e.second_player_known_as &&
+    (e.is_home === false || e.club_id === 'away' || e.club_name === match.away_name)
+  );
+
+  function goalText(e: any) {
+    const name = e.player_known_as || e.club_name || '';
+    const min = e.added_time ? `${e.minute}'+${e.added_time}` : `${e.minute}'`;
+    const suffix = e.event_type === 'own_goal' ? ' (OG)' : e.event_type === 'penalty_scored' ? ' (Pen)' : '';
+    return `${name} (${min}${suffix})`;
+  }
+
   return (
     <div className="min-h-screen bg-zinc-900">
-      {/* Match Header — always visible */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${match.home_color || '#059669'}22 0%, transparent 50%, ${match.away_color || '#3f3f46'}22 100%)`,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/40 to-zinc-900" />
-        <div className="relative mx-auto max-w-5xl px-4 pb-6 pt-4">
-          {/* Competition + Round */}
-          <div className="mb-4 flex items-center justify-center gap-2 text-sm text-zinc-400">
+      {/* Match Header — BBC style */}
+      <div className="bg-zinc-800/60 border-b border-zinc-700/50">
+        <div className="mx-auto max-w-5xl px-4 py-6">
+          {/* Date + Competition */}
+          <div className="text-center mb-5 text-sm text-zinc-400">
+            <span>{new Date(match.kickoff).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
             {match.competition_name && (
-              <Link href={`/tables?competition=${match.competition_slug}`} className="hover:text-emerald-400 transition-colors">
-                {match.competition_name}
-              </Link>
-            )}
-            {match.round && (
               <>
-                <span className="text-zinc-600">&middot;</span>
-                <span>{match.round}</span>
+                <span className="mx-2 text-zinc-600">&middot;</span>
+                <Link href={`/tables?competition=${match.competition_slug}`} className="hover:text-emerald-400 transition-colors">
+                  {match.competition_name}
+                </Link>
               </>
             )}
           </div>
 
-          {/* Teams + Score */}
-          <div className="flex items-center justify-center gap-4 sm:gap-8">
-            {/* Home */}
-            <div className="flex flex-col items-center gap-3 min-w-0 flex-1">
-              <Link className="group flex flex-col items-center gap-2" href={`/teams/${match.home_slug}`}>
-                {match.home_logo ? (
-                  <Image src={match.home_logo} alt={match.home_name} width={72} height={72}
-                    className="h-16 w-16 sm:h-[72px] sm:w-[72px] object-contain drop-shadow-lg group-hover:scale-105 transition-transform" />
-                ) : (
-                  <div className="h-16 w-16 rounded-full" style={{ backgroundColor: match.home_color || '#52525b' }} />
-                )}
-                <span className="text-sm sm:text-base font-semibold text-zinc-100 text-center group-hover:text-emerald-400 transition-colors">
-                  {match.home_name}
-                </span>
-              </Link>
-            </div>
+          {/* Teams + Score row */}
+          <div className="flex items-center justify-center gap-3 sm:gap-6">
+            {/* Home team */}
+            <Link href={`/teams/${match.home_slug}`} className="group flex items-center gap-2 sm:gap-3 flex-1 justify-end min-w-0">
+              <span className="text-base sm:text-xl font-bold text-white text-right truncate group-hover:text-emerald-400 transition-colors">
+                {match.home_name}
+              </span>
+              {match.home_logo ? (
+                <Image src={match.home_logo} alt="" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0" />
+              ) : (
+                <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: match.home_color || '#52525b' }} />
+              )}
+            </Link>
 
-            {/* Score / Time */}
-            <div className="flex flex-col items-center gap-2">
+            {/* Score */}
+            <div className="flex flex-col items-center shrink-0">
               {score ? (
-                <div className="text-4xl sm:text-5xl font-black text-white tracking-tight tabular-nums">
-                  {match.home_score}<span className="mx-2 text-zinc-600">-</span>{match.away_score}
+                <div className="flex items-center gap-2">
+                  <span className="text-4xl sm:text-5xl font-black text-white tabular-nums">{match.home_score}</span>
+                  <span className="text-2xl text-zinc-600 font-light">|</span>
+                  <span className="text-4xl sm:text-5xl font-black text-white tabular-nums">{match.away_score}</span>
                 </div>
               ) : (
-                <div className="text-2xl sm:text-3xl font-bold text-zinc-300">
+                <span className="text-2xl font-bold text-emerald-400">
                   {new Date(match.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                </div>
+                </span>
               )}
 
-              {/* Status badge */}
+              {/* Status */}
               {isLive && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-4 py-1.5 text-sm font-bold text-red-400 border border-red-500/20">
-                  <span className="relative flex h-2 w-2">
+                <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-red-400">
+                  <span className="relative flex h-1.5 w-1.5">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-400" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-400" />
                   </span>
-                  LIVE {match.minute ? `${match.minute}'` : ''}
+                  {match.minute}'
                 </span>
               )}
               {isFinished && (
-                <span className="rounded-full bg-zinc-700 px-4 py-1.5 text-sm font-bold text-zinc-300 border border-zinc-600">
-                  FT
-                </span>
-              )}
-              {isScheduled && (
-                <span className="text-sm text-zinc-500">
-                  {formatKickoff(match.kickoff)}
-                </span>
+                <span className="mt-1 text-xs font-semibold text-emerald-400">FT</span>
               )}
 
-              {/* HT score */}
+              {/* HT */}
               {match.home_score_ht != null && (
-                <div className="text-xs text-zinc-500">
-                  HT: {match.home_score_ht} - {match.away_score_ht}
-                </div>
+                <span className="text-[10px] text-zinc-500 mt-0.5">HT {match.home_score_ht}-{match.away_score_ht}</span>
               )}
             </div>
 
-            {/* Away */}
-            <div className="flex flex-col items-center gap-3 min-w-0 flex-1">
-              <Link className="group flex flex-col items-center gap-2" href={`/teams/${match.away_slug}`}>
-                {match.away_logo ? (
-                  <Image src={match.away_logo} alt={match.away_name} width={72} height={72}
-                    className="h-16 w-16 sm:h-[72px] sm:w-[72px] object-contain drop-shadow-lg group-hover:scale-105 transition-transform" />
-                ) : (
-                  <div className="h-16 w-16 rounded-full" style={{ backgroundColor: match.away_color || '#52525b' }} />
-                )}
-                <span className="text-sm sm:text-base font-semibold text-zinc-100 text-center group-hover:text-emerald-400 transition-colors">
-                  {match.away_name}
-                </span>
-              </Link>
-            </div>
+            {/* Away team */}
+            <Link href={`/teams/${match.away_slug}`} className="group flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              {match.away_logo ? (
+                <Image src={match.away_logo} alt="" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0" />
+              ) : (
+                <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: match.away_color || '#52525b' }} />
+              )}
+              <span className="text-base sm:text-xl font-bold text-white truncate group-hover:text-emerald-400 transition-colors">
+                {match.away_name}
+              </span>
+            </Link>
           </div>
 
-          {/* Venue + Referee */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-500">
-            {match.venue_name && (
-              <div className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                <span>{match.venue_name}{match.venue_city ? `, ${match.venue_city}` : ''}</span>
+          {/* Goal scorers — BBC style */}
+          {(homeGoals.length > 0 || awayGoals.length > 0) && (
+            <div className="flex justify-center mt-3 gap-6 sm:gap-12">
+              <div className="flex-1 text-right">
+                {homeGoals.map((g, i) => (
+                  <p key={i} className="text-xs sm:text-sm text-yellow-400">{goalText(g)}</p>
+                ))}
               </div>
+              <div className="w-px" />
+              <div className="flex-1 text-left">
+                {awayGoals.map((g, i) => (
+                  <p key={i} className="text-xs sm:text-sm text-yellow-400">{goalText(g)}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Assists */}
+          {(homeAssists.length > 0 || awayAssists.length > 0) && (
+            <div className="flex justify-center mt-1 gap-6 sm:gap-12">
+              <div className="flex-1 text-right">
+                {homeAssists.map((a, i) => (
+                  <p key={i} className="text-[10px] sm:text-xs text-zinc-500">{a.second_player_known_as} ({a.minute}')</p>
+                ))}
+              </div>
+              <div className="w-px" />
+              <div className="flex-1 text-left text-center">
+                <span className="text-[10px] sm:text-xs font-semibold text-zinc-500 uppercase tracking-wider">Assists</span>
+              </div>
+              <div className="flex-1 text-left">
+                {awayAssists.map((a, i) => (
+                  <p key={i} className="text-[10px] sm:text-xs text-zinc-500">{a.second_player_known_as} ({a.minute}')</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Venue + Referee — centered below */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-500">
+            {match.venue_name && (
+              <span>Venue: <strong className="text-zinc-400">{match.venue_name}</strong></span>
             )}
             {match.referee && (
-              <div className="flex items-center gap-1">
-                <Shield className="h-3.5 w-3.5" />
-                <span>{match.referee}</span>
-              </div>
+              <span>{match.referee}</span>
             )}
             {isLive && isRefreshing && (
-              <div className="flex items-center gap-1 text-emerald-400">
+              <span className="text-emerald-400 flex items-center gap-1">
                 <Radio className="h-3 w-3 animate-pulse" />
-                <span className="text-[10px]">Updating...</span>
-              </div>
+                Updating...
+              </span>
             )}
           </div>
         </div>
