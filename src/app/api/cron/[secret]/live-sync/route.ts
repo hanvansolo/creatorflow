@@ -105,12 +105,48 @@ export async function GET(
         if (!existingMatch) {
           // Match not in DB — create it from the live fixture data
           try {
-            // Find home and away clubs by API ID
-            const [homeClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.home.id)).limit(1);
-            const [awayClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.away.id)).limit(1);
+            // Find home and away clubs by API ID — auto-create if missing
+            let [homeClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.home.id)).limit(1);
+            let [awayClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.away.id)).limit(1);
+
+            // Auto-create clubs that don't exist yet
+            if (!homeClub) {
+              try {
+                const t = fixture.teams.home;
+                const slug = t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                const [created] = await db.insert(clubs).values({
+                  name: t.name,
+                  slug,
+                  logoUrl: t.logo,
+                  apiFootballId: t.id,
+                  country: fixture.league.country || null,
+                }).returning();
+                homeClub = created;
+                console.log(`[live-sync] Auto-created club: ${t.name}`);
+              } catch { /* slug conflict — try to find by name */
+                [homeClub] = await db.select().from(clubs).where(eq(clubs.name, fixture.teams.home.name)).limit(1);
+              }
+            }
+            if (!awayClub) {
+              try {
+                const t = fixture.teams.away;
+                const slug = t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                const [created] = await db.insert(clubs).values({
+                  name: t.name,
+                  slug,
+                  logoUrl: t.logo,
+                  apiFootballId: t.id,
+                  country: fixture.league.country || null,
+                }).returning();
+                awayClub = created;
+                console.log(`[live-sync] Auto-created club: ${t.name}`);
+              } catch {
+                [awayClub] = await db.select().from(clubs).where(eq(clubs.name, fixture.teams.away.name)).limit(1);
+              }
+            }
 
             if (!homeClub || !awayClub) {
-              console.log(`[live-sync] Clubs not found for fixture ${apiFixtureId}, skipping`);
+              console.log(`[live-sync] Could not create clubs for fixture ${apiFixtureId}, skipping`);
               continue;
             }
 
@@ -361,9 +397,40 @@ export async function GET(
       }
     }
 
-    // Send kickoff tweets
+    // Send kickoff tweets — ONLY for notable leagues
+    // Don't spam followers with every minor league match
+    const TWEETWORTHY_LEAGUES = new Set([
+      'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+      'Champions League', 'Europa League', 'Conference League',
+      'FA Cup', 'EFL Cup', 'Copa del Rey', 'Coppa Italia', 'DFB-Pokal', 'Coupe de France',
+      'Eredivisie', 'Primeira Liga', 'Championship', 'Scottish Premiership',
+      'MLS', 'Liga MX', 'Brasileirão',
+      'World Cup', 'European Championship', 'Copa America', 'Nations League',
+      'AFCON', 'Asian Cup',
+      'WC Qualifiers - Europe', 'WC Qualifiers - Intercontinental',
+      'AFCON Qualifiers',
+      'International Friendlies', // Major international friendlies (England, Brazil, etc.)
+    ]);
+
+    // For friendlies, only tweet if it involves a top nation
+    const TOP_NATIONS = new Set([
+      'England', 'France', 'Germany', 'Spain', 'Italy', 'Brazil', 'Argentina',
+      'Portugal', 'Netherlands', 'Belgium', 'Uruguay', 'Colombia', 'Mexico',
+      'USA', 'Japan', 'South Korea', 'Morocco', 'Senegal', 'Nigeria',
+    ]);
+
     let tweetsSent = 0;
     for (const kick of kickoffTweets) {
+      // Check if this match is tweetworthy
+      const isTweetworthy = TWEETWORTHY_LEAGUES.has(kick.competition);
+      const isFriendly = kick.competition === 'International Friendlies' || kick.competition === 'Friendlies';
+      const involvesTopNation = isFriendly && (TOP_NATIONS.has(kick.home) || TOP_NATIONS.has(kick.away));
+
+      if (!isTweetworthy && !involvesTopNation) {
+        console.log(`[live-sync] Skipping tweet for minor match: ${kick.home} vs ${kick.away} (${kick.competition})`);
+        continue;
+      }
+
       try {
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
         const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
