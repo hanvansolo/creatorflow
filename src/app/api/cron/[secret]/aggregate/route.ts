@@ -153,9 +153,61 @@ export async function GET(
 
         if (ENABLE_SPINNING && (article.content || article.summary) && spunCount < MAX_SPINS_PER_RUN) {
           try {
+            // Scrape the full article text from the source URL
+            // RSS only gives us 1-2 sentence excerpts — we need the real article
+            let fullText = article.content || article.summary || '';
+            if (article.originalUrl && fullText.length < 500) {
+              try {
+                const scrapeRes = await fetch(article.originalUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html',
+                  },
+                  signal: AbortSignal.timeout(10000),
+                  redirect: 'follow',
+                });
+                if (scrapeRes.ok) {
+                  const html = await scrapeRes.text();
+                  // Extract article body text — strip HTML tags, scripts, styles
+                  const cleaned = html
+                    .replace(/<script[\s\S]*?<\/script>/gi, '')
+                    .replace(/<style[\s\S]*?<\/style>/gi, '')
+                    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+                    .replace(/<header[\s\S]*?<\/header>/gi, '')
+                    .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+                    .replace(/<aside[\s\S]*?<\/aside>/gi, '');
+                  // Try to find article content via common patterns
+                  const articleMatch = cleaned.match(/<article[\s\S]*?<\/article>/i)
+                    || cleaned.match(/<div[^>]+class="[^"]*article[^"]*"[\s\S]*?<\/div>/i)
+                    || cleaned.match(/<div[^>]+class="[^"]*content[^"]*"[\s\S]*?<\/div>/i)
+                    || cleaned.match(/<div[^>]+class="[^"]*story[^"]*"[\s\S]*?<\/div>/i);
+                  const articleHtml = articleMatch ? articleMatch[0] : cleaned;
+                  // Strip remaining HTML tags
+                  const plainText = articleHtml
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'")
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                  // Only use if we got meaningful text (> 200 chars)
+                  if (plainText.length > 200) {
+                    // Cap at 5000 chars to avoid huge prompts
+                    fullText = plainText.slice(0, 5000);
+                    console.log(`[Spinner] Scraped ${plainText.length} chars from ${article.originalUrl?.slice(0, 50)}`);
+                  }
+                }
+              } catch (scrapeErr) {
+                console.warn(`[Spinner] Failed to scrape source:`, (scrapeErr as Error).message);
+              }
+            }
+
             const spun = await spinArticle(
               article.title,
-              article.content || '',
+              fullText,
               article.summary
             );
             finalTitle = spun.title;

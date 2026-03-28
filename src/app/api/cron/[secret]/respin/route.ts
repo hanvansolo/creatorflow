@@ -46,6 +46,7 @@ export async function GET(
         originalTitle: newsArticles.originalTitle,
         content: newsArticles.content,
         summary: newsArticles.summary,
+        originalUrl: newsArticles.originalUrl,
       })
       .from(newsArticles)
       .where(sql`LENGTH(${newsArticles.content}) < 300`)
@@ -61,14 +62,53 @@ export async function GET(
       try {
         // Use original title if available for better context, fall back to current
         const sourceTitle = article.originalTitle || article.title;
-        const sourceContent = article.content || article.summary || '';
+        let sourceContent = article.content || article.summary || '';
 
         if (!sourceContent.trim()) {
           console.log(`[Respin] Skipping empty article: ${article.id}`);
           continue;
         }
 
-        console.log(`[Respin] Processing: ${sourceTitle.slice(0, 60)}...`);
+        // Scrape full article from source if content is short
+        if (article.originalUrl && sourceContent.length < 500) {
+          try {
+            const scrapeRes = await fetch(article.originalUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html',
+              },
+              signal: AbortSignal.timeout(10000),
+              redirect: 'follow',
+            });
+            if (scrapeRes.ok) {
+              const html = await scrapeRes.text();
+              const cleaned = html
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<style[\s\S]*?<\/style>/gi, '')
+                .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+                .replace(/<header[\s\S]*?<\/header>/gi, '')
+                .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+                .replace(/<aside[\s\S]*?<\/aside>/gi, '');
+              const articleMatch = cleaned.match(/<article[\s\S]*?<\/article>/i)
+                || cleaned.match(/<div[^>]+class="[^"]*article[^"]*"[\s\S]*?<\/div>/i)
+                || cleaned.match(/<div[^>]+class="[^"]*content[^"]*"[\s\S]*?<\/div>/i);
+              const articleHtml = articleMatch ? articleMatch[0] : cleaned;
+              const plainText = articleHtml
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+                .replace(/\s+/g, ' ').trim();
+              if (plainText.length > 200) {
+                sourceContent = plainText.slice(0, 5000);
+                console.log(`[Respin] Scraped ${plainText.length} chars from source`);
+              }
+            }
+          } catch (e) {
+            console.warn(`[Respin] Scrape failed:`, (e as Error).message);
+          }
+        }
+
+        console.log(`[Respin] Processing (${sourceContent.length} chars): ${sourceTitle.slice(0, 60)}...`);
 
         const result = await extractAndSpin(sourceTitle, sourceContent, article.summary || undefined);
 
