@@ -141,11 +141,16 @@ export default function TimelineTab({ match, events }: TimelineTabProps) {
                     </p>
                   )}
 
-                  {/* Event label */}
-                  <p className={`text-xs mt-0.5 ${
-                    isGoal ? 'text-emerald-400' : isCard ? 'text-yellow-400' : 'text-zinc-500'
+                  {/* Full text description */}
+                  <p className={`text-xs mt-1.5 leading-relaxed ${
+                    isGoal ? 'text-emerald-300/80' : 'text-zinc-400'
                   } ${isHome ? 'text-right' : 'text-left'}`}>
-                    {label}
+                    {isGoal && `GOAL! ${name} scores for ${isHome ? match.home_name : match.away_name}${evt.event_type === 'own_goal' ? ' (Own Goal)' : evt.event_type === 'penalty_scored' ? ' (Penalty)' : ''}.${second ? ` Assisted by ${second}.` : ''}`}
+                    {(evt.event_type === 'yellow_card' || evt.event_type === 'yellow card') && `${name} (${isHome ? match.home_name : match.away_name}) receives a yellow card.`}
+                    {(evt.event_type === 'red_card' || evt.event_type === 'red card') && `${name} (${isHome ? match.home_name : match.away_name}) is shown a red card!`}
+                    {(evt.event_type === 'second_yellow') && `${name} (${isHome ? match.home_name : match.away_name}) receives a second yellow card and is sent off!`}
+                    {isSub && `Substitution for ${isHome ? match.home_name : match.away_name}: ${second ? `${second} replaces ${name}` : `${name} comes off`}.`}
+                    {evt.event_type?.includes('var') && `VAR Review: ${evt.description || name}`}
                   </p>
                 </div>
               </div>
