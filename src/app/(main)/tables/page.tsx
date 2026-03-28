@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Trophy, ArrowRight, LayoutGrid } from 'lucide-react';
 import { CompetitionSelector } from '@/components/competitions';
+import { AdSlot } from '@/components/ads/AdSlot';
 
 export const dynamic = 'force-dynamic';
 
@@ -229,6 +230,11 @@ export default async function TablesPage({ searchParams }: PageProps) {
             <p className="text-xs text-zinc-500 mt-1">Standings are updated after each matchday.</p>
           </div>
         )}
+
+        {/* Ad below standings table */}
+        <div className="my-6">
+          <AdSlot format="horizontal" />
+        </div>
 
         {/* Legend — only show for league type */}
         {standings.length > 0 && selected.type === 'league' && (

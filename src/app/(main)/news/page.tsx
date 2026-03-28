@@ -9,6 +9,7 @@ import { desc, eq, isNotNull } from 'drizzle-orm';
 import type { NewsArticle, CredibilityRating } from '@/types';
 import { createPageMetadata } from '@/lib/seo';
 import { getRelatedImageSync } from '@/lib/getFallbackImage';
+import { AdSlot } from '@/components/ads/AdSlot';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +149,11 @@ export default async function NewsPage() {
           initialArticles={news}
           initialCursor={news.length >= 30 ? news[news.length - 1].publishedAt : null}
         />
+
+        {/* Ad after article listing */}
+        <div className="my-6">
+          <AdSlot format="horizontal" />
+        </div>
       </div>
     </div>
   );

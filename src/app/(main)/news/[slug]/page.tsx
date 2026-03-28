@@ -21,6 +21,7 @@ import { getRelatedImageSync } from '@/lib/getFallbackImage';
 import { formatRelativeTime } from '@/lib/utils';
 import { prepareAnnotatedContent } from '@/lib/utils/prepare-annotated-content';
 import type { CredibilityRating } from '@/types';
+import { AdSlot, InArticleAd } from '@/components/ads/AdSlot';
 import {
   generateArticleMetadata,
   generateAlternates,
@@ -404,6 +405,11 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </CardContent>
         </Card>
 
+        {/* In-article ad */}
+        <div className="my-6">
+          <InArticleAd />
+        </div>
+
         {/* Comments */}
         <div id="comments">
           <CommentSection contentType="article" contentId={slug} />
@@ -580,6 +586,11 @@ export default async function NewsArticlePage({ params }: PageProps) {
             <p className="text-xs text-zinc-400 mt-1 mb-3">Football news without the waffle. Weekly.</p>
             <NewsletterCTA source="article-sidebar" variant="inline" />
           </div>
+        </div>
+
+        {/* Sidebar Ad */}
+        <div className="my-4">
+          <AdSlot format="auto" />
         </div>
       </aside>
       </div>

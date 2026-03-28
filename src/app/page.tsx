@@ -15,6 +15,7 @@ import type { NewsArticle, CredibilityRating } from '@/types';
 import { SITE_CONFIG, DEFAULT_KEYWORDS, generateFAQStructuredData, HOMEPAGE_FAQ, jsonLd, JsonLdScript } from '@/lib/seo';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
 import { LiveTicker } from '@/components/live/LiveTicker';
+import { AdSlot } from '@/components/ads/AdSlot';
 
 
 export const dynamic = 'force-dynamic';
@@ -393,6 +394,11 @@ export default async function HomePage() {
           <NewsletterCTA source="homepage" variant="banner" />
         </section>
 
+        {/* Ad between hero/content and More News */}
+        <div className="my-6">
+          <AdSlot format="horizontal" />
+        </div>
+
         {/* More News + Sidebar */}
         <section className="mt-8">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -547,6 +553,11 @@ export default async function HomePage() {
                   </p>
                   <NewsletterCTA source="sidebar" variant="inline" />
                 </div>
+              </div>
+
+              {/* Sidebar Ad */}
+              <div className="my-4">
+                <AdSlot format="auto" />
               </div>
 
               {/* Latest Videos */}

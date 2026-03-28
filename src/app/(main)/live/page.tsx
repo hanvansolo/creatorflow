@@ -9,6 +9,7 @@ import { Radio, ArrowRight, Zap, Calendar, Trophy, Goal } from 'lucide-react';
 import { COMPETITIONS } from '@/lib/constants/competitions';
 import { CompetitionSelector } from '@/components/competitions';
 import { LiveMatchCard } from '@/components/live/LiveMatchCard';
+import { AdSlot } from '@/components/ads/AdSlot';
 
 const ALL_COMPETITIONS = COMPETITIONS.map(c => ({
   name: c.name,
@@ -229,6 +230,11 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Ad below match count banner */}
+        <div className="my-4">
+          <AdSlot format="horizontal" />
         </div>
 
         {/* Competition selector */}
