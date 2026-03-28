@@ -28,20 +28,22 @@ export async function spinArticle(
 
 CURRENT DATE CONTEXT: The current year is ${currentYear}. All references to "this season", "upcoming", "next year" etc. should be relative to ${currentYear}.
 
-CRITICAL ACCURACY RULES:
-- NEVER change club names, player names, manager names, or club affiliations - use EXACTLY what the original states
-- NEVER change years, dates, transfer fees, scores, or any numbers - copy them EXACTLY from the original
-- NEVER guess or infer information not explicitly stated in the original
-- If the original mentions a specific club, player, or competition, use the EXACT same name
+CRITICAL ACCURACY RULES — THESE ARE NON-NEGOTIABLE:
+- ONLY include facts, quotes, names, dates, scores, and statistics that are EXPLICITLY stated in the original article below
+- NEVER invent quotes, statistics, background context, or analysis that isn't in the original
+- NEVER add "according to reports", "it is believed", or any speculative language unless the original contains it
+- NEVER change club names, player names, manager names, or club affiliations — use EXACTLY what the original states
+- NEVER change years, dates, transfer fees, scores, or any numbers — copy them EXACTLY
+- If a fact is not in the original text, DO NOT INCLUDE IT. Period.
 
 WRITING RULES:
-- Use a different structure and flow than the original
+- Rewrite the original in your own words with different phrasing and structure
 - Write in an engaging, professional football journalism style
-- Create a new compelling headline (but keep the same subject matter). The headline MUST be under 48 characters (a suffix will be appended) - be concise and punchy
+- Create a new compelling headline (same subject matter). Headline MUST be under 48 characters — be concise and punchy
 - Write a brief 2-3 sentence summary
-- The rewritten article MUST be at least 600 words long. If the original is shorter, expand with additional context, analysis, background information about the clubs/players involved, and implications of the news - but ONLY using facts from the original article
-- Use proper paragraph structure with clear transitions between sections
-- Include subheadings where appropriate for longer articles
+- Match the LENGTH of the original article. If the original is 200 words, write ~200 words. If it's 800 words, write ~800 words. Do NOT pad short articles to make them longer.
+- Use proper paragraph structure
+- Include subheadings where appropriate for articles over 400 words
 - Do not add any information that wasn't in the original
 - Do not include any disclaimers about rewriting
 
@@ -140,16 +142,18 @@ KEEP ALL of the following - these are essential:
 - Analysis and expert insight
 - Multiple perspectives on the story
 
-CRITICAL ACCURACY RULES:
-- NEVER change club names, player names, or affiliations - use EXACTLY what the original states
-- NEVER change years, dates, or numbers - copy them EXACTLY
-- NEVER add information not in the original
+CRITICAL ACCURACY RULES — NON-NEGOTIABLE:
+- ONLY include facts that are EXPLICITLY stated in the original article
+- NEVER invent quotes, stats, context, or analysis not in the original
+- NEVER change club names, player names, or affiliations — use EXACTLY what the original states
+- NEVER change years, dates, or numbers — copy them EXACTLY
+- If a fact is not in the original, DO NOT INCLUDE IT
 
 WRITING STYLE:
 - Professional sports journalism with good flow
 - Lead with the most newsworthy angle
-- The article MUST be at least 600 words long - expand with deeper analysis and context from the original where needed
-- Minimum 6-8 paragraphs for a proper article
+- Match the length of the original — do NOT pad short articles
+- If the original is 300 words, write ~300 words. If 1000 words, write ~1000 words
 - Use subheadings to break up longer sections
 - Write a sharp headline that captures the key news. The headline MUST be under 48 characters (a suffix will be appended) - be concise and punchy
 - Summary should be 2-3 sentences conveying the core story
