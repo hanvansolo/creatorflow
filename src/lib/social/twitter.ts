@@ -219,7 +219,7 @@ const TOPIC_HASHTAGS: Record<string, string> = {
   'retirement': '#Retirement', 'farewell': '#Farewell',
 };
 
-function buildHashtags(title: string, tags: string[]): string {
+export function buildHashtags(title: string, tags: string[]): string {
   const text = `${title} ${tags.join(' ')}`.toLowerCase();
   const hashtags: string[] = [];
   const seen = new Set<string>();

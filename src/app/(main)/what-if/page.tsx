@@ -1,4 +1,4 @@
-// @ts-nocheck — Stub API data typed as 'any', will be properly typed when rewritten for Footy Feed
+// @ts-nocheck
 import { Metadata } from 'next';
 import { MessageCircleQuestion, TrendingUp, Clock, Sparkles } from 'lucide-react';
 import { getPopularScenarios, getRecentScenarios } from '@/lib/api/what-if';
@@ -21,10 +21,10 @@ export default async function WhatIfPage() {
   ]);
 
   const suggestedQuestions = [
-    "What if Max Verstappen had joined Ferrari in 2020?",
-    "What if the 2021 Abu Dhabi safety car had not been deployed?",
-    "What if ground effect cars never returned to F1?",
-    "What if there were 25 races per season?",
+    "What if Mbappe had joined Real Madrid in 2022 instead of 2024?",
+    "What if the Premier League introduced a salary cap?",
+    "What if VAR was removed from football tomorrow?",
+    "What if the Champions League was a league format from the start?",
   ];
 
   return (
@@ -38,14 +38,14 @@ export default async function WhatIfPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white sm:text-3xl">What If Simulator</h1>
-              <p className="text-sm text-zinc-400">Explore alternate F1 realities</p>
+              <p className="text-sm text-zinc-400">Explore alternate football realities</p>
             </div>
           </div>
 
           <p className="text-zinc-300 max-w-2xl mb-8">
-            Ever wondered what could have been? Ask any hypothetical F1 question and our AI
-            will analyze the scenario, considering team dynamics, driver strengths, and
-            historical precedents.
+            Ever wondered what could have been? Ask any hypothetical football question and our AI
+            will analyse the scenario, considering team dynamics, player strengths, tactical setups,
+            and historical precedents.
           </p>
 
           <WhatIfSearch />
@@ -90,8 +90,8 @@ export default async function WhatIfPage() {
             <MessageCircleQuestion className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">No Scenarios Yet</h3>
             <p className="text-zinc-400 max-w-md mx-auto">
-              Be the first to ask a What If question! Our AI will analyze your hypothetical
-              scenario and provide detailed insights.
+              Be the first to ask a What If question! Our AI will analyse your hypothetical
+              scenario and provide detailed insights about how it could change football.
             </p>
           </div>
         )}

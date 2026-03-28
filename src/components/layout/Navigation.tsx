@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -53,6 +54,19 @@ export function Navigation({ className, vertical = false, onItemClick }: Navigat
           </Link>
         );
       })}
+      <Link
+        href="/search"
+        onClick={onItemClick}
+        className={cn(
+          'relative px-3 py-2 text-sm font-medium transition-colors',
+          pathname === '/search'
+            ? 'text-emerald-500 dark:text-emerald-400'
+            : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'
+        )}
+        aria-label="Search"
+      >
+        <Search className="h-4 w-4" />
+      </Link>
     </nav>
   );
 }

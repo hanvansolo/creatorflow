@@ -1,11 +1,12 @@
 import { postToTwitter } from './twitter';
-import { postToFacebook } from './facebook';
+import { postToFacebook, postToInstagram } from './facebook';
 import { postToBluesky } from './bluesky';
 import { postToThreads } from './threads';
 
 export interface SocialPostResult {
   twitter: { success: boolean; id?: string; error?: string } | null;
   facebook: { success: boolean; id?: string; error?: string } | null;
+  instagram: { success: boolean; id?: string; error?: string } | null;
   bluesky: { success: boolean; uri?: string; error?: string } | null;
   threads: { success: boolean; id?: string; error?: string } | null;
 }
@@ -24,7 +25,8 @@ export async function postToAllPlatforms(
 ): Promise<SocialPostResult> {
   const results = await Promise.allSettled([
     (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) ? postToTwitter(title, slug, tags, imageUrl, summary) : null,
-    process.env.FACEBOOK_PAGE_ID ? postToFacebook(title, slug, summary, imageUrl) : null,
+    process.env.FACEBOOK_PAGE_ID ? postToFacebook(title, slug, summary, tags) : null,
+    (process.env.INSTAGRAM_ACCOUNT_ID && imageUrl) ? postToInstagram(title, slug, imageUrl, tags) : null,
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
     process.env.THREADS_USER_ID ? postToThreads(title, slug, imageUrl) : null,
   ]);
@@ -38,8 +40,9 @@ export async function postToAllPlatforms(
   const result: SocialPostResult = {
     twitter: get(0),
     facebook: get(1),
-    bluesky: get(2),
-    threads: get(3),
+    instagram: get(2),
+    bluesky: get(3),
+    threads: get(4),
   };
 
   for (const [platform, res] of Object.entries(result)) {
