@@ -16,7 +16,8 @@ function playerName(evt: MatchEvent): string {
   return (
     evt.player_known_as ||
     [evt.player_first_name, evt.player_last_name].filter(Boolean).join(' ') ||
-    'Unknown'
+    evt.club_name ||
+    'Goal'
   );
 }
 
