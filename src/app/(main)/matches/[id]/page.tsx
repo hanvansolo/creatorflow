@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { matchEvents, matchStats, matchAnalysis, players, clubs } from '@/lib/db/schema';
 import { eq, desc, asc, sql } from 'drizzle-orm';
-import { getFixtureEvents, getFixtureStatistics, getFixtureOdds, getLiveOdds, mapEventType } from '@/lib/api/football-api';
+import { getFixtureEvents, getFixtureStatistics, getFixtureOdds, getLiveOdds, mapEventType, getFixtureLineups, getFixturePlayerStats, getFixturePredictions, getFixtureInjuries } from '@/lib/api/football-api';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -22,6 +22,10 @@ import {
   BarChart3,
   Activity,
   Target,
+  ListOrdered,
+  Star,
+  Brain,
+  AlertTriangle,
 } from 'lucide-react';
 import { OddsPanel } from '@/components/odds';
 
@@ -379,6 +383,41 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       }
     } catch (e) {
       console.error('[Match] Failed to fetch odds:', e);
+    }
+  }
+
+  // ===== FETCH RICH MATCH DATA (on-demand, not stored) =====
+  let lineupsData: any[] = [];
+  let playerStatsData: any[] = [];
+  let predictionsData: any = null;
+  let injuriesData: any[] = [];
+
+  if (match.api_football_id) {
+    const isMatchPlayed = ['finished', 'live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
+
+    // Fetch in parallel — each with independent try/catch
+    const [lineupsRes, playerStatsRes, predictionsRes, injuriesRes] = await Promise.allSettled([
+      // Lineups: only for played/live matches
+      isMatchPlayed ? getFixtureLineups(match.api_football_id) : Promise.resolve(null),
+      // Player stats: only for played/live matches
+      isMatchPlayed ? getFixturePlayerStats(match.api_football_id) : Promise.resolve(null),
+      // Predictions: all matches
+      getFixturePredictions(match.api_football_id),
+      // Injuries: mainly useful for scheduled, but fetch for all
+      getFixtureInjuries(match.api_football_id),
+    ]);
+
+    if (lineupsRes.status === 'fulfilled' && lineupsRes.value?.response?.length) {
+      lineupsData = lineupsRes.value.response;
+    }
+    if (playerStatsRes.status === 'fulfilled' && playerStatsRes.value?.response?.length) {
+      playerStatsData = playerStatsRes.value.response;
+    }
+    if (predictionsRes.status === 'fulfilled' && predictionsRes.value?.response?.length) {
+      predictionsData = predictionsRes.value.response[0];
+    }
+    if (injuriesRes.status === 'fulfilled' && injuriesRes.value?.response?.length) {
+      injuriesData = injuriesRes.value.response;
     }
   }
 
@@ -917,6 +956,305 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             </div>
           </section>
         )}
+
+        {/* ===== LINEUPS ===== */}
+        {lineupsData.length >= 2 && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
+              <ListOrdered className="h-5 w-5 text-emerald-500" />
+              Lineups
+            </h2>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {lineupsData.map((lineup: any, idx: number) => (
+                <div key={idx} className="rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {lineup.team?.logo && (
+                        <Image src={lineup.team.logo} alt={lineup.team.name} width={24} height={24} className="h-6 w-6 object-contain" />
+                      )}
+                      <span className="font-semibold text-zinc-100">{lineup.team?.name}</span>
+                    </div>
+                    <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-0.5 text-xs font-bold text-emerald-400">
+                      {lineup.formation}
+                    </span>
+                  </div>
+
+                  {/* Coach */}
+                  {lineup.coach?.name && (
+                    <div className="mb-3 flex items-center gap-2 text-xs text-zinc-500">
+                      <Shield className="h-3.5 w-3.5" />
+                      <span>Coach: {lineup.coach.name}</span>
+                    </div>
+                  )}
+
+                  {/* Starting XI */}
+                  <div className="mb-3">
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Starting XI</h4>
+                    <div className="space-y-1">
+                      {lineup.startXI?.map((entry: any, pi: number) => (
+                        <div key={pi} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-800/60">
+                          <span className="w-7 text-right text-xs font-bold text-zinc-500">{entry.player.number}</span>
+                          <span className="text-zinc-200">{entry.player.name}</span>
+                          <span className="ml-auto rounded bg-zinc-700/50 px-1.5 py-0.5 text-[10px] text-zinc-500 uppercase">{entry.player.pos}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Substitutes */}
+                  {lineup.substitutes?.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Substitutes</h4>
+                      <div className="space-y-1">
+                        {lineup.substitutes.map((entry: any, si: number) => (
+                          <div key={si} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-800/60">
+                            <span className="w-7 text-right text-xs font-bold text-zinc-600">{entry.player.number}</span>
+                            <span className="text-zinc-400">{entry.player.name}</span>
+                            <span className="ml-auto rounded bg-zinc-700/50 px-1.5 py-0.5 text-[10px] text-zinc-600 uppercase">{entry.player.pos}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ===== PLAYER RATINGS ===== */}
+        {playerStatsData.length >= 2 && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
+              <Star className="h-5 w-5 text-emerald-500" />
+              Player Ratings
+            </h2>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {playerStatsData.map((teamData: any, idx: number) => {
+                const sortedPlayers = [...(teamData.players || [])].sort((a: any, b: any) => {
+                  const rA = parseFloat(a.statistics?.[0]?.games?.rating || '0');
+                  const rB = parseFloat(b.statistics?.[0]?.games?.rating || '0');
+                  return rB - rA;
+                });
+                return (
+                  <div key={idx} className="rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
+                    <div className="mb-4 flex items-center gap-2">
+                      {teamData.team?.logo && (
+                        <Image src={teamData.team.logo} alt={teamData.team.name} width={24} height={24} className="h-6 w-6 object-contain" />
+                      )}
+                      <span className="font-semibold text-zinc-100">{teamData.team?.name}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 px-2 py-1 text-[10px] uppercase tracking-wide text-zinc-600 font-semibold">
+                        <span className="flex-1">Player</span>
+                        <span className="w-10 text-center">Rat</span>
+                        <span className="w-8 text-center">G</span>
+                        <span className="w-8 text-center">A</span>
+                        <span className="w-8 text-center">SH</span>
+                        <span className="w-8 text-center">PS</span>
+                        <span className="w-8 text-center">TK</span>
+                      </div>
+                      {sortedPlayers.map((p: any, pi: number) => {
+                        const s = p.statistics?.[0] || {};
+                        const rating = parseFloat(s.games?.rating || '0');
+                        const ratingColor = rating >= 7 ? 'text-emerald-400 bg-emerald-500/15' : rating >= 6 ? 'text-amber-400 bg-amber-500/15' : 'text-red-400 bg-red-500/15';
+                        return (
+                          <div key={pi} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-zinc-800/60">
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <span className="text-zinc-200 truncate">{p.player?.name}</span>
+                              <span className="rounded bg-zinc-700/50 px-1 py-0.5 text-[10px] text-zinc-500 uppercase flex-shrink-0">{s.games?.position || '-'}</span>
+                            </div>
+                            <span className={`w-10 text-center rounded px-1 py-0.5 text-xs font-bold ${rating > 0 ? ratingColor : 'text-zinc-600'}`}>
+                              {rating > 0 ? rating.toFixed(1) : '-'}
+                            </span>
+                            <span className="w-8 text-center text-xs text-zinc-400">{s.goals?.total || 0}</span>
+                            <span className="w-8 text-center text-xs text-zinc-400">{s.goals?.assists || 0}</span>
+                            <span className="w-8 text-center text-xs text-zinc-400">{s.shots?.total || 0}</span>
+                            <span className="w-8 text-center text-xs text-zinc-400">{s.passes?.total || 0}</span>
+                            <span className="w-8 text-center text-xs text-zinc-400">{s.tackles?.total || 0}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ===== PRE-MATCH PREDICTIONS (API-Football AI) ===== */}
+        {predictionsData && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
+              <Brain className="h-5 w-5 text-emerald-500" />
+              Match Predictions
+            </h2>
+
+            {/* Win Probability Bars */}
+            {predictionsData.predictions?.percent && (
+              <div className="mb-6 space-y-3">
+                {[
+                  { label: predictionsData.teams?.home?.name || match.home_name, pct: predictionsData.predictions.percent.home, color: 'emerald' },
+                  { label: 'Draw', pct: predictionsData.predictions.percent.draw, color: 'zinc' },
+                  { label: predictionsData.teams?.away?.name || match.away_name, pct: predictionsData.predictions.percent.away, color: 'blue' },
+                ].map((item, i) => {
+                  const pctNum = parseInt(item.pct?.replace('%', '') || '0');
+                  const barColor = item.color === 'emerald' ? 'bg-emerald-500' : item.color === 'blue' ? 'bg-blue-500' : 'bg-zinc-500';
+                  const textColor = item.color === 'emerald' ? 'text-emerald-400' : item.color === 'blue' ? 'text-blue-400' : 'text-zinc-400';
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-zinc-300">{item.label}</span>
+                        <span className={`font-bold ${textColor}`}>{item.pct}</span>
+                      </div>
+                      <div className="h-3 w-full rounded-full bg-zinc-700/50 overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${pctNum}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Advice */}
+            {predictionsData.predictions?.advice && (
+              <div className="mb-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
+                <p className="text-sm font-medium text-emerald-300">{predictionsData.predictions.advice}</p>
+              </div>
+            )}
+
+            {/* Comparison Radar */}
+            {predictionsData.comparison && (
+              <div className="mb-6">
+                <h3 className="mb-3 text-sm font-semibold text-zinc-400 uppercase tracking-wide">Comparison</h3>
+                <div className="space-y-2">
+                  {Object.entries(predictionsData.comparison).map(([key, vals]: [string, any]) => {
+                    const homePct = parseInt(vals?.home?.replace('%', '') || '0');
+                    const awayPct = parseInt(vals?.away?.replace('%', '') || '0');
+                    const labels: Record<string, string> = { form: 'Form', att: 'Attack', def: 'Defence', poisson_distribution: 'Poisson', h2h: 'H2H', goals: 'Goals', total: 'Total' };
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className={homePct > awayPct ? 'font-bold text-emerald-400' : 'text-zinc-500'}>{vals?.home || '0%'}</span>
+                          <span className="text-zinc-500 uppercase tracking-wide">{labels[key] || key}</span>
+                          <span className={awayPct > homePct ? 'font-bold text-blue-400' : 'text-zinc-500'}>{vals?.away || '0%'}</span>
+                        </div>
+                        <div className="flex h-1.5 gap-0.5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-l-full ${homePct >= awayPct ? 'bg-emerald-500' : 'bg-zinc-600'}`} style={{ width: `${homePct || 50}%` }} />
+                          <div className={`h-full rounded-r-full ${awayPct > homePct ? 'bg-blue-500' : 'bg-zinc-600'}`} style={{ width: `${awayPct || 50}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Form */}
+            {(predictionsData.teams?.home?.last_5?.form || predictionsData.teams?.away?.last_5?.form) && (
+              <div className="mb-6">
+                <h3 className="mb-3 text-sm font-semibold text-zinc-400 uppercase tracking-wide">Last 5 Matches</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    { team: predictionsData.teams?.home, side: 'home' },
+                    { team: predictionsData.teams?.away, side: 'away' },
+                  ].map(({ team, side }) => team?.last_5?.form && (
+                    <div key={side} className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-zinc-300 w-20 truncate">{team.name}</span>
+                      <div className="flex gap-1">
+                        {team.last_5.form.split('').map((r: string, ri: number) => {
+                          const bg = r === 'W' ? 'bg-emerald-500' : r === 'D' ? 'bg-amber-500' : 'bg-red-500';
+                          return (
+                            <span key={ri} className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold text-white ${bg}`}>
+                              {r}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* H2H History */}
+            {predictionsData.h2h?.length > 0 && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-zinc-400 uppercase tracking-wide">Head to Head</h3>
+                <div className="space-y-2">
+                  {predictionsData.h2h.slice(0, 6).map((h: any, hi: number) => {
+                    const d = new Date(h.fixture?.date);
+                    const homeTeam = h.teams?.home?.name || '?';
+                    const awayTeam = h.teams?.away?.name || '?';
+                    return (
+                      <div key={hi} className="flex items-center gap-3 rounded-lg bg-zinc-800/60 border border-zinc-700/50 px-4 py-2 text-sm">
+                        <span className="text-xs text-zinc-600 w-20">{d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                        <span className={`flex-1 text-right ${h.teams?.home?.winner ? 'font-bold text-zinc-100' : 'text-zinc-400'}`}>{homeTeam}</span>
+                        <span className="rounded bg-zinc-700 px-2 py-0.5 text-xs font-bold text-zinc-200 tabular-nums">
+                          {h.goals?.home ?? '?'} - {h.goals?.away ?? '?'}
+                        </span>
+                        <span className={`flex-1 ${h.teams?.away?.winner ? 'font-bold text-zinc-100' : 'text-zinc-400'}`}>{awayTeam}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ===== INJURIES PANEL ===== */}
+        {injuriesData.length > 0 && (() => {
+          const homeInjuries = injuriesData.filter((inj: any) => inj.team?.id === match.home_api_id);
+          const awayInjuries = injuriesData.filter((inj: any) => inj.team?.id === match.away_api_id);
+          if (homeInjuries.length === 0 && awayInjuries.length === 0) return null;
+          return (
+            <section className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
+              <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Injuries &amp; Suspensions
+              </h2>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {[
+                  { label: match.home_name, logo: match.home_logo, injuries: homeInjuries },
+                  { label: match.away_name, logo: match.away_logo, injuries: awayInjuries },
+                ].map((side, idx) => side.injuries.length > 0 && (
+                  <div key={idx} className="rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      {side.logo && (
+                        <Image src={side.logo} alt={side.label} width={24} height={24} className="h-6 w-6 object-contain" />
+                      )}
+                      <span className="font-semibold text-zinc-100">{side.label}</span>
+                      <span className="ml-auto rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-400">{side.injuries.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {side.injuries.map((inj: any, ii: number) => (
+                        <div key={ii} className="flex items-center gap-3 rounded px-2 py-1.5 hover:bg-zinc-800/60">
+                          {inj.player?.photo && (
+                            <Image src={inj.player.photo} alt={inj.player.name} width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-zinc-200 truncate">{inj.player?.name}</p>
+                            <p className="text-xs text-zinc-500">{inj.player?.reason || 'Unknown'}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            inj.player?.type === 'Missing Fixture' || inj.player?.type === 'Suspended'
+                              ? 'bg-red-500/15 text-red-400'
+                              : 'bg-amber-500/15 text-amber-400'
+                          }`}>
+                            {inj.player?.type || 'Injured'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* ===== LINKS ===== */}
         <section className="grid gap-3 sm:grid-cols-3">

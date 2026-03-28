@@ -326,6 +326,173 @@ export async function getTransfers(params: { team?: number; player?: number }) {
   return apiFetch<ApiTransfer[]>('/transfers', params as Record<string, string | number>);
 }
 
+// ===== LINEUPS & PLAYER STATS =====
+
+/** Get fixture player statistics (individual player performance per match) */
+export async function getFixturePlayerStats(fixtureId: number) {
+  return apiFetch<Array<{
+    team: { id: number; name: string; logo: string; update: string };
+    players: Array<{
+      player: { id: number; name: string; photo: string };
+      statistics: Array<{
+        games: { minutes: number | null; number: number; position: string; rating: string | null; captain: boolean; substitute: boolean };
+        offsides: number | null;
+        shots: { total: number | null; on: number | null };
+        goals: { total: number | null; conceded: number | null; assists: number | null; saves: number | null };
+        passes: { total: number | null; key: number | null; accuracy: string | null };
+        tackles: { total: number | null; blocks: number | null; interceptions: number | null };
+        duels: { total: number | null; won: number | null };
+        dribbles: { attempts: number | null; success: number | null; past: number | null };
+        fouls: { drawn: number | null; committed: number | null };
+        cards: { yellow: number; red: number };
+        penalty: { won: number | null; committed: number | null; scored: number | null; missed: number | null; saved: number | null };
+      }>;
+    }>;
+  }>>('/fixtures/players', { fixture: fixtureId });
+}
+
+// ===== PREDICTIONS =====
+
+/** Get AI predictions for a fixture (from API-Football's own model) */
+export async function getFixturePredictions(fixtureId: number) {
+  return apiFetch<Array<{
+    predictions: {
+      winner: { id: number; name: string; comment: string } | null;
+      win_or_draw: boolean;
+      under_over: string | null; // e.g. "+3.5"
+      goals: { home: string; away: string }; // e.g. "-3.5" or "+1.5"
+      advice: string; // e.g. "Double chance : Manchester City or draw"
+      percent: { home: string; draw: string; away: string }; // e.g. "60%"
+    };
+    league: { id: number; name: string; country: string; logo: string; season: number };
+    teams: {
+      home: { id: number; name: string; logo: string; last_5: { form: string; att: string; def: string; goals: { for: { total: number; average: string }; against: { total: number; average: string } } } };
+      away: { id: number; name: string; logo: string; last_5: { form: string; att: string; def: string; goals: { for: { total: number; average: string }; against: { total: number; average: string } } } };
+    };
+    comparison: {
+      form: { home: string; away: string };
+      att: { home: string; away: string };
+      def: { home: string; away: string };
+      poisson_distribution: { home: string; away: string };
+      h2h: { home: string; away: string };
+      goals: { home: string; away: string };
+      total: { home: string; away: string };
+    };
+    h2h: ApiFixture[];
+  }>>('/predictions', { fixture: fixtureId });
+}
+
+// ===== INJURIES =====
+
+/** Get injuries/suspensions for a fixture */
+export async function getFixtureInjuries(fixtureId: number) {
+  return apiFetch<Array<{
+    player: { id: number; name: string; photo: string; type: string; reason: string };
+    team: { id: number; name: string; logo: string };
+    fixture: { id: number; timezone: string; date: string; timestamp: number };
+    league: { id: number; season: number; name: string; country: string; logo: string; flag: string };
+  }>>('/injuries', { fixture: fixtureId });
+}
+
+/** Get injuries for a team in a season */
+export async function getTeamInjuries(teamId: number, season: number) {
+  return apiFetch<Array<{
+    player: { id: number; name: string; photo: string; type: string; reason: string };
+    team: { id: number; name: string; logo: string };
+    fixture: { id: number; timezone: string; date: string; timestamp: number };
+    league: { id: number; season: number; name: string };
+  }>>('/injuries', { team: teamId, season });
+}
+
+// ===== COACHES =====
+
+/** Get coach info by team */
+export async function getCoach(teamId: number) {
+  return apiFetch<Array<{
+    id: number;
+    name: string;
+    firstname: string;
+    lastname: string;
+    age: number;
+    birth: { date: string; place: string; country: string };
+    nationality: string;
+    height: string | null;
+    weight: string | null;
+    photo: string;
+    team: { id: number; name: string; logo: string };
+    career: Array<{ team: { id: number; name: string; logo: string }; start: string; end: string | null }>;
+  }>>('/coachs', { team: teamId });
+}
+
+// ===== TROPHIES =====
+
+/** Get trophies won by a player or coach */
+export async function getTrophies(params: { player?: number; coach?: number }) {
+  return apiFetch<Array<{
+    league: string;
+    country: string;
+    season: string;
+    place: string;
+  }>>('/trophies', params as Record<string, string | number>);
+}
+
+// ===== SIDELINED (injured/suspended players) =====
+
+/** Get sidelined players for a team */
+export async function getSidelined(playerId: number) {
+  return apiFetch<Array<{
+    type: string; // "Injury" | "Suspension" | etc
+    start: string;
+    end: string | null;
+  }>>('/sidelined', { player: playerId });
+}
+
+// ===== HEAD TO HEAD =====
+
+/** Get head-to-head results between two teams */
+export async function getH2H(team1Id: number, team2Id: number, params?: { last?: number }) {
+  const h2hParam = `${team1Id}-${team2Id}`;
+  return apiFetch<ApiFixture[]>('/fixtures/headtohead', { h2h: h2hParam, ...params } as Record<string, string | number>);
+}
+
+// ===== FIXTURE PLAYER STATISTICS (per-player stats for a match) =====
+
+/** Get top scorers for a league + season */
+export async function getTopScorers(leagueId: number, season: number) {
+  return apiFetch<ApiPlayer[]>('/players/topscorers', { league: leagueId, season });
+}
+
+/** Get top assists for a league + season */
+export async function getTopAssists(leagueId: number, season: number) {
+  return apiFetch<ApiPlayer[]>('/players/topassists', { league: leagueId, season });
+}
+
+/** Get top yellow cards for a league + season */
+export async function getTopYellowCards(leagueId: number, season: number) {
+  return apiFetch<ApiPlayer[]>('/players/topyellowcards', { league: leagueId, season });
+}
+
+/** Get top red cards for a league + season */
+export async function getTopRedCards(leagueId: number, season: number) {
+  return apiFetch<ApiPlayer[]>('/players/topredcards', { league: leagueId, season });
+}
+
+// ===== VENUES =====
+
+/** Get venue info */
+export async function getVenue(venueId: number) {
+  return apiFetch<Array<{
+    id: number;
+    name: string;
+    address: string;
+    city: string;
+    country: string;
+    capacity: number;
+    surface: string;
+    image: string;
+  }>>('/venues', { id: venueId });
+}
+
 // ===== STATUS MAPPING =====
 
 /** Map API-Football status short codes to our MatchStatus */
