@@ -13,12 +13,12 @@ import {
   Radio,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { SummaryTab } from './tabs/SummaryTab';
-import { TimelineTab } from './tabs/TimelineTab';
-import { LineupsTab } from './tabs/LineupsTab';
-import { StatsTab } from './tabs/StatsTab';
-import { OddsTab } from './tabs/OddsTab';
-import { NewsTab } from './tabs/NewsTab';
+import SummaryTab from './tabs/SummaryTab';
+import TimelineTab from './tabs/TimelineTab';
+import LineupsTab from './tabs/LineupsTab';
+import StatsTab from './tabs/StatsTab';
+import OddsTab from './tabs/OddsTab';
+import NewsTab from './tabs/NewsTab';
 import { AdSlot } from '@/components/ads/AdSlot';
 import type { MatchPageData, LiveRefreshData, MatchEvent, TeamStats, MatchAnalysisRow } from './types';
 
