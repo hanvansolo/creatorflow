@@ -73,9 +73,9 @@ interface TimelineTabProps {
 export default function TimelineTab({ match, events }: TimelineTabProps) {
   const sorted = useMemo(
     () => [...events].sort((a, b) => {
-      const minDiff = a.minute - b.minute;
+      const minDiff = b.minute - a.minute;
       if (minDiff !== 0) return minDiff;
-      return (a.added_time ?? 0) - (b.added_time ?? 0);
+      return (b.added_time ?? 0) - (a.added_time ?? 0);
     }),
     [events],
   );
