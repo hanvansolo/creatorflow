@@ -36,7 +36,7 @@ export const COMPETITIONS = [
   {
     name: 'Bundesliga',
     slug: 'bundesliga',
-    shortName: 'BuLi',
+    shortName: 'Bundesliga',
     type: 'league' as const,
     country: 'Germany',
     countryCode: 'DE',
@@ -47,7 +47,7 @@ export const COMPETITIONS = [
   {
     name: 'Ligue 1',
     slug: 'ligue-1',
-    shortName: 'L1',
+    shortName: 'Ligue 1',
     type: 'league' as const,
     country: 'France',
     countryCode: 'FR',
@@ -59,7 +59,7 @@ export const COMPETITIONS = [
   {
     name: 'Eredivisie',
     slug: 'eredivisie',
-    shortName: 'ERE',
+    shortName: 'Eredivisie',
     type: 'league' as const,
     country: 'Netherlands',
     countryCode: 'NL',
@@ -70,7 +70,7 @@ export const COMPETITIONS = [
   {
     name: 'Primeira Liga',
     slug: 'primeira-liga',
-    shortName: 'Liga PT',
+    shortName: 'Primeira Liga',
     type: 'league' as const,
     country: 'Portugal',
     countryCode: 'PT',
@@ -81,7 +81,7 @@ export const COMPETITIONS = [
   {
     name: 'Scottish Premiership',
     slug: 'scottish-premiership',
-    shortName: 'SPFL',
+    shortName: 'Scottish PL',
     type: 'league' as const,
     country: 'Scotland',
     countryCode: 'GB',
@@ -92,7 +92,7 @@ export const COMPETITIONS = [
   {
     name: 'Championship',
     slug: 'championship',
-    shortName: 'EFL C',
+    shortName: 'Championship',
     type: 'league' as const,
     country: 'England',
     countryCode: 'GB',
@@ -103,7 +103,7 @@ export const COMPETITIONS = [
   {
     name: 'Belgian Pro League',
     slug: 'belgian-pro-league',
-    shortName: 'JPL',
+    shortName: 'Belgian PL',
     type: 'league' as const,
     country: 'Belgium',
     countryCode: 'BE',
@@ -114,7 +114,7 @@ export const COMPETITIONS = [
   {
     name: 'Turkish Süper Lig',
     slug: 'super-lig',
-    shortName: 'SüpLig',
+    shortName: 'Turkish SL',
     type: 'league' as const,
     country: 'Turkey',
     countryCode: 'TR',
@@ -125,7 +125,7 @@ export const COMPETITIONS = [
   {
     name: 'Austrian Bundesliga',
     slug: 'austrian-bundesliga',
-    shortName: 'ÖBL',
+    shortName: 'Austrian BL',
     type: 'league' as const,
     country: 'Austria',
     countryCode: 'AT',
@@ -136,7 +136,7 @@ export const COMPETITIONS = [
   {
     name: 'Swiss Super League',
     slug: 'swiss-super-league',
-    shortName: 'SSL',
+    shortName: 'Swedish AL',
     type: 'league' as const,
     country: 'Switzerland',
     countryCode: 'CH',
@@ -147,7 +147,7 @@ export const COMPETITIONS = [
   {
     name: 'Danish Superliga',
     slug: 'danish-superliga',
-    shortName: 'DSL',
+    shortName: 'Danish SL',
     type: 'league' as const,
     country: 'Denmark',
     countryCode: 'DK',
@@ -158,7 +158,7 @@ export const COMPETITIONS = [
   {
     name: 'Greek Super League',
     slug: 'greek-super-league',
-    shortName: 'GSL',
+    shortName: 'Greek SL',
     type: 'league' as const,
     country: 'Greece',
     countryCode: 'GR',
@@ -169,7 +169,7 @@ export const COMPETITIONS = [
   {
     name: 'Croatian First League',
     slug: 'croatian-first-league',
-    shortName: 'HNL',
+    shortName: 'Croatian 1st',
     type: 'league' as const,
     country: 'Croatia',
     countryCode: 'HR',
@@ -180,7 +180,7 @@ export const COMPETITIONS = [
   {
     name: 'Czech First League',
     slug: 'czech-first-league',
-    shortName: 'CFL',
+    shortName: 'Czech FL',
     type: 'league' as const,
     country: 'Czech Republic',
     countryCode: 'CZ',
@@ -191,7 +191,7 @@ export const COMPETITIONS = [
   {
     name: 'Polish Ekstraklasa',
     slug: 'ekstraklasa',
-    shortName: 'Ekstra',
+    shortName: 'Polish Ekstra',
     type: 'league' as const,
     country: 'Poland',
     countryCode: 'PL',
@@ -202,7 +202,7 @@ export const COMPETITIONS = [
   {
     name: 'Norwegian Eliteserien',
     slug: 'eliteserien',
-    shortName: 'ELS',
+    shortName: 'Norwegian EL',
     type: 'league' as const,
     country: 'Norway',
     countryCode: 'NO',
@@ -213,7 +213,7 @@ export const COMPETITIONS = [
   {
     name: 'Swedish Allsvenskan',
     slug: 'allsvenskan',
-    shortName: 'ALL',
+    shortName: 'Allsvenskan',
     type: 'league' as const,
     country: 'Sweden',
     countryCode: 'SE',
@@ -224,7 +224,7 @@ export const COMPETITIONS = [
   {
     name: 'Premier League',
     slug: 'russian-premier-league',
-    shortName: 'RPL',
+    shortName: 'Russian PL',
     type: 'league' as const,
     country: 'Russia',
     countryCode: 'RU',
@@ -235,7 +235,7 @@ export const COMPETITIONS = [
   {
     name: 'Premier League',
     slug: 'ukrainian-premier-league',
-    shortName: 'UPL',
+    shortName: 'Ukrainian PL',
     type: 'league' as const,
     country: 'Ukraine',
     countryCode: 'UA',
@@ -257,7 +257,7 @@ export const COMPETITIONS = [
   {
     name: 'Super Liga',
     slug: 'serbian-super-liga',
-    shortName: 'SSL',
+    shortName: 'Swedish AL',
     type: 'league' as const,
     country: 'Serbia',
     countryCode: 'RS',
@@ -290,7 +290,7 @@ export const COMPETITIONS = [
   {
     name: 'Veikkausliiga',
     slug: 'veikkausliiga',
-    shortName: 'VL',
+    shortName: 'Finnish VL',
     type: 'league' as const,
     country: 'Finland',
     countryCode: 'FI',
@@ -312,7 +312,7 @@ export const COMPETITIONS = [
   {
     name: 'Premier Division',
     slug: 'irish-premier-division',
-    shortName: 'LOI',
+    shortName: 'Irish PL',
     type: 'league' as const,
     country: 'Ireland',
     countryCode: 'IE',
@@ -577,7 +577,7 @@ export const COMPETITIONS = [
   {
     name: 'Brasileirão Série A',
     slug: 'brasileirao',
-    shortName: 'BRA A',
+    shortName: 'Brasileirão',
     type: 'league' as const,
     country: 'Brazil',
     countryCode: 'BR',
@@ -765,7 +765,7 @@ export const COMPETITIONS = [
   {
     name: 'Saudi Pro League',
     slug: 'saudi-pro-league',
-    shortName: 'SPL',
+    shortName: 'Serbian SL',
     type: 'league' as const,
     country: 'Saudi Arabia',
     countryCode: 'SA',
@@ -776,7 +776,7 @@ export const COMPETITIONS = [
   {
     name: 'J1 League',
     slug: 'j-league',
-    shortName: 'J1',
+    shortName: 'J-League',
     type: 'league' as const,
     country: 'Japan',
     countryCode: 'JP',
@@ -787,7 +787,7 @@ export const COMPETITIONS = [
   {
     name: 'K League 1',
     slug: 'k-league',
-    shortName: 'K1',
+    shortName: 'K-League',
     type: 'league' as const,
     country: 'South Korea',
     countryCode: 'KR',
@@ -798,7 +798,7 @@ export const COMPETITIONS = [
   {
     name: 'Indian Super League',
     slug: 'indian-super-league',
-    shortName: 'ISL',
+    shortName: 'Indian SL',
     type: 'league' as const,
     country: 'India',
     countryCode: 'IN',
@@ -809,7 +809,7 @@ export const COMPETITIONS = [
   {
     name: 'Chinese Super League',
     slug: 'chinese-super-league',
-    shortName: 'CSL',
+    shortName: 'Chinese SL',
     type: 'league' as const,
     country: 'China',
     countryCode: 'CN',
@@ -1240,7 +1240,7 @@ export const COMPETITIONS = [
   {
     name: 'Champions League',
     slug: 'champions-league',
-    shortName: 'UCL',
+    shortName: 'Champions League',
     type: 'cup' as const,
     country: 'Europe',
     countryCode: 'EU',
@@ -1251,7 +1251,7 @@ export const COMPETITIONS = [
   {
     name: 'Europa League',
     slug: 'europa-league',
-    shortName: 'UEL',
+    shortName: 'Europa League',
     type: 'cup' as const,
     country: 'Europe',
     countryCode: 'EU',
@@ -1262,7 +1262,7 @@ export const COMPETITIONS = [
   {
     name: 'Conference League',
     slug: 'conference-league',
-    shortName: 'UECL',
+    shortName: 'Conference League',
     type: 'cup' as const,
     country: 'Europe',
     countryCode: 'EU',
@@ -1273,7 +1273,7 @@ export const COMPETITIONS = [
   {
     name: 'UEFA Super Cup',
     slug: 'uefa-super-cup',
-    shortName: 'USC',
+    shortName: 'Super Cup',
     type: 'cup' as const,
     country: 'Europe',
     countryCode: 'EU',
@@ -1296,7 +1296,7 @@ export const COMPETITIONS = [
   {
     name: 'EFL Cup',
     slug: 'efl-cup',
-    shortName: 'EFL Cup',
+    shortName: 'League Cup',
     type: 'cup' as const,
     country: 'England',
     countryCode: 'GB',
@@ -1329,7 +1329,7 @@ export const COMPETITIONS = [
   {
     name: 'DFB-Pokal',
     slug: 'dfb-pokal',
-    shortName: 'DFB',
+    shortName: 'DFB Pokal',
     type: 'cup' as const,
     country: 'Germany',
     countryCode: 'DE',
@@ -1340,7 +1340,7 @@ export const COMPETITIONS = [
   {
     name: 'Coupe de France',
     slug: 'coupe-de-france',
-    shortName: 'CdF',
+    shortName: 'Coupe de France',
     type: 'cup' as const,
     country: 'France',
     countryCode: 'FR',
@@ -1396,7 +1396,7 @@ export const COMPETITIONS = [
   {
     name: 'Club World Cup',
     slug: 'club-world-cup',
-    shortName: 'CWC',
+    shortName: 'Club World Cup',
     type: 'cup' as const,
     country: 'World',
     countryCode: 'WW',
@@ -1408,7 +1408,7 @@ export const COMPETITIONS = [
   {
     name: 'World Cup',
     slug: 'world-cup',
-    shortName: 'WC',
+    shortName: 'World Cup',
     type: 'international' as const,
     country: 'World',
     countryCode: 'WW',
@@ -1475,7 +1475,7 @@ export const COMPETITIONS = [
   {
     name: 'WC Qualifiers - Europe',
     slug: 'wc-qualifiers-europe',
-    shortName: 'WCQ EU',
+    shortName: 'WC Qual Europe',
     type: 'international' as const,
     country: 'Europe',
     countryCode: 'EU',
@@ -1541,7 +1541,7 @@ export const COMPETITIONS = [
   {
     name: 'WC Qualifiers - Intercontinental',
     slug: 'wc-qualifiers-intercontinental',
-    shortName: 'WCQ IC',
+    shortName: 'WC Qual Inter',
     type: 'international' as const,
     country: 'World',
     countryCode: 'WW',
