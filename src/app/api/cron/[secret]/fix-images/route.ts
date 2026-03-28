@@ -72,12 +72,36 @@ export async function GET(
   for (const article of articles) {
     checked++;
 
-    // If article has an existing local image path, check if file exists
+    // If article has an existing local image path, check if file exists AND is large enough
     if (article.imageUrl) {
       const filename = article.imageUrl.split('/').pop();
       if (filename) {
         const filepath = path.join(storageDir, filename);
         if (await fileExists(filepath)) {
+          // Check file size — X/Twitter requires minimum 300x157px
+          // Images under 15KB are likely tiny thumbnails (240x135 = ~8-12KB)
+          try {
+            const stats = await fs.stat(filepath);
+            if (stats.size < 15000) {
+              // Tiny image — re-scrape og:image from source
+              console.log(`[FixImages] Tiny image (${stats.size}b): ${article.title.slice(0, 40)}... - re-scraping`);
+              if (article.originalUrl) {
+                const scrapedUrl = await scrapeArticleImage(article.originalUrl);
+                if (scrapedUrl) {
+                  const downloadResult = await downloadImage(scrapedUrl);
+                  if (downloadResult.success && downloadResult.localPath) {
+                    await db
+                      .update(newsArticles)
+                      .set({ imageUrl: downloadResult.localPath })
+                      .where(eq(newsArticles.id, article.id));
+                    fixed++;
+                    console.log(`[FixImages] Upgraded tiny → ${downloadResult.localPath} (${stats.size}b → full size)`);
+                    continue;
+                  }
+                }
+              }
+            }
+          } catch { /* stat failed, treat as OK */ }
           alreadyOk++;
           continue;
         }

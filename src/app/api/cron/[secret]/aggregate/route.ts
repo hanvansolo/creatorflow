@@ -191,14 +191,31 @@ export async function GET(
           );
         }
 
-        // Download image to persistent storage (Railway volume)
+        // Download image — prefer og:image from source (full-size, 1200x630)
+        // RSS thumbnails are often tiny (240x135) and rejected by X/Twitter cards
         let finalImageUrl = article.imageUrl;
-        if (ENABLE_IMAGE_DOWNLOAD && article.imageUrl) {
+        if (ENABLE_IMAGE_DOWNLOAD) {
           try {
-            const result = await downloadImage(article.imageUrl);
-            if (result.success && result.localPath) {
-              finalImageUrl = result.localPath;
-              imagesDownloaded++;
+            // 1. Try scraping og:image from original article page (always full-size)
+            let imageToDownload: string | null = null;
+            if (article.originalUrl) {
+              const { scrapeArticleImage } = await import('@/lib/utils/scrape-article-image');
+              const ogImage = await scrapeArticleImage(article.originalUrl);
+              if (ogImage) {
+                imageToDownload = ogImage;
+              }
+            }
+            // 2. Fall back to RSS thumbnail if og:image scrape failed
+            if (!imageToDownload && article.imageUrl) {
+              imageToDownload = article.imageUrl;
+            }
+            // 3. Download whichever we found
+            if (imageToDownload) {
+              const result = await downloadImage(imageToDownload);
+              if (result.success && result.localPath) {
+                finalImageUrl = result.localPath;
+                imagesDownloaded++;
+              }
             }
           } catch (error) {
             console.error('Image download error:', error);
