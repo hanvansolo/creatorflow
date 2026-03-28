@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import {
   db,
   competitions,
@@ -10,10 +10,12 @@ import {
   matches,
   leagueStandings,
   venues,
+  players,
 } from '@/lib/db';
 import {
   getLeagues,
   getTeams,
+  getSquad,
   getFixtures,
   getStandings,
   mapFixtureStatus,
@@ -543,6 +545,108 @@ async function syncFixtures(
   return { matchesUpserted, errors };
 }
 
+// ===== STEP 5: Sync player squads =====
+
+async function syncPlayerSquads() {
+  const errors: string[] = [];
+  let playersUpserted = 0;
+
+  // Only sync squads for priority league clubs to save API calls
+  const PRIORITY_IDS = [39, 140, 135, 78, 61, 2, 3, 88, 40]; // PL, La Liga, Serie A, BuLi, L1, UCL, UEL, Eredivisie, Championship
+
+  // Get clubs that belong to priority leagues
+  const priorityClubs = await db.execute(sql`
+    SELECT DISTINCT c.id, c.api_football_id, c.name, c.slug
+    FROM clubs c
+    WHERE c.api_football_id IS NOT NULL
+    AND c.id IN (
+      SELECT DISTINCT ls.club_id FROM league_standings ls
+      JOIN competition_seasons cs ON ls.competition_season_id = cs.id
+      JOIN competitions comp ON cs.competition_id = comp.id
+      WHERE comp.api_football_id IN (${sql.join(PRIORITY_IDS.map(id => sql`${id}`), sql`, `)})
+    )
+    ORDER BY c.name
+  `);
+
+  const clubList = (priorityClubs as any[]) || [];
+  console.log(`[syncPlayers] Found ${clubList.length} priority clubs to sync squads for`);
+
+  for (const club of clubList) {
+    try {
+      const squadData = await getSquad(club.api_football_id);
+      if (!squadData.response || squadData.response.length === 0) continue;
+
+      const squad = squadData.response[0];
+      if (!squad.players || squad.players.length === 0) continue;
+
+      for (const p of squad.players) {
+        try {
+          // Map position
+          const posMap: Record<string, string> = {
+            'Goalkeeper': 'GK', 'Defender': 'DEF', 'Midfielder': 'MID', 'Attacker': 'FWD',
+          };
+          const position = posMap[p.position] || p.position || 'MID';
+          const playerSlug = slugify(`${p.name}-${p.id}`);
+
+          // Check if player exists
+          const existing = await db
+            .select()
+            .from(players)
+            .where(eq(players.apiFootballId, p.id))
+            .limit(1);
+
+          if (existing.length > 0) {
+            // Update existing player
+            await db
+              .update(players)
+              .set({
+                knownAs: p.name,
+                position,
+                shirtNumber: p.number,
+                headshotUrl: p.photo,
+                currentClubId: club.id,
+                updatedAt: new Date(),
+              })
+              .where(eq(players.id, existing[0].id));
+          } else {
+            // Insert new player — split name
+            const nameParts = p.name.split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || p.name;
+
+            await db.insert(players).values({
+              firstName,
+              lastName,
+              slug: playerSlug,
+              knownAs: p.name,
+              position,
+              shirtNumber: p.number,
+              headshotUrl: p.photo,
+              age: p.age,
+              currentClubId: club.id,
+              apiFootballId: p.id,
+            });
+          }
+          playersUpserted++;
+        } catch (err) {
+          // Skip individual player errors silently
+        }
+      }
+
+      console.log(`Synced ${squad.players.length} players for ${club.name}`);
+
+      // Delay to avoid rate limiting (100 calls/min on Pro)
+      await new Promise(r => setTimeout(r, 600));
+    } catch (err) {
+      const msg = `Failed to sync squad for ${club.name}: ${err instanceof Error ? err.message : String(err)}`;
+      console.error(msg);
+      errors.push(msg);
+    }
+  }
+
+  return { playersUpserted, errors };
+}
+
 // ===== ROUTE HANDLER =====
 
 export async function GET(
@@ -605,7 +709,20 @@ export async function GET(
     console.log(`Step 4: Syncing fixtures for ${filteredMap.size} competitions...`);
     const { matchesUpserted, errors: fixtureErrors } = await syncFixtures(filteredMap);
 
-    const allErrors = [...compErrors, ...clubErrors, ...standingErrors, ...fixtureErrors];
+    // Step 5: Players (only on full sync — 1 API call per club)
+    let playersUpserted = 0;
+    let playerErrors: string[] = [];
+    const syncPlayers = url.searchParams.get('players') === 'true' || fullSync;
+    if (syncPlayers) {
+      console.log('Step 5: Syncing player squads...');
+      const result = await syncPlayerSquads();
+      playersUpserted = result.playersUpserted;
+      playerErrors = result.errors;
+    } else {
+      console.log('Step 5: Skipped players (priority run)');
+    }
+
+    const allErrors = [...compErrors, ...clubErrors, ...standingErrors, ...fixtureErrors, ...playerErrors];
     const duration = Date.now() - startTime;
 
     console.log(`Football data sync completed in ${duration}ms with ${allErrors.length} errors`);
@@ -616,6 +733,7 @@ export async function GET(
       competitions: competitionMap.size,
       clubsUpserted,
       venuesUpserted,
+      playersUpserted,
       standingsUpserted,
       matchesUpserted,
       errors: allErrors,
