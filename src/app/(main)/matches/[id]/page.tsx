@@ -225,9 +225,32 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     ? `${match.home_score}-${match.away_score}`
     : 'vs';
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
+  const ogParams = new URLSearchParams({
+    home: match.home_name,
+    away: match.away_name,
+    comp: match.competition_name || 'Football Match',
+    status: match.status || 'scheduled',
+    ...(match.home_score != null ? { score: `${match.home_score} - ${match.away_score}` } : {}),
+    ...(match.minute ? { min: String(match.minute) } : {}),
+    ...(match.home_logo ? { homeLogo: match.home_logo } : {}),
+    ...(match.away_logo ? { awayLogo: match.away_logo } : {}),
+  });
+  const ogImage = `${siteUrl}/api/og/match?${ogParams.toString()}`;
+
   return {
     title: `${match.home_name} ${score} ${match.away_name} | Match Centre`,
     description: `Full match details, stats, timeline and AI analysis for ${match.home_name} vs ${match.away_name}${match.competition_name ? ` in the ${match.competition_name}` : ''}.`,
+    openGraph: {
+      title: `${match.home_name} ${score} ${match.away_name}`,
+      description: `Live match centre for ${match.home_name} vs ${match.away_name}${match.competition_name ? ` — ${match.competition_name}` : ''}`,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${match.home_name} ${score} ${match.away_name}`,
+      images: [ogImage],
+    },
   };
 }
 
