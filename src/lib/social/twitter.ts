@@ -335,21 +335,24 @@ export async function postToTwitter(
     // X best practice: max 1-2 hashtags, links in reply not main tweet
     const topHashtags = allHashtags.split(' ').slice(0, 2).join(' ');
 
-    // Build tweet: engaging format WITHOUT link in main body
-    // Link goes in a reply (posted separately) to avoid algorithm penalty
+    // Build tweet: title + summary + link + 2 hashtags
     const summarySnippet = summary
-      ? summary.slice(0, 120).replace(/\s+\S*$/, '...')
+      ? summary.slice(0, 100).replace(/\s+\S*$/, '...')
       : '';
 
     let text: string;
     if (summarySnippet) {
-      text = `📰 ${title}\n\n${summarySnippet}\n\n${topHashtags}`;
+      text = `📰 ${title}\n\n${summarySnippet}\n\n${url}\n\n${topHashtags}`;
     } else {
-      text = `📰 ${title}\n\n${topHashtags}`;
+      text = `📰 ${title}\n\n${url}\n\n${topHashtags}`;
     }
 
     if (text.length > 280) {
-      text = `📰 ${title.slice(0, 275 - topHashtags.length)}...\n\n${topHashtags}`;
+      // Drop summary to fit
+      text = `📰 ${title}\n\n${url}\n\n${topHashtags}`;
+    }
+    if (text.length > 280) {
+      text = `📰 ${title.slice(0, 280 - url.length - topHashtags.length - 8)}...\n\n${url}\n\n${topHashtags}`;
     }
 
     // Post main tweet (no link — better algorithm treatment)
@@ -396,32 +399,8 @@ export async function postToTwitter(
     }
 
     if (res.ok && data.data?.id) {
-      const tweetId = data.data.id;
-      console.log(`[Twitter] Posted tweet ${tweetId}`);
-
-      // Reply with the link (keeps link out of main tweet for better reach)
-      try {
-        const replyToken = await getAccessToken();
-        if (replyToken) {
-          await fetch('https://api.twitter.com/2/tweets', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${replyToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              text: `🔗 Read the full story:\n${url}`,
-              reply: { in_reply_to_tweet_id: tweetId },
-            }),
-            signal: AbortSignal.timeout(10000),
-          });
-          console.log(`[Twitter] Link reply posted to ${tweetId}`);
-        }
-      } catch {
-        // Reply failed — not critical, main tweet is posted
-      }
-
-      return { success: true, id: tweetId };
+      console.log(`[Twitter] Posted tweet ${data.data.id}`);
+      return { success: true, id: data.data.id };
     }
 
     return {

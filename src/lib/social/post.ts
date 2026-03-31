@@ -11,22 +11,22 @@ export interface SocialPostResult {
   threads: { success: boolean; id?: string; error?: string } | null;
 }
 
-// Rate limiting: max posts per platform per day
-const MAX_TWEETS_PER_DAY = 8;
-let tweetCountToday = 0;
-let tweetCountDate = new Date().toDateString();
+// Rate limiting: space tweets out, don't flood
+const MAX_TWEETS_PER_HOUR = 4;
+const tweetTimestamps: number[] = [];
 
 function checkTwitterRateLimit(): boolean {
-  const today = new Date().toDateString();
-  if (today !== tweetCountDate) {
-    tweetCountToday = 0;
-    tweetCountDate = today;
+  const now = Date.now();
+  const oneHourAgo = now - 60 * 60 * 1000;
+  // Remove timestamps older than 1 hour
+  while (tweetTimestamps.length > 0 && tweetTimestamps[0] < oneHourAgo) {
+    tweetTimestamps.shift();
   }
-  if (tweetCountToday >= MAX_TWEETS_PER_DAY) {
-    console.log(`[Social] Twitter rate limit reached (${MAX_TWEETS_PER_DAY}/day), skipping`);
+  if (tweetTimestamps.length >= MAX_TWEETS_PER_HOUR) {
+    console.log(`[Social] Twitter rate limit: ${tweetTimestamps.length}/${MAX_TWEETS_PER_HOUR} per hour, skipping`);
     return false;
   }
-  tweetCountToday++;
+  tweetTimestamps.push(now);
   return true;
 }
 
