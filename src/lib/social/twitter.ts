@@ -331,27 +331,28 @@ export async function postToTwitter(
 
   try {
     const url = `${SITE_URL}/news/${slug}`;
-    const hashtags = buildHashtags(title, tags || []);
+    const allHashtags = buildHashtags(title, tags || []);
+    // X best practice: max 1-2 hashtags, links in reply not main tweet
+    const topHashtags = allHashtags.split(' ').slice(0, 2).join(' ');
 
-    // Build tweet: title + summary snippet + URL + hashtags
-    const summarySnippet = summary ? summary.slice(0, 100).replace(/\s+\S*$/, '...') : '';
+    // Build tweet: engaging format WITHOUT link in main body
+    // Link goes in a reply (posted separately) to avoid algorithm penalty
+    const summarySnippet = summary
+      ? summary.slice(0, 120).replace(/\s+\S*$/, '...')
+      : '';
 
     let text: string;
     if (summarySnippet) {
-      text = `📰 ${title}\n\n${summarySnippet}\n\n${url}\n\n${hashtags}`;
+      text = `📰 ${title}\n\n${summarySnippet}\n\n${topHashtags}`;
     } else {
-      text = `📰 ${title}\n\n${url}\n\n${hashtags}`;
+      text = `📰 ${title}\n\n${topHashtags}`;
     }
 
     if (text.length > 280) {
-      // Drop summary first
-      text = `📰 ${title}\n\n${url}\n\n${hashtags}`;
-    }
-    if (text.length > 280) {
-      const maxTitle = 280 - url.length - hashtags.length - 8;
-      text = `📰 ${title.slice(0, maxTitle)}...\n\n${url}\n\n${hashtags}`;
+      text = `📰 ${title.slice(0, 275 - topHashtags.length)}...\n\n${topHashtags}`;
     }
 
+    // Post main tweet (no link — better algorithm treatment)
     const res = await fetch('https://api.twitter.com/2/tweets', {
       method: 'POST',
       headers: {
@@ -373,7 +374,6 @@ export async function postToTwitter(
 
       const freshToken = await getAccessToken();
       if (freshToken && freshToken !== token) {
-        // Retry with fresh token
         const retryRes = await fetch('https://api.twitter.com/2/tweets', {
           method: 'POST',
           headers: {
@@ -396,8 +396,32 @@ export async function postToTwitter(
     }
 
     if (res.ok && data.data?.id) {
-      console.log(`[Twitter] Posted tweet ${data.data.id}`);
-      return { success: true, id: data.data.id };
+      const tweetId = data.data.id;
+      console.log(`[Twitter] Posted tweet ${tweetId}`);
+
+      // Reply with the link (keeps link out of main tweet for better reach)
+      try {
+        const replyToken = await getAccessToken();
+        if (replyToken) {
+          await fetch('https://api.twitter.com/2/tweets', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${replyToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: `🔗 Read the full story:\n${url}`,
+              reply: { in_reply_to_tweet_id: tweetId },
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          console.log(`[Twitter] Link reply posted to ${tweetId}`);
+        }
+      } catch {
+        // Reply failed — not critical, main tweet is posted
+      }
+
+      return { success: true, id: tweetId };
     }
 
     return {

@@ -11,6 +11,25 @@ export interface SocialPostResult {
   threads: { success: boolean; id?: string; error?: string } | null;
 }
 
+// Rate limiting: max posts per platform per day
+const MAX_TWEETS_PER_DAY = 8;
+let tweetCountToday = 0;
+let tweetCountDate = new Date().toDateString();
+
+function checkTwitterRateLimit(): boolean {
+  const today = new Date().toDateString();
+  if (today !== tweetCountDate) {
+    tweetCountToday = 0;
+    tweetCountDate = today;
+  }
+  if (tweetCountToday >= MAX_TWEETS_PER_DAY) {
+    console.log(`[Social] Twitter rate limit reached (${MAX_TWEETS_PER_DAY}/day), skipping`);
+    return false;
+  }
+  tweetCountToday++;
+  return true;
+}
+
 /**
  * Post an article to all configured social platforms.
  * Skips platforms that don't have credentials configured.
@@ -24,7 +43,7 @@ export async function postToAllPlatforms(
   imageUrl?: string
 ): Promise<SocialPostResult> {
   const results = await Promise.allSettled([
-    (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) ? postToTwitter(title, slug, tags, imageUrl, summary) : null,
+    (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) && checkTwitterRateLimit() ? postToTwitter(title, slug, tags, imageUrl, summary) : null,
     process.env.FACEBOOK_PAGE_ID ? postToFacebook(title, slug, summary, tags) : null,
     (process.env.INSTAGRAM_ACCOUNT_ID && imageUrl) ? postToInstagram(title, slug, imageUrl, tags) : null,
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
