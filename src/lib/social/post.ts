@@ -11,22 +11,19 @@ export interface SocialPostResult {
   threads: { success: boolean; id?: string; error?: string } | null;
 }
 
-// Rate limiting: space tweets out, don't flood
-const MAX_TWEETS_PER_HOUR = 4;
-const tweetTimestamps: number[] = [];
+// Rate limiting: one tweet at a time, minimum 15 min between posts
+let lastTweetTime = 0;
+const MIN_TWEET_GAP_MS = 15 * 60 * 1000; // 15 minutes
 
 function checkTwitterRateLimit(): boolean {
   const now = Date.now();
-  const oneHourAgo = now - 60 * 60 * 1000;
-  // Remove timestamps older than 1 hour
-  while (tweetTimestamps.length > 0 && tweetTimestamps[0] < oneHourAgo) {
-    tweetTimestamps.shift();
-  }
-  if (tweetTimestamps.length >= MAX_TWEETS_PER_HOUR) {
-    console.log(`[Social] Twitter rate limit: ${tweetTimestamps.length}/${MAX_TWEETS_PER_HOUR} per hour, skipping`);
+  const timeSinceLast = now - lastTweetTime;
+  if (lastTweetTime > 0 && timeSinceLast < MIN_TWEET_GAP_MS) {
+    const waitMins = Math.ceil((MIN_TWEET_GAP_MS - timeSinceLast) / 60000);
+    console.log(`[Social] Twitter rate limit: last tweet ${Math.round(timeSinceLast / 60000)}m ago, wait ${waitMins}m more`);
     return false;
   }
-  tweetTimestamps.push(now);
+  lastTweetTime = now;
   return true;
 }
 
