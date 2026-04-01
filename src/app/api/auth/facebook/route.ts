@@ -22,11 +22,9 @@ export async function GET(request: NextRequest) {
   // "Manage everything on your Page" gives: pages_show_list, pages_read_engagement, pages_manage_posts
   // "Manage messaging & content on Instagram" gives: instagram_basic, instagram_content_publish
   // These must match what's enabled in the app's Use Cases
-  const scope = [
-    'public_profile',
-    'pages_show_list',
-    'pages_manage_posts',
-  ].join(',');
+  // Start with minimal scope — pages_manage_posts must be enabled
+  // in Use Cases > Manage everything on your Page > Customize first
+  const scope = 'public_profile,pages_show_list';
 
   const state = Math.random().toString(36).substring(2);
 
