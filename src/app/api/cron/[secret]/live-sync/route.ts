@@ -20,6 +20,7 @@ import {
 } from '@/lib/api/football-api';
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
 import { postCustomTweet } from '@/lib/social/twitter';
+import { postCustomFacebook } from '@/lib/social/facebook';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -439,12 +440,21 @@ export async function GET(
 
         const tweet = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
 
-        const result = await postCustomTweet(tweet);
-        if (result.success) {
+        // Post to X and Facebook in parallel
+        const [tweetResult, fbResult] = await Promise.allSettled([
+          postCustomTweet(tweet),
+          postCustomFacebook(
+            `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`,
+            matchUrl
+          ),
+        ]);
+
+        if (tweetResult.status === 'fulfilled' && tweetResult.value.success) {
           tweetsSent++;
           console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away}`);
-        } else {
-          console.error(`[live-sync] Kickoff tweet failed: ${result.error}`);
+        }
+        if (fbResult.status === 'fulfilled' && fbResult.value.success) {
+          console.log(`[live-sync] Kickoff FB post sent: ${kick.home} vs ${kick.away}`);
         }
       } catch (err) {
         console.error(`[live-sync] Kickoff tweet error:`, err);

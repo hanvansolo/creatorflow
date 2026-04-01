@@ -8,6 +8,17 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com
  * Posts a link with message (title + summary + hashtags).
  * Facebook auto-generates a preview card from OG tags.
  */
+async function getPageToken(): Promise<string | null> {
+  // Try DB first (stored by OAuth flow), then env vars
+  try {
+    const { db, siteSettings } = await import('@/lib/db');
+    const { eq } = await import('drizzle-orm');
+    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'facebook_page_token')).limit(1);
+    if (row?.value) return row.value;
+  } catch { /* DB read failed */ }
+  return process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN || null;
+}
+
 export async function postToFacebook(
   title: string,
   slug: string,
@@ -15,7 +26,7 @@ export async function postToFacebook(
   tags?: string[]
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const pageId = process.env.FACEBOOK_PAGE_ID;
-  const pageToken = process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN;
+  const pageToken = await getPageToken();
 
   if (!pageId || !pageToken) {
     return { success: false, error: 'Facebook credentials not configured. Set FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN.' };
@@ -48,6 +59,43 @@ export async function postToFacebook(
     const data = await res.json();
     if (res.ok && data.id) {
       console.log(`[Facebook] Posted ${data.id}`);
+      return { success: true, id: data.id };
+    }
+    return { success: false, error: data.error?.message || JSON.stringify(data).slice(0, 300) };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+/**
+ * Post a custom message to Facebook Page (no rate limiting).
+ * Used for kickoff alerts, goal alerts, etc.
+ */
+export async function postCustomFacebook(
+  message: string,
+  link?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const pageId = process.env.FACEBOOK_PAGE_ID;
+  const pageToken = await getPageToken();
+
+  if (!pageId || !pageToken) {
+    return { success: false, error: 'Facebook not configured' };
+  }
+
+  try {
+    const body: Record<string, string> = { message, access_token: pageToken };
+    if (link) body.link = link;
+
+    const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.id) {
+      console.log(`[Facebook] Custom post ${data.id}`);
       return { success: true, id: data.id };
     }
     return { success: false, error: data.error?.message || JSON.stringify(data).slice(0, 300) };
