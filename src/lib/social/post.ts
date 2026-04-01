@@ -14,8 +14,8 @@ export interface SocialPostResult {
 // Rate limiting per platform — stagger posts, one at a time
 let lastTweetTime = 0;
 let lastFacebookTime = 0;
-const MIN_TWEET_GAP_MS = 15 * 60 * 1000; // 15 minutes between tweets
-const MIN_FACEBOOK_GAP_MS = 30 * 60 * 1000; // 30 minutes between FB posts (Facebook penalizes frequent posting)
+const MIN_TWEET_GAP_MS = 10 * 60 * 1000; // 10 minutes between tweets
+const MIN_FACEBOOK_GAP_MS = 10 * 60 * 1000; // 10 minutes between FB posts
 
 function checkTwitterRateLimit(): boolean {
   const now = Date.now();

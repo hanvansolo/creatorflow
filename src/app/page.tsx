@@ -128,7 +128,7 @@ async function getLatestNews(): Promise<NewsArticle[]> {
     title: a.title,
     slug: a.slug,
     summary: a.summary || undefined,
-    imageUrl: getRelatedImageSync(a.title, a.tags, a.imageUrl, [], [], imagePool) || undefined,
+    imageUrl: a.imageUrl || undefined,
     originalUrl: a.originalUrl,
     publishedAt: a.publishedAt.toISOString(),
     isBreaking: a.isBreaking ?? false,

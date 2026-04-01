@@ -171,13 +171,8 @@ export default async function NewsArticlePage({ params }: PageProps) {
   ]);
   const commentCount = commentCountResult[0]?.count ?? 0;
 
-  // Get image - uses original if available, otherwise finds related article image
-  const articleImage = getRelatedImageSync(
-    article.title,
-    article.tags,
-    article.imageUrl,
-    [], [],
-    imagePool
+  // Use the article's own image — no fallback to avoid wrong images
+  const articleImage = (article.imageUrl
   );
 
   // Check if any live matches relate to this article
