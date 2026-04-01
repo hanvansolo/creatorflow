@@ -11,19 +11,31 @@ export interface SocialPostResult {
   threads: { success: boolean; id?: string; error?: string } | null;
 }
 
-// Rate limiting: one tweet at a time, minimum 15 min between posts
+// Rate limiting per platform — stagger posts, one at a time
 let lastTweetTime = 0;
-const MIN_TWEET_GAP_MS = 15 * 60 * 1000; // 15 minutes
+let lastFacebookTime = 0;
+const MIN_TWEET_GAP_MS = 15 * 60 * 1000; // 15 minutes between tweets
+const MIN_FACEBOOK_GAP_MS = 30 * 60 * 1000; // 30 minutes between FB posts (Facebook penalizes frequent posting)
 
 function checkTwitterRateLimit(): boolean {
   const now = Date.now();
   const timeSinceLast = now - lastTweetTime;
   if (lastTweetTime > 0 && timeSinceLast < MIN_TWEET_GAP_MS) {
-    const waitMins = Math.ceil((MIN_TWEET_GAP_MS - timeSinceLast) / 60000);
-    console.log(`[Social] Twitter rate limit: last tweet ${Math.round(timeSinceLast / 60000)}m ago, wait ${waitMins}m more`);
+    console.log(`[Social] Twitter: last post ${Math.round(timeSinceLast / 60000)}m ago, skipping`);
     return false;
   }
   lastTweetTime = now;
+  return true;
+}
+
+function checkFacebookRateLimit(): boolean {
+  const now = Date.now();
+  const timeSinceLast = now - lastFacebookTime;
+  if (lastFacebookTime > 0 && timeSinceLast < MIN_FACEBOOK_GAP_MS) {
+    console.log(`[Social] Facebook: last post ${Math.round(timeSinceLast / 60000)}m ago, skipping`);
+    return false;
+  }
+  lastFacebookTime = now;
   return true;
 }
 
@@ -41,7 +53,7 @@ export async function postToAllPlatforms(
 ): Promise<SocialPostResult> {
   const results = await Promise.allSettled([
     (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) && checkTwitterRateLimit() ? postToTwitter(title, slug, tags, imageUrl, summary) : null,
-    process.env.FACEBOOK_PAGE_ID ? postToFacebook(title, slug, summary, tags) : null,
+    process.env.FACEBOOK_PAGE_ID && checkFacebookRateLimit() ? postToFacebook(title, slug, summary, tags) : null,
     (process.env.INSTAGRAM_ACCOUNT_ID && imageUrl) ? postToInstagram(title, slug, imageUrl, tags) : null,
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
     process.env.THREADS_USER_ID ? postToThreads(title, slug, imageUrl) : null,
