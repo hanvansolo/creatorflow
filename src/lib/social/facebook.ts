@@ -13,7 +13,11 @@ async function getPageToken(): Promise<string | null> {
   try {
     const { db, siteSettings } = await import('@/lib/db');
     const { eq } = await import('drizzle-orm');
-    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'facebook_page_token')).limit(1);
+    // Try page token first, then access token (callback may store as either)
+    let [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'facebook_page_token')).limit(1);
+    if (!row) {
+      [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'facebook_access_token')).limit(1);
+    }
     if (row?.value) return row.value;
   } catch { /* DB read failed */ }
   return process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN || null;
