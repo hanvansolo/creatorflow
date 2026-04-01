@@ -33,11 +33,11 @@ export async function GET(request: NextRequest) {
   }
 
   const appId = process.env.FACEBOOK_APP_ID;
-  const appSecret = process.env.FACEBOOK_APP_SECRET;
+  const appSecret = process.env.FACEBOOK_APP_PASS;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
 
   if (!appId || !appSecret) {
-    return NextResponse.json({ error: 'FACEBOOK_APP_ID and FACEBOOK_APP_SECRET not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'FACEBOOK_APP_ID and FACEBOOK_APP_PASS not configured' }, { status: 500 });
   }
 
   try {
