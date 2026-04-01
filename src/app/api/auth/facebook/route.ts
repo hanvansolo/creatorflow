@@ -18,17 +18,19 @@ export async function GET(request: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
   const redirectUri = `${siteUrl}/api/auth/facebook/callback`;
 
-  // Scopes needed for Page posting and Instagram publishing
+  // Use only the scopes available for your app's use cases
+  // "Manage everything on your Page" gives: pages_show_list, pages_read_engagement, pages_manage_posts
+  // "Manage messaging & content on Instagram" gives: instagram_basic, instagram_content_publish
+  // These must match what's enabled in the app's Use Cases
   const scope = [
-    'pages_manage_posts',     // Post to Facebook Pages
-    'pages_read_engagement',  // Read Page data
-    'instagram_basic',        // Instagram account info
-    'instagram_content_publish', // Post to Instagram
+    'public_profile',
+    'pages_show_list',
+    'pages_manage_posts',
   ].join(',');
 
   const state = Math.random().toString(36).substring(2);
 
-  const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
+  const authUrl = new URL('https://www.facebook.com/v25.0/dialog/oauth');
   authUrl.searchParams.set('client_id', appId);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('scope', scope);
