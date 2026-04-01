@@ -23,13 +23,23 @@ async function getPageToken(): Promise<string | null> {
   return process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN || null;
 }
 
+async function getPageId(): Promise<string | null> {
+  try {
+    const { db, siteSettings } = await import('@/lib/db');
+    const { eq } = await import('drizzle-orm');
+    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'facebook_page_id')).limit(1);
+    if (row?.value) return row.value;
+  } catch { /* DB read failed */ }
+  return process.env.FACEBOOK_PAGE_ID || null;
+}
+
 export async function postToFacebook(
   title: string,
   slug: string,
   summary?: string,
   tags?: string[]
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const pageId = process.env.FACEBOOK_PAGE_ID;
+  const pageId = await getPageId();
   const pageToken = await getPageToken();
 
   if (!pageId || !pageToken) {
@@ -79,7 +89,7 @@ export async function postCustomFacebook(
   message: string,
   link?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const pageId = process.env.FACEBOOK_PAGE_ID;
+  const pageId = await getPageId();
   const pageToken = await getPageToken();
 
   if (!pageId || !pageToken) {
