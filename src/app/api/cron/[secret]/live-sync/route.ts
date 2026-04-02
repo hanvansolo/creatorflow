@@ -171,7 +171,8 @@ export async function GET(
             matchId = inserted.id;
             console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
 
-            // New live match = kickoff just happened — queue tweet
+            // New live match = kickoff just happened — mark as posted first to prevent duplicates, then queue
+            await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${matchId}::uuid`);
             kickoffTweets.push({
               home: homeClub.name,
               away: awayClub.name,
@@ -191,6 +192,8 @@ export async function GET(
           const notYetTweeted = !existingMatch.social_posted;
 
           if (notYetTweeted) {
+            // Mark as posted FIRST to prevent race condition with concurrent syncs
+            await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${matchId}::uuid`);
             // Find club names for the tweet
             const [hc] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
             const [ac] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
