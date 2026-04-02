@@ -1,4 +1,4 @@
-export { default as PitchVisualization } from './PitchVisualization';
+export { PitchVisualization } from './PitchVisualization';
 export { default as MomentumTimeline } from './MomentumTimeline';
 
 export type {
