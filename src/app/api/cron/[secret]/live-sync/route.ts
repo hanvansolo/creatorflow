@@ -187,8 +187,13 @@ export async function GET(
         } else {
           matchId = existingMatch.id;
 
-          // Detect kickoff: was scheduled, now live
-          if (existingMatch.status === 'scheduled' && fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 5) {
+          // Detect kickoff: match is in first 5 minutes and hasn't been tweeted yet
+          // Check both: status transition OR early minutes with no tweet record
+          const isEarlyMinutes = fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 5;
+          const wasScheduled = existingMatch.status === 'scheduled';
+          const notYetTweeted = !existingMatch.social_posted;
+
+          if (isEarlyMinutes && (wasScheduled || notYetTweeted)) {
             // Find club names for the tweet
             const [hc] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
             const [ac] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
@@ -465,12 +470,22 @@ export async function GET(
           ),
         ]);
 
-        if (tweetResult.status === 'fulfilled' && tweetResult.value.success) {
+        const tweetOk = tweetResult.status === 'fulfilled' && tweetResult.value?.success;
+        const fbOk = fbResult.status === 'fulfilled' && fbResult.value?.success;
+
+        if (tweetOk) {
           tweetsSent++;
           console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away}`);
         }
-        if (fbResult.status === 'fulfilled' && fbResult.value.success) {
+        if (fbOk) {
           console.log(`[live-sync] Kickoff FB post sent: ${kick.home} vs ${kick.away}`);
+        }
+
+        // Mark match as socially posted so we don't tweet again
+        if (tweetOk || fbOk) {
+          try {
+            await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid`);
+          } catch { /* ignore */ }
         }
       } catch (err) {
         console.error(`[live-sync] Kickoff tweet error:`, err);
