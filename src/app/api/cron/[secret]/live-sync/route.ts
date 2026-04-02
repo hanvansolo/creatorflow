@@ -87,7 +87,7 @@ export async function GET(
     console.log(`[live-sync] Found ${liveFixtures.length} live matches`);
 
     const matchesNeedingAnalysis: Array<{ matchId: string; trigger: string }> = [];
-    const kickoffTweets: Array<{ home: string; away: string; competition: string; matchId: string }> = [];
+    const kickoffTweets: Array<{ home: string; away: string; competition: string; matchId: string; homeLogo?: string; awayLogo?: string }> = [];
     let updatedCount = 0;
 
     for (const fixture of liveFixtures) {
@@ -177,6 +177,8 @@ export async function GET(
               away: awayClub.name,
               competition: fixture.league.name || '',
               matchId,
+              homeLogo: homeClub.logoUrl || undefined,
+              awayLogo: awayClub.logoUrl || undefined,
             });
           } catch (insertErr) {
             console.error(`[live-sync] Failed to create match ${apiFixtureId}:`, insertErr);
@@ -188,14 +190,16 @@ export async function GET(
           // Detect kickoff: was scheduled, now live
           if (existingMatch.status === 'scheduled' && fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 5) {
             // Find club names for the tweet
-            const [hc] = await db.select({ name: clubs.name }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
-            const [ac] = await db.select({ name: clubs.name }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
+            const [hc] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
+            const [ac] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
             if (hc && ac) {
               kickoffTweets.push({
                 home: hc.name,
                 away: ac.name,
                 competition: fixture.league.name || '',
                 matchId,
+                homeLogo: hc.logoUrl || undefined,
+                awayLogo: ac.logoUrl || undefined,
               });
             }
           }
@@ -438,14 +442,26 @@ export async function GET(
         const compTag = kick.competition.replace(/[^a-zA-Z0-9]/g, '');
         const matchUrl = `https://www.footy-feed.com/matches/${kick.matchId}`;
 
+        // Generate OG match image URL with team logos
+        const ogParams = new URLSearchParams({
+          home: kick.home,
+          away: kick.away,
+          comp: kick.competition,
+          status: 'live',
+          ...(kick.homeLogo ? { homeLogo: kick.homeLogo } : {}),
+          ...(kick.awayLogo ? { awayLogo: kick.awayLogo } : {}),
+        });
+        const ogImageUrl = `https://www.footy-feed.com/api/og/match?${ogParams.toString()}`;
+
         const tweet = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
 
-        // Post to X and Facebook in parallel
+        // Post to X and Facebook in parallel (Facebook gets the OG image)
         const [tweetResult, fbResult] = await Promise.allSettled([
           postCustomTweet(tweet),
           postCustomFacebook(
             `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`,
-            matchUrl
+            matchUrl,
+            ogImageUrl
           ),
         ]);
 

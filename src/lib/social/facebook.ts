@@ -87,7 +87,8 @@ export async function postToFacebook(
  */
 export async function postCustomFacebook(
   message: string,
-  link?: string
+  link?: string,
+  imageUrl?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const pageId = await getPageId();
   const pageToken = await getPageToken();
@@ -97,6 +98,25 @@ export async function postCustomFacebook(
   }
 
   try {
+    // If we have an image, post as a photo (better engagement)
+    if (imageUrl) {
+      const caption = link ? `${message}\n\n${link}` : message;
+      const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: imageUrl, message: caption, access_token: pageToken }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (res.ok && (data.id || data.post_id)) {
+        console.log(`[Facebook] Photo post ${data.id || data.post_id}`);
+        return { success: true, id: data.id || data.post_id };
+      }
+      // Fall through to regular post if photo fails
+      console.warn(`[Facebook] Photo post failed, falling back to link post: ${data.error?.message}`);
+    }
+
+    // Regular link post
     const body: Record<string, string> = { message, access_token: pageToken };
     if (link) body.link = link;
 
