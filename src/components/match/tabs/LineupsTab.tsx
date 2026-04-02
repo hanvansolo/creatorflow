@@ -11,7 +11,7 @@ import type {
   SquadPlayer,
   MatchEvent,
 } from '@/components/match/types';
-import PitchVisualization from '@/components/match/PitchVisualization';
+import { PitchVisualization } from '@/components/match/PitchVisualization';
 
 /* ---------- helpers ---------- */
 
