@@ -1,7 +1,6 @@
 // @ts-nocheck
 'use client';
 
-import { useState } from 'react';
 import type { LineupData } from './types';
 
 interface PitchVisualizationProps {
@@ -17,156 +16,89 @@ function parseGrid(grid: string | null): { row: number; col: number } | null {
   return { row: parseInt(parts[0], 10), col: parseInt(parts[1], 10) };
 }
 
-function getPlayerPosition(
-  grid: { row: number; col: number },
-  maxRow: number,
-  maxCol: number,
-  isHome: boolean
-): { top: string; left: string } {
-  const rowPct = maxRow > 1 ? (grid.row - 1) / (maxRow - 1) : 0.5;
-  const colPct = maxCol > 1 ? (grid.col - 1) / (maxCol - 1) : 0.5;
-
-  let top: number;
-  if (isHome) {
-    top = 92 - rowPct * 42;
-  } else {
-    top = 8 + rowPct * 42;
+function getMaxCols(players: any[]): Map<number, number> {
+  const rowCounts = new Map<number, number>();
+  for (const p of players) {
+    const g = parseGrid(p.player?.grid);
+    if (g) rowCounts.set(g.row, Math.max(rowCounts.get(g.row) || 0, g.col));
   }
-
-  const left = 10 + colPct * 80;
-
-  return { top: `${top}%`, left: `${left}%` };
+  return rowCounts;
 }
 
-function PlayerDot({
-  player,
-  isHome,
-  maxRow,
-  maxCol,
-}: {
-  player: { name: string; number: number; grid: string | null };
-  isHome: boolean;
-  maxRow: number;
-  maxCol: number;
-}) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const gridPos = parseGrid(player.grid);
-  if (!gridPos) return null;
-
-  const pos = getPlayerPosition(gridPos, maxRow, maxCol, isHome);
+function SinglePitch({ lineup, isHome }: { lineup: LineupData; isHome: boolean }) {
+  const players = lineup.startXI || [];
+  const formation = lineup.formation || '';
+  const maxCols = getMaxCols(players);
+  const color = isHome ? 'bg-yellow-400 text-black' : 'bg-zinc-400 text-black';
 
   return (
-    <div
-      className="absolute -translate-x-1/2 -translate-y-1/2 z-10 cursor-pointer"
-      style={{ top: pos.top, left: pos.left }}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onTouchStart={() => setShowTooltip(true)}
-      onTouchEnd={() => setShowTooltip(false)}
-    >
-      <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition-transform hover:scale-110 ${
-          isHome
-            ? 'bg-yellow-400 text-black'
-            : 'bg-zinc-400 text-black'
-        }`}
-      >
-        {player.number}
+    <div className="flex-1 min-w-0">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2 px-1">
+        <span className={`inline-flex h-4 w-4 rounded-full ${isHome ? 'bg-yellow-400' : 'bg-zinc-400'}`} />
+        <span className="text-xs font-bold text-white truncate">{lineup.team?.name || (isHome ? 'Home' : 'Away')}</span>
+        {formation && <span className="text-[10px] text-zinc-500 ml-auto">{formation}</span>}
       </div>
-      {showTooltip && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-zinc-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-20 border border-zinc-700">
-          {player.name}
+
+      {/* Pitch */}
+      <div className="relative bg-emerald-800/80 rounded-lg overflow-hidden" style={{ aspectRatio: '3/4' }}>
+        {/* Pitch markings */}
+        <div className="absolute inset-0">
+          {/* Halfway line */}
+          <div className="absolute left-0 right-0 top-1/2 h-px bg-white/20" />
+          {/* Center circle */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-white/15" />
+          {/* Penalty area top */}
+          <div className="absolute top-0 left-1/4 right-1/4 h-[18%] border-b border-l border-r border-white/15" />
+          {/* Penalty area bottom */}
+          <div className="absolute bottom-0 left-1/4 right-1/4 h-[18%] border-t border-l border-r border-white/15" />
         </div>
-      )}
+
+        {/* Players */}
+        {players.map((p: any, i: number) => {
+          const grid = parseGrid(p.player?.grid);
+          if (!grid) return null;
+
+          const maxCol = maxCols.get(grid.row) || 1;
+          // Position: row 1 = GK (bottom for home, top for away)
+          const maxRow = Math.max(...Array.from(maxCols.keys()));
+          const yPct = isHome
+            ? 95 - ((grid.row - 1) / maxRow) * 85
+            : 5 + ((grid.row - 1) / maxRow) * 85;
+          const xPct = maxCol === 1
+            ? 50
+            : 8 + ((grid.col - 1) / (maxCol - 1)) * 84;
+
+          return (
+            <div
+              key={p.player?.id || i}
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+              style={{ top: `${yPct}%`, left: `${xPct}%` }}
+            >
+              <span className={`flex items-center justify-center h-6 w-6 rounded-full text-[9px] font-bold ${color} shadow-sm`}>
+                {p.player?.number || '?'}
+              </span>
+              <span className="text-[7px] text-white/70 mt-0.5 max-w-[50px] truncate text-center leading-tight">
+                {p.player?.name?.split(' ').pop() || ''}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-export default function PitchVisualization({
-  lineups,
-  homeName,
-  awayName,
-}: PitchVisualizationProps) {
-  if (!lineups || lineups.length < 2) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-zinc-800/50 rounded-lg border border-zinc-700">
-        <p className="text-zinc-400 text-sm">Lineups not yet available</p>
-      </div>
-    );
-  }
+export function PitchVisualization({ lineups, homeName, awayName }: PitchVisualizationProps) {
+  if (!lineups || lineups.length < 2) return null;
 
   const homeLineup = lineups[0];
   const awayLineup = lineups[1];
 
-  const getMaxRowCol = (lineup: LineupData) => {
-    let maxRow = 1;
-    let maxCol = 1;
-    for (const { player } of lineup.startXI) {
-      const g = parseGrid(player.grid);
-      if (g) {
-        if (g.row > maxRow) maxRow = g.row;
-        if (g.col > maxCol) maxCol = g.col;
-      }
-    }
-    return { maxRow, maxCol };
-  };
-
-  const homeMax = getMaxRowCol(homeLineup);
-  const awayMax = getMaxRowCol(awayLineup);
-
   return (
-    <div className="w-full">
-      <div
-        className="relative w-full bg-emerald-800 rounded-lg border-2 border-white/30 overflow-hidden"
-        style={{ aspectRatio: '3 / 4' }}
-      >
-        {/* Pitch markings */}
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-white/30" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-28 sm:h-28 rounded-full border border-white/30" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/40" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[44%] h-[16%] border-b border-l border-r border-white/30" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[22%] h-[7%] border-b border-l border-r border-white/30" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[44%] h-[16%] border-t border-l border-r border-white/30" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[22%] h-[7%] border-t border-l border-r border-white/30" />
-        <div className="absolute top-0 left-0 w-4 h-4 border-b-2 border-r-2 border-white/20 rounded-br-full" />
-        <div className="absolute top-0 right-0 w-4 h-4 border-b-2 border-l-2 border-white/20 rounded-bl-full" />
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-t-2 border-r-2 border-white/20 rounded-tr-full" />
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-t-2 border-l-2 border-white/20 rounded-tl-full" />
-
-        {/* Formation labels */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
-          <span className="text-[10px] sm:text-xs text-white/60 font-medium bg-zinc-900/50 px-2 py-0.5 rounded">
-            {awayName} {awayLineup.formation}
-          </span>
-        </div>
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20">
-          <span className="text-[10px] sm:text-xs text-white/60 font-medium bg-zinc-900/50 px-2 py-0.5 rounded">
-            {homeName} {homeLineup.formation}
-          </span>
-        </div>
-
-        {/* Home team players (bottom half) — yellow dots */}
-        {homeLineup.startXI.map(({ player }, i) => (
-          <PlayerDot
-            key={`home-${i}`}
-            player={player}
-            isHome={true}
-            maxRow={homeMax.maxRow}
-            maxCol={homeMax.maxCol}
-          />
-        ))}
-
-        {/* Away team players (top half) — gray dots */}
-        {awayLineup.startXI.map(({ player }, i) => (
-          <PlayerDot
-            key={`away-${i}`}
-            player={player}
-            isHome={false}
-            maxRow={awayMax.maxRow}
-            maxCol={awayMax.maxCol}
-          />
-        ))}
-      </div>
+    <div className="flex gap-2">
+      <SinglePitch lineup={homeLineup} isHome={true} />
+      <SinglePitch lineup={awayLineup} isHome={false} />
     </div>
   );
 }
