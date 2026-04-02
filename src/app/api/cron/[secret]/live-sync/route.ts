@@ -189,7 +189,7 @@ export async function GET(
 
           // Detect kickoff: match is in first 5 minutes and hasn't been tweeted yet
           // Check both: status transition OR early minutes with no tweet record
-          const isEarlyMinutes = fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 5;
+          const isEarlyMinutes = fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 15;
           const wasScheduled = existingMatch.status === 'scheduled';
           const notYetTweeted = !existingMatch.social_posted;
 
