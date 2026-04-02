@@ -187,13 +187,10 @@ export async function GET(
         } else {
           matchId = existingMatch.id;
 
-          // Detect kickoff: match is in first 5 minutes and hasn't been tweeted yet
-          // Check both: status transition OR early minutes with no tweet record
-          const isEarlyMinutes = fixture.fixture.status.elapsed !== null && fixture.fixture.status.elapsed <= 15;
-          const wasScheduled = existingMatch.status === 'scheduled';
+          // Post any live match that hasn't been posted yet (social_posted flag prevents duplicates)
           const notYetTweeted = !existingMatch.social_posted;
 
-          if (isEarlyMinutes && (wasScheduled || notYetTweeted)) {
+          if (notYetTweeted) {
             // Find club names for the tweet
             const [hc] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
             const [ac] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
