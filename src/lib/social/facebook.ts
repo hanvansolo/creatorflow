@@ -98,29 +98,10 @@ export async function postCustomFacebook(
   }
 
   try {
-    // If we have an image URL, post as photo (shows image directly in feed)
-    if (imageUrl) {
-      const caption = link ? `${message}\n\n${link}` : message;
-      const photoRes = await fetch(`https://graph.facebook.com/v25.0/${pageId}/photos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: imageUrl, message: caption, access_token: pageToken }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const photoData = await photoRes.json();
-      if (photoRes.ok && (photoData.id || photoData.post_id)) {
-        console.log(`[Facebook] Photo post ${photoData.id || photoData.post_id}`);
-        return { success: true, id: photoData.id || photoData.post_id };
-      }
-      // If photo fails, DON'T fall through — just return the error
-      // This prevents the duplicate post that caused the spam
-      console.error(`[Facebook] Photo post failed: ${photoData.error?.message || JSON.stringify(photoData).slice(0, 200)}`);
-      return { success: false, error: photoData.error?.message || 'Photo upload failed' };
-    }
-
-    // No image — post as link
+    // Post as link with optional picture (no /photos endpoint needed)
     const body: Record<string, string> = { message, access_token: pageToken };
     if (link) body.link = link;
+    if (imageUrl) body.picture = imageUrl;
 
     const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
       method: 'POST',
