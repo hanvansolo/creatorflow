@@ -424,33 +424,58 @@ export async function GET(
       }
     }
 
-    // Send kickoff tweets — ONLY for notable leagues
-    // Don't spam followers with every minor league match
-    const TWEETWORTHY_LEAGUES = new Set([
-      'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+    // Send kickoff posts — curated for maximum traffic
+    // ALL British football + top global leagues + major tournaments
+
+    // Always post these leagues (exact match)
+    const ALWAYS_POST = new Set([
+      // === ALL GB FOOTBALL ===
+      'Premier League', 'Championship', 'League One', 'League Two',
+      'National League', 'National League North', 'National League South',
+      'Scottish Premiership', 'Scottish Championship', 'Scottish League One', 'Scottish League Two',
+      'FA Cup', 'EFL Cup', 'EFL Trophy', 'FA Trophy', 'FA Vase',
+      'FAW Championship', 'FAW Cup',
+      'League of Ireland Premier', 'NIFL Premiership',
+      "Women's Super League", "Women's Championship",
+      'Premier League 2 Division One',
+      // === TOP EUROPEAN LEAGUES ===
+      'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+      'Eredivisie', 'Primeira Liga', 'Super Lig',
+      // === EUROPEAN CUPS ===
       'Champions League', 'Europa League', 'Conference League',
-      'FA Cup', 'EFL Cup', 'Copa del Rey', 'Coppa Italia', 'DFB-Pokal', 'Coupe de France',
-      'Eredivisie', 'Primeira Liga', 'Championship', 'Scottish Premiership',
-      'MLS', 'Liga MX', 'Brasileirão',
+      'Copa del Rey', 'Coppa Italia', 'DFB-Pokal', 'Coupe de France',
+      // === AMERICAS ===
+      'MLS', 'Liga MX', 'Brasileirão', 'Liga Profesional Argentina',
+      'Copa Libertadores', 'Copa Sudamericana',
+      // === INTERNATIONAL ===
       'World Cup', 'European Championship', 'Copa America', 'Nations League',
-      'AFCON', 'Asian Cup',
-      'WC Qualifiers - Europe', 'WC Qualifiers - Intercontinental',
+      'AFCON', 'Asian Cup', 'Gold Cup',
+      'WC Qualifiers - Europe', 'WC Qualifiers - South America',
+      'WC Qualifiers - North America', 'WC Qualifiers - Asia',
+      'WC Qualifiers - Africa', 'WC Qualifiers - Intercontinental',
       'AFCON Qualifiers',
-      'International Friendlies', // Major international friendlies (England, Brazil, etc.)
+      // === OTHER NOTABLE ===
+      'Saudi Pro League', 'J1 League', 'K League 1', 'A-League',
+      'Club World Cup', 'UEFA Super Cup',
     ]);
 
-    // For friendlies, only tweet if it involves a top nation
+    // Post friendlies only for these nations
     const TOP_NATIONS = new Set([
-      'England', 'France', 'Germany', 'Spain', 'Italy', 'Brazil', 'Argentina',
+      'England', 'Scotland', 'Wales', 'Northern Ireland', 'Republic of Ireland',
+      'France', 'Germany', 'Spain', 'Italy', 'Brazil', 'Argentina',
       'Portugal', 'Netherlands', 'Belgium', 'Uruguay', 'Colombia', 'Mexico',
       'USA', 'Japan', 'South Korea', 'Morocco', 'Senegal', 'Nigeria',
+      'Australia', 'Croatia', 'Denmark', 'Switzerland', 'Poland', 'Turkey',
     ]);
+
+    // Partial match — post if league name contains any of these
+    const PARTIAL_MATCH = ['Premier League', 'Championship', 'League One', 'League Two', 'FA Cup', 'League Cup'];
 
     let tweetsSent = 0;
     for (const kick of kickoffTweets) {
-      // Check if this match is tweetworthy
-      const isTweetworthy = TWEETWORTHY_LEAGUES.has(kick.competition);
-      const isFriendly = kick.competition === 'International Friendlies' || kick.competition === 'Friendlies';
+      const comp = kick.competition;
+      const isTweetworthy = ALWAYS_POST.has(comp) || PARTIAL_MATCH.some(p => comp.includes(p));
+      const isFriendly = comp.includes('Friendl');
       const involvesTopNation = isFriendly && (TOP_NATIONS.has(kick.home) || TOP_NATIONS.has(kick.away));
 
       if (!isTweetworthy && !involvesTopNation) {
