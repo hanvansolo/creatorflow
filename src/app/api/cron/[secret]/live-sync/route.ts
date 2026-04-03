@@ -60,22 +60,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Prevent concurrent runs
-  const lockKey = 'live-sync-running';
-  try {
-    const { db: lockDb, siteSettings: lockSettings } = await import('@/lib/db');
-    const [lock] = await lockDb.select().from(lockSettings).where(eq(lockSettings.key, lockKey)).limit(1);
-    const lockTime = lock?.value ? parseInt(lock.value) : 0;
-    const now = Date.now();
-    // If lock is less than 3 minutes old, another sync is still running
-    if (lockTime && (now - lockTime) < 180000) {
-      console.log('[live-sync] Skipping — another sync is still running');
-      return NextResponse.json({ message: 'Skipped — concurrent sync running' });
-    }
-    // Set lock
-    await lockDb.insert(lockSettings).values({ key: lockKey, value: String(now), updatedAt: new Date() })
-      .onConflictDoUpdate({ target: lockSettings.key, set: { value: String(now), updatedAt: new Date() } });
-  } catch { /* ignore lock errors */ }
+  // No DB lock needed — atomic UPDATE WHERE social_posted=FALSE handles dedup
 
   try {
     console.log('[live-sync] Starting live match sync...');
@@ -546,9 +531,6 @@ export async function GET(
       `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} kickoff tweets`
     );
 
-    // Clear lock
-    try { const { db: ldb, siteSettings: ls } = await import('@/lib/db'); await ldb.delete(ls).where(eq(ls.key, lockKey)); } catch {}
-
     return NextResponse.json({
       message: 'Live sync complete',
       liveMatches: liveFixtures.length,
@@ -557,8 +539,6 @@ export async function GET(
       kickoffTweets: tweetsSent,
     });
   } catch (error) {
-    // Clear lock on error too
-    try { const { db: ldb, siteSettings: ls } = await import('@/lib/db'); await ldb.delete(ls).where(eq(ls.key, lockKey)); } catch {}
     console.error('[live-sync] Fatal error:', error);
     return NextResponse.json(
       { error: 'Live sync failed', details: String(error) },
