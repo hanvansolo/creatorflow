@@ -486,6 +486,15 @@ export async function GET(
       }
 
       try {
+        // FINAL SAFETY CHECK — re-read social_posted right before posting
+        const [doubleCheck] = await db.execute(sql`SELECT social_posted FROM matches WHERE id = ${kick.matchId}::uuid`);
+        if ((doubleCheck as any)?.social_posted === true) {
+          console.log(`[live-sync] Already posted (double-check): ${kick.home} vs ${kick.away}`);
+          continue;
+        }
+        // Mark IMMEDIATELY before any API calls
+        await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid`);
+
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
         const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
         const compTag = kick.competition.replace(/[^a-zA-Z0-9]/g, '');
