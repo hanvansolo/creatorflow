@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   // These must match what's enabled in the app's Use Cases
   // Start with minimal scope — pages_manage_posts must be enabled
   // in Use Cases > Manage everything on your Page > Customize first
-  const scope = 'pages_manage_posts,pages_show_list';
+  const scope = 'pages_manage_posts,pages_show_list,pages_read_engagement';
 
   const state = Math.random().toString(36).substring(2);
 
