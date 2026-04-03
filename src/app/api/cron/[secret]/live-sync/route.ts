@@ -183,7 +183,7 @@ export async function GET(
               referee: fixture.fixture.referee,
               slug,
               round: fixture.league.round,
-              socialPosted: true, // Mark immediately to prevent duplicate posts
+              socialPosted: false, // Will be set to true by the atomic posting loop
             }).returning({ id: matches.id });
 
             matchId = inserted.id;
@@ -468,13 +468,12 @@ export async function GET(
     ]);
 
     // Partial match — post if league name contains any of these
-    // Partial match — post if league name contains any of these (catches all English tiers)
+    // Partial match for ENGLISH football only (these terms are unique to English football)
     const PARTIAL_MATCH = [
-      'Premier League', 'Championship', 'League One', 'League Two',
-      'FA Cup', 'League Cup', 'EFL',
+      'EFL', 'FA Cup', 'FA Trophy', 'FA Vase',
       'National League', 'Non League',
-      'Professional Development', 'Premier League 2',
       'Isthmian', 'Northern Premier', 'Southern League',
+      'Professional Development League',
     ];
 
     // Post kickoffs — each post does its own DB check immediately before posting
