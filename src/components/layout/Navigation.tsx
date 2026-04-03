@@ -12,6 +12,7 @@ const navItems = [
   { href: '/fixtures', label: 'Fixtures' },
   { href: '/tables', label: 'Tables' },
   { href: '/transfers', label: 'Transfers' },
+  { href: '/match-reports', label: 'Reports' },
   { href: '/videos', label: 'Videos' },
   { href: '/predictions', label: 'Predictions' },
   { href: '/rules', label: 'Rules' },

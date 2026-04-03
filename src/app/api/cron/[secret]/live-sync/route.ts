@@ -19,6 +19,7 @@ import {
   mapEventType,
 } from '@/lib/api/football-api';
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
+import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/api/match-reports';
 import { postCustomTweet } from '@/lib/social/twitter';
 import { postCustomFacebook } from '@/lib/social/facebook';
 
@@ -90,6 +91,7 @@ export async function GET(
 
     const matchesNeedingAnalysis: Array<{ matchId: string; trigger: string }> = [];
     const kickoffTweets: Array<{ home: string; away: string; competition: string; matchId: string; homeLogo?: string; awayLogo?: string }> = [];
+    const finishedMatches: Array<{ matchId: string; home: string; away: string; homeScore: number; awayScore: number; competition: string; slug: string }> = [];
     let updatedCount = 0;
 
     for (const fixture of liveFixtures) {
@@ -231,6 +233,27 @@ export async function GET(
           .where(eq(matches.id, matchId));
 
         updatedCount++;
+
+        // 2a-ii. Detect match finishing (was live/halftime, now FT)
+        if (
+          existingMatch &&
+          newStatus === 'finished' &&
+          ['live', 'halftime', 'extra_time', 'penalties'].includes(existingMatch.status)
+        ) {
+          const [hc] = await db.select({ name: clubs.name }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
+          const [ac] = await db.select({ name: clubs.name }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
+          if (hc && ac) {
+            finishedMatches.push({
+              matchId,
+              home: hc.name,
+              away: ac.name,
+              homeScore: fixture.goals.home ?? 0,
+              awayScore: fixture.goals.away ?? 0,
+              competition: fixture.league.name || '',
+              slug: existingMatch.slug,
+            });
+          }
+        }
 
         // 2b. Only fetch events/stats if score changed (saves ~180 API calls per sync)
         const scoreChanged = existingMatch
@@ -550,8 +573,84 @@ export async function GET(
       }
     }
 
+    // 6. Generate match reports for finished matches
+    let reportsGenerated = 0;
+    for (const fm of finishedMatches) {
+      try {
+        // Check if reportworthy
+        if (!isReportworthy(fm.competition, fm.homeScore, fm.awayScore, fm.home, fm.away)) {
+          continue;
+        }
+
+        // Check if already generated (via column or slug)
+        let alreadyGenerated = false;
+        try {
+          const [check] = await db.execute(
+            sql`SELECT match_report_generated FROM matches WHERE id = ${fm.matchId}::uuid AND match_report_generated = TRUE LIMIT 1`
+          );
+          if (check) alreadyGenerated = true;
+        } catch {
+          // Column may not exist — fall through to slug check in generateMatchReport
+        }
+
+        if (alreadyGenerated) {
+          console.log(`[live-sync] Report already generated for ${fm.home} vs ${fm.away}`);
+          continue;
+        }
+
+        console.log(`[live-sync] Generating match report: ${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away}`);
+        const reportResult = await generateMatchReport(fm.matchId);
+
+        if (reportResult.success && reportResult.articleId) {
+          reportsGenerated++;
+
+          // Post to social media for major matches
+          if (isSocialPostworthy(fm.competition)) {
+            try {
+              const articleSlug = `${new Date().toISOString().split('T')[0]}-${fm.home.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vs-${fm.away.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-match-report`;
+              const articleUrl = `https://www.footy-feed.com/news/${articleSlug}`;
+
+              // Fetch the generated article for the summary
+              const [article] = await db
+                .select({ summary: newsArticles.summary })
+                .from(newsArticles)
+                .where(eq(newsArticles.id, reportResult.articleId))
+                .limit(1);
+
+              const summaryText = article?.summary || `${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away} in the ${fm.competition}.`;
+
+              const homeTag = fm.home.replace(/[^a-zA-Z0-9]/g, '');
+              const awayTag = fm.away.replace(/[^a-zA-Z0-9]/g, '');
+              const compTag = fm.competition.replace(/[^a-zA-Z0-9]/g, '');
+
+              const tweetText = `📝 MATCH REPORT: ${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away}\n\n${summaryText.slice(0, 140)}\n\n${articleUrl}\n\n#${homeTag} #${awayTag} #${compTag} #MatchReport`;
+              const fbText = `📝 MATCH REPORT: ${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away}\n\n${summaryText}\n\n#${homeTag} #${awayTag} #${compTag} #MatchReport`;
+
+              const [tweetRes, fbRes] = await Promise.allSettled([
+                postCustomTweet(tweetText.slice(0, 280)),
+                postCustomFacebook(fbText, articleUrl),
+              ]);
+
+              if (tweetRes.status === 'fulfilled' && tweetRes.value?.success) {
+                console.log(`[live-sync] Match report tweet sent: ${fm.home} vs ${fm.away}`);
+              }
+              if (fbRes.status === 'fulfilled' && fbRes.value?.success) {
+                console.log(`[live-sync] Match report FB post sent: ${fm.home} vs ${fm.away}`);
+              }
+            } catch (socialErr) {
+              console.error(`[live-sync] Social posting error for report:`, socialErr);
+            }
+          }
+        } else {
+          console.log(`[live-sync] Report generation failed: ${reportResult.error}`);
+        }
+      } catch (err) {
+        console.error(`[live-sync] Error generating report for ${fm.home} vs ${fm.away}:`, err);
+      }
+    }
+
     console.log(
-      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} kickoff tweets`
+      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} kickoff tweets, ${reportsGenerated} match reports`
     );
 
     return NextResponse.json({
@@ -560,6 +659,7 @@ export async function GET(
       updated: updatedCount,
       analysisGenerated: analysisCount,
       kickoffTweets: tweetsSent,
+      matchReports: reportsGenerated,
     });
   } catch (error) {
     console.error('[live-sync] Fatal error:', error);

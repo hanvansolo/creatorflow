@@ -154,6 +154,7 @@ export const matches = pgTable('matches', {
   referee: varchar('referee', { length: 100 }),
   attendance: integer('attendance'),
   socialPosted: boolean('social_posted').default(false),
+  matchReportGenerated: boolean('match_report_generated').default(false),
   slug: varchar('slug', { length: 200 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

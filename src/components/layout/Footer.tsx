@@ -10,6 +10,7 @@ const footerLinks = {
     { href: '/tables', label: 'Tables' },
   ],
   resources: [
+    { href: '/match-reports', label: 'Match Reports' },
     { href: '/transfers', label: 'Transfers' },
     { href: '/predictions', label: 'Predictions' },
     { href: '/videos', label: 'Videos' },
