@@ -232,8 +232,11 @@ export async function GET(
 
         updatedCount++;
 
-        // 2b. Get and upsert match events
-        // First, count existing events to detect new significant events
+        // 2b. Only fetch events/stats if score changed (saves ~180 API calls per sync)
+        const scoreChanged = existingMatch
+          ? (existingMatch.homeScore !== fixture.goals.home || existingMatch.awayScore !== fixture.goals.away)
+          : true; // New match — always fetch
+
         const existingEvents = await db
           .select()
           .from(matchEvents)
@@ -244,8 +247,13 @@ export async function GET(
           (e) => SIGNIFICANT_EVENTS.has(e.eventType)
         ).length;
 
-        const eventsResponse = await getFixtureEvents(apiFixtureId);
-        const apiEvents = eventsResponse.response || [];
+        // Only call API for events if score changed or every 15 minutes (minute % 15 === 0)
+        let apiEvents: any[] = [];
+        const shouldFetchEvents = scoreChanged || (fixture.fixture.status.elapsed && fixture.fixture.status.elapsed % 15 === 0);
+        if (shouldFetchEvents) {
+          const eventsResponse = await getFixtureEvents(apiFixtureId);
+          apiEvents = eventsResponse.response || [];
+        }
 
         for (const event of apiEvents) {
           const eventType = mapEventType(event.type, event.detail);
@@ -323,9 +331,13 @@ export async function GET(
           }
         }
 
-        // 2c. Get and upsert match statistics
-        const statsResponse = await getFixtureStatistics(apiFixtureId);
-        const apiStats = statsResponse.response || [];
+        // 2c. Get and upsert match statistics (only if score changed or halftime/fulltime)
+        let apiStats: any[] = [];
+        const isBreak = fixture.fixture.status.short === 'HT' || fixture.fixture.status.short === 'FT';
+        if (shouldFetchEvents || isBreak) {
+          const statsResponse = await getFixtureStatistics(apiFixtureId);
+          apiStats = statsResponse.response || [];
+        }
 
         for (const teamStats of apiStats) {
           if (!teamStats.team?.id || !teamStats.statistics) continue;
