@@ -189,8 +189,7 @@ export async function GET(
             matchId = inserted.id;
             console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
 
-            // New live match = kickoff just happened — mark as posted first to prevent duplicates, then queue
-            await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${matchId}::uuid`);
+            // New match — queue for posting (socialPosted already true from INSERT)
             kickoffTweets.push({
               home: homeClub.name,
               away: awayClub.name,
@@ -206,14 +205,11 @@ export async function GET(
         } else {
           matchId = existingMatch.id;
 
-          // Post any live match that hasn't been posted yet (social_posted flag prevents duplicates)
-          // Must use raw SQL because social_posted isn't in Drizzle schema
-          const [postCheck] = await db.execute(sql`SELECT social_posted FROM matches WHERE id = ${matchId}::uuid`);
-          const notYetTweeted = !(postCheck as any)?.social_posted;
+          // ATOMIC: only queue if we can flip social_posted from FALSE to TRUE
+          const lockResult = await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${matchId}::uuid AND social_posted = FALSE RETURNING id`);
+          const notYetTweeted = (lockResult as any[]).length > 0;
 
           if (notYetTweeted) {
-            // Mark as posted FIRST to prevent race condition with concurrent syncs
-            await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${matchId}::uuid`);
             // Find club names for the tweet
             const [hc] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.homeClubId)).limit(1);
             const [ac] = await db.select({ name: clubs.name, logoUrl: clubs.logoUrl }).from(clubs).where(eq(clubs.id, existingMatch.awayClubId)).limit(1);
@@ -474,16 +470,9 @@ export async function GET(
     // Partial match — post if league name contains any of these
     const PARTIAL_MATCH = ['Premier League', 'Championship', 'League One', 'League Two', 'FA Cup', 'League Cup'];
 
-    // DISABLED: Live match social posting temporarily disabled to stop spam
-    // Re-enable once the duplicate prevention is verified working
-    const ENABLE_KICKOFF_POSTS = false;
-
+    // Post kickoffs — each post does its own DB check immediately before posting
     let tweetsSent = 0;
     for (const kick of kickoffTweets) {
-      if (!ENABLE_KICKOFF_POSTS) {
-        console.log(`[live-sync] Kickoff posting DISABLED: ${kick.home} vs ${kick.away}`);
-        continue;
-      }
       const comp = kick.competition;
       const isTweetworthy = ALWAYS_POST.has(comp) || PARTIAL_MATCH.some(p => comp.includes(p));
       const isFriendly = comp.includes('Friendl');
@@ -495,14 +484,12 @@ export async function GET(
       }
 
       try {
-        // FINAL SAFETY CHECK — re-read social_posted right before posting
-        const [doubleCheck] = await db.execute(sql`SELECT social_posted FROM matches WHERE id = ${kick.matchId}::uuid`);
-        if ((doubleCheck as any)?.social_posted === true) {
-          console.log(`[live-sync] Already posted (double-check): ${kick.home} vs ${kick.away}`);
+        // ATOMIC lock — UPDATE only if social_posted is still FALSE, returns row if we got the lock
+        const lockResult = await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid AND social_posted = FALSE RETURNING id`);
+        if ((lockResult as any[]).length === 0) {
+          console.log(`[live-sync] Already posted (atomic check): ${kick.home} vs ${kick.away}`);
           continue;
         }
-        // Mark IMMEDIATELY before any API calls
-        await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid`);
 
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
         const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
