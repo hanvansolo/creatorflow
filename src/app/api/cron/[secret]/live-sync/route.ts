@@ -468,7 +468,14 @@ export async function GET(
     ]);
 
     // Partial match — post if league name contains any of these
-    const PARTIAL_MATCH = ['Premier League', 'Championship', 'League One', 'League Two', 'FA Cup', 'League Cup'];
+    // Partial match — post if league name contains any of these (catches all English tiers)
+    const PARTIAL_MATCH = [
+      'Premier League', 'Championship', 'League One', 'League Two',
+      'FA Cup', 'League Cup', 'EFL',
+      'National League', 'Non League',
+      'Professional Development', 'Premier League 2',
+      'Isthmian', 'Northern Premier', 'Southern League',
+    ];
 
     // Post kickoffs — each post does its own DB check immediately before posting
     let tweetsSent = 0;
