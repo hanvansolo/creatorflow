@@ -183,6 +183,7 @@ export async function GET(
               referee: fixture.fixture.referee,
               slug,
               round: fixture.league.round,
+              socialPosted: true, // Mark immediately to prevent duplicate posts
             }).returning({ id: matches.id });
 
             matchId = inserted.id;

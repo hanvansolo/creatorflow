@@ -24,7 +24,7 @@ export async function rateCredibility(
 ): Promise<CredibilityRating> {
   try {
     const response = await getAnthropic().messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4-5-latest',
       max_tokens: 50,
       messages: [
         {

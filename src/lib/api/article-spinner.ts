@@ -64,7 +64,7 @@ Your full rewritten article here
 
   try {
     const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4-5-latest',
       max_tokens: 4000,
       messages: [
         {
@@ -175,7 +175,7 @@ Your trimmed, rewritten article here
 
   try {
     const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4-5-latest',
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
     });
