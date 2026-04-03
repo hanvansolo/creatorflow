@@ -462,6 +462,12 @@ export async function GET(
     ];
 
     // Post kickoffs — each post does its own DB check immediately before posting
+    // Check if any major league matches are in the kickoff queue
+    const hasMajorMatch = kickoffTweets.some(k => {
+      const c = k.competition;
+      return ALWAYS_POST.has(c) || PARTIAL_MATCH.some(p => c.includes(p));
+    });
+
     let tweetsSent = 0;
     for (const kick of kickoffTweets) {
       const comp = kick.competition;
@@ -469,8 +475,13 @@ export async function GET(
       const isFriendly = comp.includes('Friendl');
       const involvesTopNation = isFriendly && (TOP_NATIONS.has(kick.home) || TOP_NATIONS.has(kick.away));
 
-      if (!isTweetworthy && !involvesTopNation) {
-        console.log(`[live-sync] Skipping tweet for minor match: ${kick.home} vs ${kick.away} (${kick.competition})`);
+      // If major matches are on, skip minor ones. If quiet, post everything.
+      if (!isTweetworthy && !involvesTopNation && hasMajorMatch) {
+        continue; // Major matches available — skip minor
+      }
+      // Always skip U19/U20/U21/Reserve/Women's during quiet periods too — focus on men's first teams
+      const isYouthOrReserve = comp.includes('U19') || comp.includes('U20') || comp.includes('U21') || comp.includes('Reserve') || comp.includes('Primavera');
+      if (isYouthOrReserve) {
         continue;
       }
 
