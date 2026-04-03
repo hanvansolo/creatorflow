@@ -520,8 +520,7 @@ export async function GET(
           postCustomTweet(tweet),
           postCustomFacebook(
             `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`,
-            matchUrl,
-            ogImageUrl
+            matchUrl
           ),
         ]);
 
