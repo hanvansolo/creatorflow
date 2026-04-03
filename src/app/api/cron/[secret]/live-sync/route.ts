@@ -474,8 +474,16 @@ export async function GET(
     // Partial match — post if league name contains any of these
     const PARTIAL_MATCH = ['Premier League', 'Championship', 'League One', 'League Two', 'FA Cup', 'League Cup'];
 
+    // DISABLED: Live match social posting temporarily disabled to stop spam
+    // Re-enable once the duplicate prevention is verified working
+    const ENABLE_KICKOFF_POSTS = false;
+
     let tweetsSent = 0;
     for (const kick of kickoffTweets) {
+      if (!ENABLE_KICKOFF_POSTS) {
+        console.log(`[live-sync] Kickoff posting DISABLED: ${kick.home} vs ${kick.away}`);
+        continue;
+      }
       const comp = kick.competition;
       const isTweetworthy = ALWAYS_POST.has(comp) || PARTIAL_MATCH.some(p => comp.includes(p));
       const isFriendly = comp.includes('Friendl');
