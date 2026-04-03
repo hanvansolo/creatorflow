@@ -206,7 +206,9 @@ export async function GET(
           matchId = existingMatch.id;
 
           // Post any live match that hasn't been posted yet (social_posted flag prevents duplicates)
-          const notYetTweeted = !existingMatch.social_posted;
+          // Must use raw SQL because social_posted isn't in Drizzle schema
+          const [postCheck] = await db.execute(sql`SELECT social_posted FROM matches WHERE id = ${matchId}::uuid`);
+          const notYetTweeted = !(postCheck as any)?.social_posted;
 
           if (notYetTweeted) {
             // Mark as posted FIRST to prevent race condition with concurrent syncs
