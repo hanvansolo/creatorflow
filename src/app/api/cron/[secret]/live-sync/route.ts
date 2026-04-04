@@ -432,16 +432,17 @@ export async function GET(
       }
     }
 
-    // 4. Generate AI analysis for matches with significant events
+    // 4. Generate AI analysis — DISABLED to save Anthropic tokens
+    // Re-enable when token budget allows. Was generating analysis for every goal/card across 90+ matches.
     let analysisCount = 0;
-    for (const { matchId, trigger } of matchesNeedingAnalysis) {
-      try {
-        await generateMatchAnalysis(matchId, trigger);
-        analysisCount++;
-      } catch (err) {
-        console.error(`[live-sync] Error generating analysis for match ${matchId}:`, err);
-      }
-    }
+    // for (const { matchId, trigger } of matchesNeedingAnalysis) {
+    //   try {
+    //     await generateMatchAnalysis(matchId, trigger);
+    //     analysisCount++;
+    //   } catch (err) {
+    //     console.error(`[live-sync] Error generating analysis for match ${matchId}:`, err);
+    //   }
+    // }
 
     // Send kickoff posts — curated for maximum traffic
     // ALL British football + top global leagues + major tournaments
