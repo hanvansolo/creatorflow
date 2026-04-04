@@ -10,7 +10,7 @@ const DEFAULT_JOBS = [
   { name: 'aggregate',         path: '/api/cron/{secret}/aggregate',         intervalMs: 15 * 60 * 1000,      delayMs: 30_000   },
   { name: 'youtube',           path: '/api/cron/{secret}/youtube',           intervalMs: 60 * 60 * 1000,      delayMs: 60_000   },
   { name: 'weather',           path: '/api/cron/{secret}/weather',           intervalMs: 30 * 60 * 1000,      delayMs: 90_000   },
-  { name: 'data-sync',         path: '/api/cron/{secret}/data-sync?full=true', intervalMs: 6 * 60 * 60 * 1000,  delayMs: 120_000  }, // Every 6h — full sync all 133 competitions (~800 calls × 4 = 3,200/day)
+  { name: 'data-sync',         path: '/api/cron/{secret}/data-sync?full=true', intervalMs: 12 * 60 * 60 * 1000, delayMs: 120_000  }, // Every 12h — full sync (~800 calls × 2 = 1,600/day)
   { name: 'ai-analysis',       path: '/api/cron/{secret}/ai-analysis',       intervalMs: 6 * 60 * 60 * 1000,  delayMs: 150_000  },
   { name: 'predictions',       path: '/api/cron/{secret}/predictions',       intervalMs: 12 * 60 * 60 * 1000, delayMs: 180_000  },
   { name: 'roundup',           path: '/api/cron/{secret}/roundup',           intervalMs: 60 * 60 * 1000,      delayMs: 240_000  },
@@ -23,7 +23,7 @@ const DEFAULT_JOBS = [
   { name: 'email-weekly',      path: '/api/cron/{secret}/email-weekly',      intervalMs: 60 * 60 * 1000,      delayMs: 450_000  }, // Hourly on Sundays - sends where it's 10am
   { name: 'email-race-reminder', path: '/api/cron/{secret}/email-race-reminder', intervalMs: 12 * 60 * 60 * 1000, delayMs: 480_000  }, // Every 12h - checks for races in 3 days
   { name: 'email-race-roundup', path: '/api/cron/{secret}/email-race-roundup', intervalMs: 12 * 60 * 60 * 1000, delayMs: 510_000  }, // Every 12h - checks for races in last 2 days
-  { name: 'live-sync',          path: '/api/cron/{secret}/live-sync',          intervalMs: 5 * 60 * 1000,       delayMs: 60_000   }, // Every 5 min - live match scores, events, stats + AI analysis
+  { name: 'live-sync',          path: '/api/cron/{secret}/live-sync',          intervalMs: 10 * 60 * 1000,      delayMs: 60_000   }, // Every 10 min - live match scores + social posting
   { name: 'fix-images',         path: '/api/cron/{secret}/fix-images',         intervalMs: 30 * 60 * 1000,      delayMs: 540_000  }, // Every 30 min - re-scrape missing article images
   { name: 'respin',             path: '/api/cron/{secret}/respin?limit=10',    intervalMs: 30 * 60 * 1000,      delayMs: 570_000  }, // Every 30 min - expand short articles with AI
 ];

@@ -2,6 +2,11 @@ import { db, players, clubs } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { getSquad } from '@/lib/api/football-api';
 
+// Rate limit: max 10 squad API loads per hour to save API calls
+let squadLoadCount = 0;
+let squadLoadResetTime = Date.now() + 3600000;
+const MAX_SQUAD_LOADS_PER_HOUR = 10;
+
 /**
  * Get players for a club — loads from DB if cached, otherwise fetches from API and stores.
  * Returns array of players. Call this from any page that needs squad data.
@@ -18,6 +23,15 @@ export async function getOrLoadSquad(clubId: string): Promise<any[]> {
   // 2. Get the club's API Football ID
   const [club] = await db.select().from(clubs).where(eq(clubs.id, clubId)).limit(1);
   if (!club?.apiFootballId) return [];
+
+  // 3. Rate limit — max 10 squad loads per hour
+  const now = Date.now();
+  if (now > squadLoadResetTime) { squadLoadCount = 0; squadLoadResetTime = now + 3600000; }
+  if (squadLoadCount >= MAX_SQUAD_LOADS_PER_HOUR) {
+    console.log(`[PlayerLoader] Rate limited — skipping ${club.name}`);
+    return [];
+  }
+  squadLoadCount++;
 
   // 3. Fetch from API
   try {
