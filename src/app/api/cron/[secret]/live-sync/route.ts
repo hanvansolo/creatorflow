@@ -521,12 +521,8 @@ export async function GET(
       }
 
       try {
-        // ATOMIC lock — UPDATE only if social_posted is still FALSE, returns row if we got the lock
-        const lockResult = await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid AND social_posted = FALSE RETURNING id`);
-        if ((lockResult as any[]).length === 0) {
-          console.log(`[live-sync] Already posted (atomic check): ${kick.home} vs ${kick.away}`);
-          continue;
-        }
+        // social_posted already set to TRUE during match processing (line ~196)
+        // No second lock needed here
 
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
         const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
