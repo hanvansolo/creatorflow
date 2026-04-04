@@ -68,7 +68,7 @@ async function generateSectionSummary(
 
   try {
     const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       messages: [
         {
@@ -147,7 +147,7 @@ async function generateRoundupArticle(
 
   try {
     const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 6000,
       messages: [
         {

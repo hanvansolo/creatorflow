@@ -558,9 +558,15 @@ export async function GET(
         if (tweetOk) {
           tweetsSent++;
           console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away}`);
+        } else {
+          const tweetErr = tweetResult.status === 'rejected' ? tweetResult.reason?.message : tweetResult.value?.error;
+          if (tweetErr) console.error(`[live-sync] Twitter failed: ${tweetErr}`);
         }
         if (fbOk) {
           console.log(`[live-sync] Kickoff FB post sent: ${kick.home} vs ${kick.away}`);
+        } else {
+          const fbErr = fbResult.status === 'rejected' ? fbResult.reason?.message : fbResult.value?.error;
+          console.error(`[live-sync] Facebook FAILED for ${kick.home} vs ${kick.away}: ${fbErr || 'unknown'}`);
         }
 
         // social_posted already marked TRUE before queuing — no need to mark again

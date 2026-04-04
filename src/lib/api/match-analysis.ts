@@ -146,7 +146,7 @@ Respond in JSON format only, no markdown or code blocks:
     // 5. Call Claude
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     });

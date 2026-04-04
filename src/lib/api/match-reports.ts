@@ -347,7 +347,7 @@ Your 2-3 sentence summary here
 Your full 400-800 word report here`;
 
     const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
     });
