@@ -98,10 +98,10 @@ export async function postCustomFacebook(
   }
 
   try {
-    // Post as link with optional picture (no /photos endpoint needed)
+    // Post as link — Facebook auto-generates preview from OG tags on the page
     const body: Record<string, string> = { message, access_token: pageToken };
     if (link) body.link = link;
-    if (imageUrl) body.picture = imageUrl;
+    // Note: 'picture' param requires domain verification, so we let Facebook crawl OG tags instead
 
     const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
       method: 'POST',
