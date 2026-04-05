@@ -257,32 +257,10 @@ export async function GET(
 
         // 2b. Only fetch events/stats for TOP LEAGUES when score changes
         // Minor leagues just get score updates from getLiveFixtures (no extra API calls)
-        // Only fetch events/stats for the absolute top leagues (saves API calls)
-        // Everything else just gets score updates from getLiveFixtures
-        const TOP_LEAGUE_IDS = new Set([
-          39, // Premier League
-          140, // La Liga
-          135, // Serie A
-          78, // Bundesliga
-          61, // Ligue 1
-          2, // Champions League
-          3, // Europa League
-          40, // Championship
-          45, // FA Cup
-        ]);
-
-        const leagueId = fixture.league.id;
-        const isTopLeague = TOP_LEAGUE_IDS.has(leagueId);
+        // Fetch events/stats for all leagues when score changes (150k API budget)
         const scoreChanged = existingMatch
           ? (existingMatch.homeScore !== fixture.goals.home || existingMatch.awayScore !== fixture.goals.away)
           : true;
-
-        // Skip events/stats entirely for minor leagues — just scores from getLiveFixtures
-        if (!isTopLeague) {
-          updatedCount++;
-          // Still queue kickoff tweets for minor leagues during quiet periods
-          continue; // Skip to next fixture — score already updated above
-        }
 
         const existingEvents = await db
           .select()
