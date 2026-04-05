@@ -36,6 +36,19 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
   const [latestAnalysis, setLatestAnalysis] = useState(data.analyses[0] || null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Track page view
+  useEffect(() => {
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pageType: 'match',
+        pageSlug: match.slug || match.id,
+        competitionSlug: match.competition_slug || null,
+      }),
+    }).catch(() => {}); // Never fail
+  }, [match.id]);
+
   // Auto-refresh for live matches
   const refresh = useCallback(async () => {
     if (!isLiveStatus(match.status)) return;

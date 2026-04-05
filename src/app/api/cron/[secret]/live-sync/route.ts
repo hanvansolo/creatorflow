@@ -255,10 +255,32 @@ export async function GET(
           }
         }
 
-        // 2b. Only fetch events/stats if score changed (saves ~180 API calls per sync)
+        // 2b. Only fetch events/stats for TOP LEAGUES when score changes
+        // Minor leagues just get score updates from getLiveFixtures (no extra API calls)
+        const TOP_LEAGUE_IDS = new Set([
+          39, 140, 135, 78, 61, // PL, La Liga, Serie A, Bundesliga, Ligue 1
+          2, 3, 848, // UCL, UEL, UECL
+          40, 41, 42, // Championship, League One, League Two
+          88, 94, 179, // Eredivisie, Primeira Liga, Scottish Premiership
+          253, 262, // MLS, Liga MX
+          71, 128, // Brasileirao, Liga Profesional Argentina
+          45, 48, 143, 137, 81, 66, // FA Cup, EFL Cup, Copa del Rey, Coppa Italia, DFB-Pokal, Coupe de France
+          1, 4, 5, 6, 9, 29, 30, 31, 32, 33, 34, // World Cup, Euros, Nations League, WC Qualifiers
+          307, 98, 292, // Saudi Pro, J1 League, K League
+        ]);
+
+        const leagueId = fixture.league.id;
+        const isTopLeague = TOP_LEAGUE_IDS.has(leagueId);
         const scoreChanged = existingMatch
           ? (existingMatch.homeScore !== fixture.goals.home || existingMatch.awayScore !== fixture.goals.away)
-          : true; // New match — always fetch
+          : true;
+
+        // Skip events/stats entirely for minor leagues — just scores from getLiveFixtures
+        if (!isTopLeague) {
+          updatedCount++;
+          // Still queue kickoff tweets for minor leagues during quiet periods
+          continue; // Skip to next fixture — score already updated above
+        }
 
         const existingEvents = await db
           .select()
@@ -270,7 +292,7 @@ export async function GET(
           (e) => SIGNIFICANT_EVENTS.has(e.eventType)
         ).length;
 
-        // Only call API for events if score changed or every 15 minutes (minute % 15 === 0)
+        // Only call API for events if score changed or at HT/FT
         let apiEvents: any[] = [];
         const shouldFetchEvents = scoreChanged || (fixture.fixture.status.elapsed && fixture.fixture.status.elapsed % 15 === 0);
         if (shouldFetchEvents) {
