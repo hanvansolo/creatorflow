@@ -257,16 +257,18 @@ export async function GET(
 
         // 2b. Only fetch events/stats for TOP LEAGUES when score changes
         // Minor leagues just get score updates from getLiveFixtures (no extra API calls)
+        // Only fetch events/stats for the absolute top leagues (saves API calls)
+        // Everything else just gets score updates from getLiveFixtures
         const TOP_LEAGUE_IDS = new Set([
-          39, 140, 135, 78, 61, // PL, La Liga, Serie A, Bundesliga, Ligue 1
-          2, 3, 848, // UCL, UEL, UECL
-          40, 41, 42, // Championship, League One, League Two
-          88, 94, 179, // Eredivisie, Primeira Liga, Scottish Premiership
-          253, 262, // MLS, Liga MX
-          71, 128, // Brasileirao, Liga Profesional Argentina
-          45, 48, 143, 137, 81, 66, // FA Cup, EFL Cup, Copa del Rey, Coppa Italia, DFB-Pokal, Coupe de France
-          1, 4, 5, 6, 9, 29, 30, 31, 32, 33, 34, // World Cup, Euros, Nations League, WC Qualifiers
-          307, 98, 292, // Saudi Pro, J1 League, K League
+          39, // Premier League
+          140, // La Liga
+          135, // Serie A
+          78, // Bundesliga
+          61, // Ligue 1
+          2, // Champions League
+          3, // Europa League
+          40, // Championship
+          45, // FA Cup
         ]);
 
         const leagueId = fixture.league.id;
