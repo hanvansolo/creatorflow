@@ -10,6 +10,8 @@ import {
   Brain,
   Radio,
   Clock,
+  Target,
+  BarChart3,
 } from 'lucide-react';
 import Image from 'next/image';
 import type {
@@ -349,6 +351,160 @@ export default function SummaryTab({
               </>
             );
           })()}
+        </section>
+      )}
+
+      {/* ---- Match Prediction (API-Football + AI) ---- */}
+      {predictions && !isFinished && (
+        <section className="rounded-lg bg-zinc-800 p-4">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
+            <Target className="h-4 w-4" />
+            Match Prediction
+          </h3>
+
+          {/* Win probabilities */}
+          {predictions.predictions?.percent && (
+            <div className="mb-4 space-y-2.5">
+              {(() => {
+                const homePct = parseInt(predictions.predictions.percent.home || '0');
+                const drawPct = parseInt(predictions.predictions.percent.draw || '0');
+                const awayPct = parseInt(predictions.predictions.percent.away || '0');
+                const maxVal = Math.max(homePct, drawPct, awayPct);
+                return [
+                  { label: match.home_name, value: homePct },
+                  { label: 'Draw', value: drawPct },
+                  { label: match.away_name, value: awayPct },
+                ].map((row) => (
+                  <div key={row.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={row.value === maxVal && maxVal > 0 ? 'text-yellow-400 font-bold' : 'text-zinc-300'}>
+                        {row.label}
+                      </span>
+                      <span className={`font-bold ${row.value === maxVal && maxVal > 0 ? 'text-yellow-400' : 'text-zinc-200'}`}>
+                        {row.value}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded bg-zinc-700">
+                      <div
+                        className={`h-full rounded transition-all duration-700 ${
+                          row.value === maxVal && maxVal > 0 ? 'bg-yellow-400' : 'bg-zinc-500'
+                        }`}
+                        style={{ width: `${row.value}%` }}
+                      />
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+
+          {/* Score Forecast + BTTS + Over/Under */}
+          <div className="grid grid-cols-3 gap-3 rounded-lg bg-zinc-900/60 p-3">
+            {/* Predicted Score */}
+            <div className="text-center">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Score Forecast</div>
+              {predictions.predictions?.goals ? (
+                <div className="text-lg font-bold text-white">
+                  {predictions.predictions.goals.home} - {predictions.predictions.goals.away}
+                </div>
+              ) : (
+                <div className="text-sm text-zinc-400">-</div>
+              )}
+            </div>
+
+            {/* BTTS */}
+            <div className="text-center">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">BTTS</div>
+              {(() => {
+                // Derive BTTS from goals data — if both expected goals > 0, BTTS likely
+                const homeGoals = parseFloat(predictions.predictions?.goals?.home || '0');
+                const awayGoals = parseFloat(predictions.predictions?.goals?.away || '0');
+                const btts = homeGoals >= 1 && awayGoals >= 1;
+                return (
+                  <div className={`text-lg font-bold ${btts ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {btts ? 'Yes' : 'No'}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Over/Under */}
+            <div className="text-center">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Over/Under 2.5</div>
+              {(() => {
+                const underOver = predictions.predictions?.under_over;
+                if (!underOver) return <div className="text-sm text-zinc-400">-</div>;
+                const isOver = underOver.startsWith('+') || parseFloat(underOver) > 0;
+                return (
+                  <div className={`text-lg font-bold ${isOver ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {isOver ? 'Over' : 'Under'}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Advice */}
+          {predictions.predictions?.advice && (
+            <p className="mt-3 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm italic text-zinc-300">
+              💡 {predictions.predictions.advice}
+            </p>
+          )}
+
+          {/* Form comparison */}
+          {predictions.teams && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {[
+                { team: match.home_name, data: predictions.teams.home },
+                { team: match.away_name, data: predictions.teams.away },
+              ].map(({ team, data }) => (
+                <div key={team} className="rounded-lg bg-zinc-900/40 p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">{team} Form</p>
+                  <div className="flex gap-1">
+                    {(data?.last_5?.form || '').split('').map((r: string, i: number) => (
+                      <span
+                        key={i}
+                        className={`flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold ${
+                          r === 'W' ? 'bg-emerald-500/20 text-emerald-400' :
+                          r === 'D' ? 'bg-amber-500/20 text-amber-400' :
+                          r === 'L' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                  {data?.last_5?.goals && (
+                    <p className="mt-1.5 text-[10px] text-zinc-500">
+                      Avg: {data.last_5.goals.for.average} scored, {data.last_5.goals.against.average} conceded
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Comparison bars */}
+          {predictions.comparison && (
+            <div className="mt-3 space-y-2">
+              {Object.entries(predictions.comparison)
+                .filter(([key]) => ['form', 'att', 'def', 'h2h', 'goals'].includes(key))
+                .map(([key, val]: [string, any]) => {
+                  const homePct = parseInt(val.home || '50');
+                  const awayPct = parseInt(val.away || '50');
+                  const labels: Record<string, string> = { form: 'Form', att: 'Attack', def: 'Defence', h2h: 'Head-to-Head', goals: 'Goals' };
+                  return (
+                    <StatBar
+                      key={key}
+                      label={labels[key] || key}
+                      homeValue={homePct}
+                      awayValue={awayPct}
+                      isPercentage={true}
+                    />
+                  );
+                })}
+            </div>
+          )}
         </section>
       )}
 

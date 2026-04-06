@@ -11,6 +11,7 @@ import {
   competitions,
   competitionSeasons,
   newsArticles,
+  matchPredictions,
 } from '@/lib/db';
 import {
   getLiveFixtures,
@@ -650,8 +651,51 @@ export async function GET(
       }
     }
 
+    // 7. Update prediction accuracy for finished matches
+    let predictionsScored = 0;
+    for (const fm of finishedMatches) {
+      try {
+        const [pred] = await db
+          .select()
+          .from(matchPredictions)
+          .where(eq(matchPredictions.matchId, fm.matchId))
+          .limit(1);
+
+        if (pred && !pred.accuracy) {
+          const actualOutcome = fm.homeScore > fm.awayScore ? 'home' : fm.awayScore > fm.homeScore ? 'away' : 'draw';
+          const outcomeCorrect = pred.predictedOutcome === actualOutcome;
+          const scoreCorrect = pred.predictedHomeScore === fm.homeScore && pred.predictedAwayScore === fm.awayScore;
+          const bttsActual = fm.homeScore > 0 && fm.awayScore > 0;
+          const bttsCorrect = pred.btts === bttsActual;
+          const totalGoals = fm.homeScore + fm.awayScore;
+          const ouLine = parseFloat(String(pred.overUnder || '2.5'));
+          const overUnderCorrect = pred.overUnderPrediction === (totalGoals > ouLine ? 'over' : 'under');
+
+          await db
+            .update(matchPredictions)
+            .set({
+              accuracy: {
+                outcomeCorrect,
+                scoreCorrect,
+                bttsCorrect,
+                overUnderCorrect,
+                actualHomeScore: fm.homeScore,
+                actualAwayScore: fm.awayScore,
+                actualOutcome,
+              },
+            })
+            .where(eq(matchPredictions.id, pred.id));
+
+          predictionsScored++;
+          console.log(`[live-sync] Prediction scored: ${fm.home} vs ${fm.away} — outcome ${outcomeCorrect ? '✓' : '✗'}, score ${scoreCorrect ? '✓' : '✗'}, BTTS ${bttsCorrect ? '✓' : '✗'}`);
+        }
+      } catch (err) {
+        console.error(`[live-sync] Prediction scoring error for ${fm.matchId}:`, err);
+      }
+    }
+
     console.log(
-      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} tweets, ${fbSent} FB posts, ${reportsGenerated} match reports`
+      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} tweets, ${fbSent} FB posts, ${reportsGenerated} match reports, ${predictionsScored} predictions scored`
     );
 
     return NextResponse.json({
