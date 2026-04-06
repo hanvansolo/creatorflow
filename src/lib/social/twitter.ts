@@ -4,9 +4,13 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com
 let cachedToken: string | null = null;
 let tokenExpiresAt: number = 0;
 
+// Mutex to prevent concurrent refresh token usage (single-use tokens!)
+let refreshInProgress: Promise<string | null> | null = null;
+
 /**
  * Get a valid OAuth 2.0 User Access Token.
  * Auto-refreshes using the refresh token when expired.
+ * Uses a mutex to prevent concurrent refresh — Twitter refresh tokens are single-use.
  */
 async function getRefreshToken(): Promise<string | null> {
   // First try DB (where we store rotated tokens)
@@ -16,7 +20,6 @@ async function getRefreshToken(): Promise<string | null> {
     const [row] = await db.select({ value: siteSettings.value })
       .from(siteSettings).where(eq(siteSettings.key, 'twitter_refresh_token')).limit(1);
     if (row?.value) {
-      console.log('[Twitter] Using refresh token from DB');
       return row.value;
     }
   } catch (e) {
@@ -26,81 +29,87 @@ async function getRefreshToken(): Promise<string | null> {
   return process.env.TWITTER_REFRESH_TOKEN || null;
 }
 
+async function doRefresh(): Promise<string | null> {
+  const refreshToken = await getRefreshToken();
+  const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_PASS;
+
+  if (!refreshToken || !clientId) {
+    console.error(`[Twitter] Cannot refresh: ${!refreshToken ? 'no refresh token' : 'no client ID'}`);
+    return null;
+  }
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+    if (clientSecret) {
+      headers['Authorization'] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+    }
+
+    const res = await fetch('https://api.twitter.com/2/oauth2/token', {
+      method: 'POST',
+      headers,
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: clientId,
+      }).toString(),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      cachedToken = data.access_token;
+      tokenExpiresAt = Date.now() + (data.expires_in * 1000);
+
+      // CRITICAL: Store new refresh token immediately (single-use, old one is now dead)
+      if (data.refresh_token) {
+        try {
+          const { db, siteSettings } = await import('@/lib/db');
+          await db.insert(siteSettings).values({
+            key: 'twitter_refresh_token',
+            value: data.refresh_token,
+            updatedAt: new Date(),
+          }).onConflictDoUpdate({
+            target: siteSettings.key,
+            set: { value: data.refresh_token, updatedAt: new Date() },
+          });
+        } catch (e) {
+          console.error('[Twitter] CRITICAL: Failed to store new refresh token:', e);
+        }
+      }
+
+      console.log(`[Twitter] Token refreshed, expires in ${data.expires_in}s`);
+      return cachedToken;
+    }
+
+    const errText = await res.text();
+    console.error(`[Twitter] Token refresh failed ${res.status}: ${errText}`);
+    return null;
+  } catch (e) {
+    console.error('[Twitter] Token refresh error:', (e as Error).message);
+    return null;
+  }
+}
+
 async function getAccessToken(): Promise<string | null> {
   // Use cached token if still valid (with 5 min buffer)
   if (cachedToken && Date.now() < tokenExpiresAt - 300_000) {
     return cachedToken;
   }
 
-  const refreshToken = await getRefreshToken();
-  const clientId = process.env.TWITTER_CLIENT_ID;
-  const clientSecret = process.env.TWITTER_CLIENT_PASS;
-
-  // If we have a refresh token, use it to get a fresh access token
-  if (refreshToken && clientId) {
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      };
-      if (clientSecret) {
-        headers['Authorization'] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
-      }
-
-      const res = await fetch('https://api.twitter.com/2/oauth2/token', {
-        method: 'POST',
-        headers,
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-          client_id: clientId,
-        }).toString(),
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        cachedToken = data.access_token;
-        tokenExpiresAt = Date.now() + (data.expires_in * 1000);
-
-        // Update refresh token if a new one was issued
-        if (data.refresh_token && data.refresh_token !== refreshToken) {
-          // Store new refresh token in DB for persistence across deploys
-          try {
-            const { db, siteSettings } = await import('@/lib/db');
-            await db.insert(siteSettings).values({
-              key: 'twitter_refresh_token',
-              value: data.refresh_token,
-              updatedAt: new Date(),
-            }).onConflictDoUpdate({
-              target: siteSettings.key,
-              set: { value: data.refresh_token, updatedAt: new Date() },
-            });
-            console.log('[Twitter] Stored new refresh token in DB');
-          } catch (e) {
-            console.error('[Twitter] Failed to store refresh token:', e);
-          }
-        }
-
-        console.log(`[Twitter] Token refreshed, expires in ${data.expires_in}s`);
-        return cachedToken;
-      }
-
-      const errText = await res.text();
-      console.error(`[Twitter] Token refresh failed ${res.status}: ${errText}`);
-    } catch (e) {
-      console.error('[Twitter] Token refresh error:', (e as Error).message);
-    }
+  // Mutex: if a refresh is already in progress, wait for it instead of starting another
+  if (refreshInProgress) {
+    return refreshInProgress;
   }
 
-  // Fall back to the static token from env
-  const staticToken = process.env.TWITTER_OAUTH2_TOKEN;
-  if (staticToken) {
-    cachedToken = staticToken;
-    tokenExpiresAt = Date.now() + 7200_000; // Assume 2h
-    return staticToken;
+  try {
+    refreshInProgress = doRefresh();
+    return await refreshInProgress;
+  } finally {
+    refreshInProgress = null;
   }
-
-  return null;
 }
 
 // Known football hashtags for players, clubs, and competitions

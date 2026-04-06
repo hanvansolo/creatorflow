@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com'}/api/auth/twitter/callback`;
-  const scope = 'tweet.read tweet.write users.read offline.access';
+  const scope = 'tweet.read tweet.write users.read offline.access media.write';
   const state = Math.random().toString(36).substring(2);
 
   const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
