@@ -8,6 +8,8 @@ import {
   TrendingDown,
   Minus,
   Brain,
+  Radio,
+  Clock,
 } from 'lucide-react';
 import Image from 'next/image';
 import type {
@@ -102,11 +104,99 @@ export default function SummaryTab({
     [injuries, match.away_api_id],
   );
 
+  const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
   const isFinished =
     match.status === 'FT' ||
     match.status === 'AET' ||
     match.status === 'PEN' ||
     match.status === 'finished';
+  const isScheduled = match.status === 'scheduled' || match.status === 'not_started';
+
+  /* Key events for live commentary */
+  const goals = useMemo(
+    () => events.filter((e) => ['goal', 'own_goal', 'penalty_scored'].includes(e.event_type)),
+    [events],
+  );
+  const cards = useMemo(
+    () => events.filter((e) => ['yellow_card', 'red_card'].includes(e.event_type)),
+    [events],
+  );
+  const subs = useMemo(
+    () => events.filter((e) => e.event_type === 'substitution'),
+    [events],
+  );
+
+  /* Build live commentary lines */
+  const commentary = useMemo(() => {
+    if (!isLive && !isFinished) return [];
+    const lines: string[] = [];
+    const minute = match.minute || 0;
+    const homeScore = match.home_score ?? 0;
+    const awayScore = match.away_score ?? 0;
+    const total = homeScore + awayScore;
+
+    if (match.status === 'halftime') {
+      lines.push(`Half-time at ${homeScore}-${awayScore}. The teams head to the break.`);
+      if (total === 0) lines.push('A tight first half with neither side managing to break the deadlock.');
+      else if (total >= 3) lines.push('An entertaining first half with plenty of action.');
+    } else if (isLive) {
+      if (total === 0 && minute <= 15) {
+        lines.push(`The match is underway. Early stages as both sides look to settle into the game.`);
+      } else if (total === 0 && minute <= 30) {
+        lines.push(`${minute} minutes played and it remains goalless. Both teams probing for an opening.`);
+      } else if (total === 0 && minute <= 45) {
+        lines.push(`Still 0-0 as we approach half-time. Defences on top so far.`);
+      } else if (total === 0 && minute > 45 && minute <= 60) {
+        lines.push(`Second half underway. Both sides still searching for a breakthrough.`);
+      } else if (total === 0 && minute > 60 && minute <= 75) {
+        lines.push(`${minute} minutes gone and still no goals. The tension is building.`);
+      } else if (total === 0 && minute > 75) {
+        lines.push(`Into the final 15 minutes and still deadlocked at 0-0. Can either side find a winner?`);
+      } else if (total > 0) {
+        const leader = homeScore > awayScore ? match.home_name : awayScore > homeScore ? match.away_name : null;
+        if (leader) {
+          lines.push(`${leader} lead${homeScore !== awayScore ? ` ${Math.max(homeScore, awayScore)}-${Math.min(homeScore, awayScore)}` : ''} with ${90 - minute} minutes remaining.`);
+        } else {
+          lines.push(`Level at ${homeScore}-${awayScore} with ${90 - minute} minutes to play.`);
+        }
+      }
+    }
+
+    // Add event summaries
+    if (goals.length > 0) {
+      for (const g of goals) {
+        const scorer = g.player_known_as || g.club_name || 'Unknown';
+        const min = g.added_time ? `${g.minute}'+${g.added_time}` : `${g.minute}'`;
+        const suffix = g.event_type === 'own_goal' ? ' (OG)' : g.event_type === 'penalty_scored' ? ' (Pen)' : '';
+        lines.push(`⚽ ${min} — ${scorer}${suffix} scores${g.club_name ? ` for ${g.club_name}` : ''}`);
+      }
+    }
+    if (cards.length > 0) {
+      for (const c of cards) {
+        const player = c.player_known_as || 'Unknown';
+        const min = c.added_time ? `${c.minute}'+${c.added_time}` : `${c.minute}'`;
+        const icon = c.event_type === 'red_card' ? '🟥' : '🟨';
+        lines.push(`${icon} ${min} — ${player}${c.club_name ? ` (${c.club_name})` : ''}`);
+      }
+    }
+
+    // Shots/stats commentary when available
+    if (homeStats && awayStats) {
+      const totalShots = (homeStats.shots_total ?? 0) + (awayStats.shots_total ?? 0);
+      const totalOnTarget = (homeStats.shots_on_target ?? 0) + (awayStats.shots_on_target ?? 0);
+      if (totalShots > 0) {
+        lines.push(`📊 Shots: ${match.home_name} ${homeStats.shots_total ?? 0} (${homeStats.shots_on_target ?? 0} on target) — ${match.away_name} ${awayStats.shots_total ?? 0} (${awayStats.shots_on_target ?? 0} on target)`);
+      }
+      if (homeStats.possession && awayStats.possession) {
+        lines.push(`📊 Possession: ${match.home_name} ${homeStats.possession}% — ${match.away_name} ${awayStats.possession}%`);
+      }
+      if ((homeStats.corners ?? 0) + (awayStats.corners ?? 0) > 0) {
+        lines.push(`📊 Corners: ${match.home_name} ${homeStats.corners ?? 0} — ${match.away_name} ${awayStats.corners ?? 0}`);
+      }
+    }
+
+    return lines;
+  }, [match, events, goals, cards, homeStats, awayStats, isLive, isFinished]);
 
   /* Quick stats — top 4 */
   const quickStats = useMemo(() => {
@@ -121,6 +211,39 @@ export default function SummaryTab({
 
   return (
     <div className="space-y-4">
+      {/* ---- Live Match Commentary ---- */}
+      {isLive && commentary.length > 0 && (
+        <section className="rounded-lg bg-zinc-800 p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
+            <Radio className="h-4 w-4 animate-pulse text-red-400" />
+            Match Update — {match.minute}'
+          </h3>
+          <div className="space-y-2">
+            {commentary.map((line, i) => (
+              <p key={i} className={`text-sm leading-relaxed ${i === 0 ? 'text-zinc-200 font-medium' : 'text-zinc-400'}`}>
+                {line}
+              </p>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ---- Scheduled Match Countdown ---- */}
+      {isScheduled && (
+        <section className="rounded-lg bg-zinc-800 p-4 text-center">
+          <Clock className="mx-auto mb-2 h-6 w-6 text-yellow-400" />
+          <p className="text-sm text-zinc-300">
+            Kick-off at{' '}
+            <span className="font-bold text-yellow-400">
+              {new Date(match.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Live updates will appear here once the match begins.
+          </p>
+        </section>
+      )}
+
       {/* ---- Quick Stats ---- */}
       {quickStats.length > 0 && (
         <section className="rounded-lg bg-zinc-800 p-4">

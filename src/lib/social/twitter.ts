@@ -501,6 +501,46 @@ export async function postCustomTweet(
     let data;
     try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
 
+    // If token expired, clear cache and retry once with fresh token
+    if (res.status === 401 || res.status === 403) {
+      cachedToken = null;
+      tokenExpiresAt = 0;
+      console.log(`[Twitter] Token expired (${res.status}), refreshing...`);
+
+      const freshToken = await getAccessToken();
+      if (freshToken && freshToken !== token) {
+        // Retry media upload with fresh token if needed
+        if (imageUrl && !mediaId) {
+          mediaId = await uploadMediaToTwitter(imageUrl, freshToken);
+        }
+        const retryBody: Record<string, any> = { text: text.slice(0, 280) };
+        if (mediaId) retryBody.media = { media_ids: [mediaId] };
+
+        const retryRes = await fetch('https://api.twitter.com/2/tweets', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${freshToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(retryBody),
+          signal: AbortSignal.timeout(15000),
+        });
+
+        const retryText = await retryRes.text();
+        let retryData;
+        try { retryData = JSON.parse(retryText); } catch { retryData = { raw: retryText }; }
+
+        if (retryRes.ok && retryData.data?.id) {
+          console.log(`[Twitter] Custom tweet posted: ${retryData.data.id} (after token refresh)${mediaId ? ' (with image)' : ''}`);
+          return { success: true, id: retryData.data.id };
+        }
+        return {
+          success: false,
+          error: `${retryRes.status} (after refresh): ${retryData.detail || retryData.title || retryData.errors?.[0]?.message || retryText.slice(0, 200)}`,
+        };
+      }
+    }
+
     if (res.ok && data.data?.id) {
       console.log(`[Twitter] Custom tweet posted: ${data.data.id}${mediaId ? ' (with image)' : ''}`);
       return { success: true, id: data.data.id };
