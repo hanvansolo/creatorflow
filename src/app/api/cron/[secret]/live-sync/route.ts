@@ -447,11 +447,26 @@ export async function GET(
     //   }
     // }
 
-    // Send kickoff posts — curated for maximum traffic
-    // ALL British football + top global leagues + major tournaments
+    // Send kickoff posts
+    // Twitter: ONLY top-traffic leagues (1,500 tweets/month free tier)
+    // Facebook: ALL leagues (no rate limit concerns)
 
-    // Always post these leagues (exact match)
-    const ALWAYS_POST = new Set([
+    // Twitter-worthy leagues — high traffic, worth spending a tweet credit on
+    const TWITTER_LEAGUES = new Set([
+      'Premier League', 'Championship', 'FA Cup', 'EFL Cup',
+      'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+      'Champions League', 'Europa League', 'Conference League',
+      'MLS', 'Liga MX', 'Brasileirão',
+      'Copa Libertadores',
+      'World Cup', 'European Championship', 'Copa America', 'Nations League',
+      'Scottish Premiership',
+      'Saudi Pro League',
+      'Club World Cup', 'UEFA Super Cup',
+    ]);
+    const TWITTER_PARTIAL = ['FA Cup', 'EFL'];
+
+    // Facebook-worthy leagues — much broader (no credit limit)
+    const FB_LEAGUES = new Set([
       // === ALL GB FOOTBALL ===
       'Premier League', 'Championship', 'League One', 'League Two',
       'National League', 'National League North', 'National League South',
@@ -460,7 +475,6 @@ export async function GET(
       'FAW Championship', 'FAW Cup',
       'League of Ireland Premier', 'NIFL Premiership',
       "Women's Super League", "Women's Championship",
-      'Premier League 2 Division One',
       // === TOP EUROPEAN LEAGUES ===
       'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
       'Eredivisie', 'Primeira Liga', 'Super Lig',
@@ -481,53 +495,27 @@ export async function GET(
       'Saudi Pro League', 'J1 League', 'K League 1', 'A-League',
       'Club World Cup', 'UEFA Super Cup',
     ]);
-
-    // Post friendlies only for these nations
-    const TOP_NATIONS = new Set([
-      'England', 'Scotland', 'Wales', 'Northern Ireland', 'Republic of Ireland',
-      'France', 'Germany', 'Spain', 'Italy', 'Brazil', 'Argentina',
-      'Portugal', 'Netherlands', 'Belgium', 'Uruguay', 'Colombia', 'Mexico',
-      'USA', 'Japan', 'South Korea', 'Morocco', 'Senegal', 'Nigeria',
-      'Australia', 'Croatia', 'Denmark', 'Switzerland', 'Poland', 'Turkey',
-    ]);
-
-    // Partial match — post if league name contains any of these
-    // Partial match for ENGLISH football only (these terms are unique to English football)
-    const PARTIAL_MATCH = [
+    const FB_PARTIAL = [
       'EFL', 'FA Cup', 'FA Trophy', 'FA Vase',
       'National League', 'Non League',
       'Isthmian', 'Northern Premier', 'Southern League',
-      'Professional Development League',
     ];
 
-    // Post kickoffs — each post does its own DB check immediately before posting
-    // Check if any major league matches are in the kickoff queue
-    const hasMajorMatch = kickoffTweets.some(k => {
-      const c = k.competition;
-      return ALWAYS_POST.has(c) || PARTIAL_MATCH.some(p => c.includes(p));
-    });
-
     let tweetsSent = 0;
+    let fbSent = 0;
     for (const kick of kickoffTweets) {
       const comp = kick.competition;
-      const isTweetworthy = ALWAYS_POST.has(comp) || PARTIAL_MATCH.some(p => comp.includes(p));
-      const isFriendly = comp.includes('Friendl');
-      const involvesTopNation = isFriendly && (TOP_NATIONS.has(kick.home) || TOP_NATIONS.has(kick.away));
 
-      // If major matches are on, skip minor ones. If quiet, post everything.
-      if (!isTweetworthy && !involvesTopNation && hasMajorMatch) {
-        continue; // Major matches available — skip minor
-      }
-      // Always skip U19/U20/U21/Reserve/Women's during quiet periods too — focus on men's first teams
+      // Always skip youth/reserve
       const isYouthOrReserve = comp.includes('U19') || comp.includes('U20') || comp.includes('U21') || comp.includes('Reserve') || comp.includes('Primavera');
-      if (isYouthOrReserve) {
-        continue;
-      }
+      if (isYouthOrReserve) continue;
+
+      const isTwitterWorthy = TWITTER_LEAGUES.has(comp) || TWITTER_PARTIAL.some(p => comp.includes(p));
+      const isFbWorthy = FB_LEAGUES.has(comp) || FB_PARTIAL.some(p => comp.includes(p)) || !kickoffTweets.some(k => FB_LEAGUES.has(k.competition)); // Post minor leagues during quiet periods
+
+      if (!isTwitterWorthy && !isFbWorthy) continue;
 
       try {
-        // social_posted already set to TRUE during match processing (line ~196)
-        // No second lock needed here
-
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
         const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
         const compTag = kick.competition.replace(/[^a-zA-Z0-9]/g, '');
@@ -544,38 +532,45 @@ export async function GET(
         });
         const ogImageUrl = `https://www.footy-feed.com/api/og/match?${ogParams.toString()}`;
 
-        const tweet = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
+        const tweetText = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
+        const fbText = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
 
-        // Post to X and Facebook in parallel (both get the OG match image)
-        const [tweetResult, fbResult] = await Promise.allSettled([
-          postCustomTweet(tweet, ogImageUrl),
-          postCustomFacebook(
-            `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`,
-            matchUrl,
-            ogImageUrl
-          ),
-        ]);
+        // Post to X (only top leagues) and Facebook (broader) in parallel
+        const promises: Promise<any>[] = [];
+
+        if (isTwitterWorthy) {
+          promises.push(postCustomTweet(tweetText, ogImageUrl));
+        } else {
+          promises.push(Promise.resolve({ success: false, skipped: true }));
+        }
+
+        if (isFbWorthy) {
+          promises.push(postCustomFacebook(fbText, matchUrl, ogImageUrl));
+        } else {
+          promises.push(Promise.resolve({ success: false, skipped: true }));
+        }
+
+        const [tweetResult, fbResult] = await Promise.allSettled(promises);
 
         const tweetOk = tweetResult.status === 'fulfilled' && tweetResult.value?.success;
         const fbOk = fbResult.status === 'fulfilled' && fbResult.value?.success;
 
         if (tweetOk) {
           tweetsSent++;
-          console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away}`);
-        } else {
+          console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away} (${comp})`);
+        } else if (isTwitterWorthy) {
           const tweetErr = tweetResult.status === 'rejected' ? tweetResult.reason?.message : tweetResult.value?.error;
           if (tweetErr) console.error(`[live-sync] Twitter failed: ${tweetErr}`);
         }
         if (fbOk) {
+          fbSent++;
           console.log(`[live-sync] Kickoff FB post sent: ${kick.home} vs ${kick.away}`);
-        } else {
+        } else if (isFbWorthy) {
           const fbErr = fbResult.status === 'rejected' ? fbResult.reason?.message : fbResult.value?.error;
           console.error(`[live-sync] Facebook FAILED for ${kick.home} vs ${kick.away}: ${fbErr || 'unknown'}`);
         }
-
-        // social_posted already marked TRUE before queuing — no need to mark again
       } catch (err) {
-        console.error(`[live-sync] Kickoff tweet error:`, err);
+        console.error(`[live-sync] Kickoff post error:`, err);
       }
     }
 
@@ -656,7 +651,7 @@ export async function GET(
     }
 
     console.log(
-      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} kickoff tweets, ${reportsGenerated} match reports`
+      `[live-sync] Complete: ${updatedCount} matches updated, ${analysisCount} analyses, ${tweetsSent} tweets, ${fbSent} FB posts, ${reportsGenerated} match reports`
     );
 
     return NextResponse.json({
@@ -665,6 +660,7 @@ export async function GET(
       updated: updatedCount,
       analysisGenerated: analysisCount,
       kickoffTweets: tweetsSent,
+      kickoffFbPosts: fbSent,
       matchReports: reportsGenerated,
     });
   } catch (error) {
