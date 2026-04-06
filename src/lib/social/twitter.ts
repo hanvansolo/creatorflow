@@ -1,5 +1,8 @@
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
 
+// KILL SWITCH: Set to true to disable all Twitter posting
+const TWITTER_PAUSED = true;
+
 // In-memory token cache (refreshed when expired)
 let cachedToken: string | null = null;
 let tokenExpiresAt: number = 0;
@@ -332,6 +335,7 @@ export async function postToTwitter(
   imageUrl?: string,
   summary?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (TWITTER_PAUSED) return { success: false, error: 'Twitter posting paused' };
   const token = await getAccessToken();
 
   if (!token) {
@@ -479,6 +483,7 @@ export async function postCustomTweet(
   text: string,
   imageUrl?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (TWITTER_PAUSED) return { success: false, error: 'Twitter posting paused' };
   const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Twitter credentials not configured' };
