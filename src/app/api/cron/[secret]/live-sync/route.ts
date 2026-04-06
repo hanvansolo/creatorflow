@@ -10,6 +10,7 @@ import {
   players,
   competitions,
   competitionSeasons,
+  newsArticles,
 } from '@/lib/db';
 import {
   getLiveFixtures,
@@ -170,13 +171,13 @@ export async function GET(
               referee: fixture.fixture.referee,
               slug,
               round: fixture.league.round,
-              socialPosted: false, // Will be set to true by the atomic posting loop
+              socialPosted: true, // Mark as posted immediately since we queue below
             }).returning({ id: matches.id });
 
             matchId = inserted.id;
             console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
 
-            // New match — queue for posting (socialPosted already true from INSERT)
+            // New match — queue for posting (socialPosted=true on INSERT prevents duplicate on next cron run)
             kickoffTweets.push({
               home: homeClub.name,
               away: awayClub.name,
@@ -545,9 +546,9 @@ export async function GET(
 
         const tweet = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
 
-        // Post to X and Facebook in parallel (Facebook gets the OG image)
+        // Post to X and Facebook in parallel (both get the OG match image)
         const [tweetResult, fbResult] = await Promise.allSettled([
-          postCustomTweet(tweet),
+          postCustomTweet(tweet, ogImageUrl),
           postCustomFacebook(
             `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`,
             matchUrl,

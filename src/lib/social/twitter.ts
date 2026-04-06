@@ -413,11 +413,62 @@ export async function postToTwitter(
 }
 
 /**
+ * Upload an image to Twitter and return the media_id.
+ * Fetches the image from a URL, converts to base64, uploads via v1.1 media/upload.
+ */
+async function uploadMediaToTwitter(
+  imageUrl: string,
+  token: string
+): Promise<string | null> {
+  try {
+    // Fetch the image
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
+    if (!imgRes.ok) {
+      console.error(`[Twitter] Failed to fetch image: ${imgRes.status}`);
+      return null;
+    }
+
+    const buffer = await imgRes.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+
+    // Upload to Twitter media endpoint
+    const formData = new URLSearchParams();
+    formData.append('media_data', base64);
+
+    const uploadRes = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const uploadText = await uploadRes.text();
+    let uploadData;
+    try { uploadData = JSON.parse(uploadText); } catch { uploadData = {}; }
+
+    if (uploadRes.ok && uploadData.media_id_string) {
+      console.log(`[Twitter] Media uploaded: ${uploadData.media_id_string}`);
+      return uploadData.media_id_string;
+    }
+
+    console.error(`[Twitter] Media upload failed ${uploadRes.status}: ${uploadText.slice(0, 200)}`);
+    return null;
+  } catch (e) {
+    console.error(`[Twitter] Media upload error:`, (e as Error).message);
+    return null;
+  }
+}
+
+/**
  * Post a custom tweet with exact text (no auto-formatting).
  * Used for kickoff alerts, goal alerts, etc.
+ * Optionally attaches an image if imageUrl is provided.
  */
 export async function postCustomTweet(
-  text: string
+  text: string,
+  imageUrl?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const token = await getAccessToken();
   if (!token) {
@@ -425,13 +476,24 @@ export async function postCustomTweet(
   }
 
   try {
+    // Upload image if provided
+    let mediaId: string | null = null;
+    if (imageUrl) {
+      mediaId = await uploadMediaToTwitter(imageUrl, token);
+    }
+
+    const tweetBody: Record<string, any> = { text: text.slice(0, 280) };
+    if (mediaId) {
+      tweetBody.media = { media_ids: [mediaId] };
+    }
+
     const res = await fetch('https://api.twitter.com/2/tweets', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text: text.slice(0, 280) }),
+      body: JSON.stringify(tweetBody),
       signal: AbortSignal.timeout(15000),
     });
 
@@ -440,7 +502,7 @@ export async function postCustomTweet(
     try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
 
     if (res.ok && data.data?.id) {
-      console.log(`[Twitter] Custom tweet posted: ${data.data.id}`);
+      console.log(`[Twitter] Custom tweet posted: ${data.data.id}${mediaId ? ' (with image)' : ''}`);
       return { success: true, id: data.data.id };
     }
 

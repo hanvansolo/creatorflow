@@ -98,10 +98,34 @@ export async function postCustomFacebook(
   }
 
   try {
-    // Post as link — Facebook auto-generates preview from OG tags on the page
+    // If we have an image URL, post as a photo (shows the image directly in the post)
+    if (imageUrl) {
+      const photoBody: Record<string, string> = {
+        message: link ? `${message}\n\n${link}` : message,
+        url: imageUrl,
+        access_token: pageToken,
+      };
+
+      const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(photoBody),
+        signal: AbortSignal.timeout(20000),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.id) {
+        console.log(`[Facebook] Photo post ${data.id}`);
+        return { success: true, id: data.id };
+      }
+
+      // If photo upload fails, fall through to link post
+      console.error(`[Facebook] Photo upload failed: ${data.error?.message || 'unknown'}, falling back to link post`);
+    }
+
+    // Post as link — Facebook auto-generates preview from OG tags
     const body: Record<string, string> = { message, access_token: pageToken };
     if (link) body.link = link;
-    // Note: 'picture' param requires domain verification, so we let Facebook crawl OG tags instead
 
     const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
       method: 'POST',
