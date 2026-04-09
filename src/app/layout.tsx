@@ -15,7 +15,6 @@ import {
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
 import { CookieConsent } from '@/components/layout/CookieConsent';
-import Script from 'next/script';
 import './globals.css';
 
 const geistSans = Geist({
@@ -55,12 +54,14 @@ export default function RootLayout({
       <head>
         <JsonLdScript data={websiteStructuredData} />
         <meta name="impact-site-verification" content="cfef735d-47e2-4c0b-8630-84ff2dc0ea39" />
-        <Script
+        <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
+        {/* AdSense script — raw <script> tag (not Next.js <Script>) so it renders
+            into the SSR HTML head where the AdSense crawler can see it */}
+        <script
+          async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8717247095472771"
           crossOrigin="anonymous"
-          strategy="beforeInteractive"
         />
-        <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 antialiased`}

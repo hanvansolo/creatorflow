@@ -5,4 +5,4 @@ Disallow: /admin
 Disallow: /api/
 Disallow: /_next/
 
-Sitemap: https://footy-feed.com/sitemap.xml
+Sitemap: https://www.footy-feed.com/sitemap.xml
