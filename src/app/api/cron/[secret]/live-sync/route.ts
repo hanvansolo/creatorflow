@@ -533,8 +533,36 @@ export async function GET(
         });
         const ogImageUrl = `https://www.footy-feed.com/api/og/match?${ogParams.toString()}`;
 
-        const tweetText = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n${matchUrl}\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
-        const fbText = `⚽ KICK OFF! ${kick.home} vs ${kick.away} is underway!\n\nLive scores, stats & match feed 👇\n\n#${homeTag} #${awayTag} #${compTag} #Football`;
+        // Vary tweet/FB text — avoids spam detection from identical posts
+        const TWEET_TEMPLATES = [
+          (h: string, a: string, c: string, url: string, tags: string) => `⚽ KICK OFF! ${h} vs ${a} is underway!\n\nLive scores, stats & match feed 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🔴 LIVE: ${h} take on ${a} in the ${c}!\n\nFollow every kick 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🚨 We're underway at ${h} vs ${a}!\n\nLive coverage, stats & commentary 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `⚡ It's GO TIME! ${h} 🆚 ${a}\n\nAll the action live 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🎯 ${h} vs ${a} has kicked off in the ${c}!\n\nLive feed 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `📡 ${h} v ${a} is LIVE!\n\nReal-time scores & match centre 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🏟️ ${h} host ${a} — and we're off!\n\nMatch centre 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `⏱️ Underway! ${h} 0-0 ${a}\n\nLive blog 👇\n${url}\n\n${tags}`,
+        ];
+        const FB_TEMPLATES = [
+          (h: string, a: string, c: string, tags: string) => `⚽ KICK OFF! ${h} vs ${a} is underway!\n\nLive scores, stats & match feed 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🔴 LIVE: ${h} take on ${a} in the ${c}!\n\nFollow every kick at footy-feed.com 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🚨 We're underway at ${h} vs ${a}!\n\nFull live coverage, stats & commentary 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `⚡ It's GO TIME! ${h} 🆚 ${a}\n\nAll the action — live now 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🎯 ${h} vs ${a} has kicked off in the ${c}!\n\nDon't miss a moment 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `📡 ${h} v ${a} is LIVE!\n\nReal-time scores & match centre below 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🏟️ ${h} host ${a} — and we're off!\n\nFull match centre below 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `⏱️ Underway! ${h} 0-0 ${a}\n\nLive updates as they happen 👇\n\n${tags}`,
+        ];
+
+        // Pick a template based on match ID hash — deterministic so retries don't change text
+        const seed = kick.matchId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        const tweetTemplate = TWEET_TEMPLATES[seed % TWEET_TEMPLATES.length];
+        const fbTemplate = FB_TEMPLATES[seed % FB_TEMPLATES.length];
+
+        const tags = `#${homeTag} #${awayTag} #${compTag} #Football`;
+        const tweetText = tweetTemplate(kick.home, kick.away, kick.competition, matchUrl, tags);
+        const fbText = fbTemplate(kick.home, kick.away, kick.competition, tags);
 
         // Post to X (only top leagues) and Facebook (broader) in parallel
         const promises: Promise<any>[] = [];
