@@ -14,10 +14,12 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') || '';
 
   // Redirect bare domain to www (preserves path and query)
+  // CRITICAL: build URL from explicit string — don't use request.url which
+  // contains Railway's internal port :8080. That broke AdSense verification
+  // because the redirect target was https://www.footy-feed.com:8080/
   if (host === 'footy-feed.com') {
-    const url = new URL(request.url);
-    url.host = 'www.footy-feed.com';
-    return NextResponse.redirect(url, 301);
+    const { pathname, search } = request.nextUrl;
+    return NextResponse.redirect(`https://www.footy-feed.com${pathname}${search}`, 301);
   }
 
   // Only protect /admin routes (not /api/admin which uses its own secret-based auth)
