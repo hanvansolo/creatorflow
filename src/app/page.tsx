@@ -264,7 +264,18 @@ export default async function HomePage() {
   const heroArticle = mainNews[0] ?? null;
   const sideGridArticles = mainNews.slice(1, 5);
   const secondaryRowArticles = mainNews.slice(5, 11);
-  const latestArticles = mainNews.slice(11);
+
+  // "More News" pulls from ALL articles (verified + opinions + rumours),
+  // excluding ones already displayed above and ones featured in opinion/rumour
+  // sidebars. This guarantees the section always has content.
+  const featuredIds = new Set([
+    heroArticle?.id,
+    ...sideGridArticles.map(a => a.id),
+    ...secondaryRowArticles.map(a => a.id),
+    ...opinions.slice(0, 4).map(a => a.id),
+    ...rumours.slice(0, 4).map(a => a.id),
+  ].filter(Boolean));
+  const latestArticles = news.filter(a => !featuredIds.has(a.id));
 
   const faqStructuredData = jsonLd(generateFAQStructuredData(HOMEPAGE_FAQ));
 
