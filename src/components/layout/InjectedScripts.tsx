@@ -84,6 +84,10 @@ export async function HeadScripts() {
           // External script - render as raw <script> tag
           // Pass through async, defer, crossorigin, and all data-* attributes
           const dataAttrs = getDataAttributes(script.attrs);
+          const crossOriginRaw = script.attrs.crossorigin || script.attrs.crossOrigin;
+          const crossOriginValue: 'anonymous' | 'use-credentials' | undefined =
+            crossOriginRaw === 'use-credentials' ? 'use-credentials' :
+            crossOriginRaw !== undefined ? 'anonymous' : undefined;
           return (
             // eslint-disable-next-line @next/next/no-sync-scripts
             <script
@@ -91,7 +95,7 @@ export async function HeadScripts() {
               src={script.src}
               async={script.attrs.async !== undefined ? true : undefined}
               defer={script.attrs.defer !== undefined ? true : undefined}
-              crossOrigin={script.attrs.crossorigin || script.attrs.crossOrigin}
+              crossOrigin={crossOriginValue}
               {...dataAttrs}
             />
           );
