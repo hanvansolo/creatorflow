@@ -55,20 +55,15 @@ export default function RootLayout({
         <JsonLdScript data={websiteStructuredData} />
         <meta name="impact-site-verification" content="cfef735d-47e2-4c0b-8630-84ff2dc0ea39" />
         <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
-        {/* AdSense script — raw <script> tag (not Next.js <Script>) so it renders
-            into the SSR HTML head where the AdSense crawler can see it */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8717247095472771"
-          crossOrigin="anonymous"
-        />
+        {/* HeadScripts injects scripts from admin/scripts (AdSense, GA, etc.)
+            directly into <head> as raw <script> tags so SSR crawlers see them */}
+        <Suspense fallback={null}>
+          <HeadScripts />
+        </Suspense>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 antialiased`}
       >
-        <Suspense fallback={null}>
-          <HeadScripts />
-        </Suspense>
         <Suspense fallback={null}>
           <BodyStartScripts />
         </Suspense>

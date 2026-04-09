@@ -64,7 +64,12 @@ function getDataAttributes(attrs: Record<string, string>): Record<string, string
 
 /**
  * Scripts to inject in <head>
- * Use: Analytics, Meta Pixel, Tag Manager, etc.
+ * Use: Analytics, Meta Pixel, Tag Manager, AdSense, etc.
+ *
+ * IMPORTANT: Uses raw <script> tags (not Next.js <Script>) so they render
+ * directly into the SSR HTML <head> where verification crawlers (AdSense,
+ * Search Console) can see them. Next.js <Script> with afterInteractive
+ * injects via JS after hydration, which crawlers miss.
  */
 export async function HeadScripts() {
   const html = await getScript('script_head');
@@ -76,23 +81,25 @@ export async function HeadScripts() {
     <>
       {scripts.map((script, i) => {
         if (script.src) {
-          // External script - pass through all data-* attributes
+          // External script - render as raw <script> tag
+          // Pass through async, defer, crossorigin, and all data-* attributes
           const dataAttrs = getDataAttributes(script.attrs);
           return (
-            <Script
+            // eslint-disable-next-line @next/next/no-sync-scripts
+            <script
               key={`head-script-${i}`}
               src={script.src}
-              strategy="afterInteractive"
+              async={script.attrs.async !== undefined ? true : undefined}
+              defer={script.attrs.defer !== undefined ? true : undefined}
+              crossOrigin={script.attrs.crossorigin || script.attrs.crossOrigin}
               {...dataAttrs}
             />
           );
         } else if (script.content) {
-          // Inline script
+          // Inline script - render as raw <script> with dangerouslySetInnerHTML
           return (
-            <Script
+            <script
               key={`head-script-${i}`}
-              id={`injected-head-${i}`}
-              strategy="afterInteractive"
               dangerouslySetInnerHTML={{ __html: script.content }}
             />
           );
