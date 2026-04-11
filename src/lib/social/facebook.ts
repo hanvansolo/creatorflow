@@ -167,6 +167,18 @@ async function getInstagramAccountId(): Promise<string | null> {
   return process.env.INSTAGRAM_ACCOUNT_ID || null;
 }
 
+async function getInstagramToken(): Promise<string | null> {
+  // Prefer dedicated IG token, fall back to FB page token
+  if (process.env.INSTAGRAM_ACCESS_TOKEN) return process.env.INSTAGRAM_ACCESS_TOKEN;
+  try {
+    const { db, siteSettings } = await import('@/lib/db');
+    const { eq } = await import('drizzle-orm');
+    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'instagram_access_token')).limit(1);
+    if (row?.value) return row.value;
+  } catch { /* DB read failed */ }
+  return await getPageToken();
+}
+
 export async function postToInstagram(
   title: string,
   slug: string,
@@ -174,7 +186,7 @@ export async function postToInstagram(
   tags?: string[]
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const igUserId = await getInstagramAccountId();
-  const accessToken = await getPageToken() || process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN;
+  const accessToken = await getInstagramToken();
 
   if (!igUserId || !accessToken) {
     return { success: false, error: 'Instagram credentials not configured. Set INSTAGRAM_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN.' };
@@ -259,7 +271,7 @@ export async function postCustomInstagram(
   imageUrl: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const igUserId = await getInstagramAccountId();
-  const accessToken = await getPageToken() || process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN;
+  const accessToken = await getInstagramToken();
 
   if (!igUserId || !accessToken) {
     return { success: false, error: 'Instagram not configured' };
