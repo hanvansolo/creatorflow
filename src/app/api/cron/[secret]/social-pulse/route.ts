@@ -122,22 +122,37 @@ async function getLiveScorePost(): Promise<{ text: string; url: string; image?: 
 
   if (liveMatches.length === 0) return null;
 
-  // Get club names
+  // Get club names + logos for OG image
   const scoreLines: string[] = [];
+  let firstMatch: any = null;
   for (const m of liveMatches.slice(0, 4)) {
     const [fullMatch] = await db.execute(
-      sql`SELECT hc.name as home, ac.name as away FROM matches m
+      sql`SELECT hc.name as home, ac.name as away, hc.logo_url as home_logo, ac.logo_url as away_logo FROM matches m
           JOIN clubs hc ON m.home_club_id = hc.id
           JOIN clubs ac ON m.away_club_id = ac.id
           WHERE m.id = ${m.id}::uuid`
     );
     if (fullMatch) {
+      if (!firstMatch) firstMatch = { ...fullMatch, homeScore: m.homeScore, awayScore: m.awayScore, minute: m.minute, status: m.status };
       const statusTag = m.status === 'halftime' ? 'HT' : `${m.minute}'`;
       scoreLines.push(`${(fullMatch as any).home} ${m.homeScore ?? 0}-${m.awayScore ?? 0} ${(fullMatch as any).away} (${statusTag})`);
     }
   }
 
   if (scoreLines.length === 0) return null;
+
+  // Generate OG image from first live match for Instagram
+  let ogImage: string | undefined;
+  if (firstMatch) {
+    const ogParams = new URLSearchParams({
+      home: firstMatch.home, away: firstMatch.away, comp: '',
+      status: 'live', min: String(firstMatch.minute || ''),
+      score: `${firstMatch.homeScore ?? 0} - ${firstMatch.awayScore ?? 0}`,
+      ...(firstMatch.home_logo ? { homeLogo: firstMatch.home_logo } : {}),
+      ...(firstMatch.away_logo ? { awayLogo: firstMatch.away_logo } : {}),
+    });
+    ogImage = `https://www.footy-feed.com/api/og/match?${ogParams.toString()}`;
+  }
 
   const templates = [
     `📊 LIVE SCORES\n\n${scoreLines.join('\n')}\n\nFull match centres 👇\nhttps://www.footy-feed.com/live\n\n#LiveScores #Football`,
@@ -146,16 +161,17 @@ async function getLiveScorePost(): Promise<{ text: string; url: string; image?: 
   ];
 
   const template = templates[Math.floor(Math.random() * templates.length)];
-  return { text: template, url: 'https://www.footy-feed.com/live' };
+  return { text: template, url: 'https://www.footy-feed.com/live', image: ogImage };
 }
 
-async function getRecentResultPost(): Promise<{ text: string; url: string } | null> {
+async function getRecentResultPost(): Promise<{ text: string; url: string; image?: string } | null> {
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
 
   const recentFinished = await db.execute(sql`
     SELECT m.id, m.home_score, m.away_score, m.slug,
-           hc.name as home, ac.name as away
+           hc.name as home, ac.name as away,
+           hc.logo_url as home_logo, ac.logo_url as away_logo
     FROM matches m
     JOIN clubs hc ON m.home_club_id = hc.id
     JOIN clubs ac ON m.away_club_id = ac.id
@@ -173,6 +189,17 @@ async function getRecentResultPost(): Promise<{ text: string; url: string } | nu
     `${r.home} ${r.home_score}-${r.away_score} ${r.away}`
   );
 
+  // OG image from first result
+  const first = results[0];
+  const ogParams = new URLSearchParams({
+    home: first.home, away: first.away, comp: '',
+    status: 'finished',
+    score: `${first.home_score} - ${first.away_score}`,
+    ...(first.home_logo ? { homeLogo: first.home_logo } : {}),
+    ...(first.away_logo ? { awayLogo: first.away_logo } : {}),
+  });
+  const ogImage = `https://www.footy-feed.com/api/og/match?${ogParams.toString()}`;
+
   const templates = [
     `📋 Recent results\n\n${lines.join('\n')}\n\nFull match reports 👇\nhttps://www.footy-feed.com/fixtures\n\n#Football #Results`,
     `✅ FT — Here's what you missed\n\n${lines.join('\n')}\n\nMatch reports & stats 👇\nhttps://www.footy-feed.com/fixtures\n\n#Football`,
@@ -182,6 +209,7 @@ async function getRecentResultPost(): Promise<{ text: string; url: string } | nu
   return {
     text: templates[Math.floor(Math.random() * templates.length)],
     url: 'https://www.footy-feed.com/fixtures',
+    image: ogImage,
   };
 }
 
@@ -287,7 +315,7 @@ async function getUpcomingMatchPost(): Promise<{ text: string; url: string; imag
   };
 }
 
-async function getEngagementPost(): Promise<{ text: string; url: string } | null> {
+async function getEngagementPost(): Promise<{ text: string; url: string; image?: string } | null> {
   const templates = [
     `⚽ What's the biggest game you're watching today?\n\nCheck all live scores 👇\nhttps://www.footy-feed.com/live\n\n#Football`,
     `📊 Who's your prediction for tonight's games?\n\nSee our AI predictions 👇\nhttps://www.footy-feed.com/predictions\n\n#Football #Predictions`,
@@ -299,6 +327,7 @@ async function getEngagementPost(): Promise<{ text: string; url: string } | null
   return {
     text: templates[Math.floor(Math.random() * templates.length)],
     url: 'https://www.footy-feed.com',
+    image: 'https://www.footy-feed.com/images/og-home.png',
   };
 }
 
