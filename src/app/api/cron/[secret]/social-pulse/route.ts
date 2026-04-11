@@ -39,7 +39,7 @@ export const maxDuration = 30;
 const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 // Rate limits
-const FB_MIN_GAP_MS = 20 * 60 * 1000;  // 20 min between FB posts
+const FB_MIN_GAP_MS = 30 * 60 * 1000;  // 30 min between FB posts (they rate limit at ~20min)
 const TW_MIN_GAP_MS = 30 * 60 * 1000;  // 30 min between tweets
 const FB_MAX_PER_DAY = 999; // No limit — push until they complain
 const TW_MAX_PER_DAY = 15;
