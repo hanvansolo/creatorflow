@@ -31,7 +31,7 @@ import {
   siteSettings,
 } from '@/lib/db';
 import { postCustomTweet } from '@/lib/social/twitter';
-import { postCustomFacebook } from '@/lib/social/facebook';
+import { postCustomFacebook, postCustomInstagram } from '@/lib/social/facebook';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -367,6 +367,17 @@ export async function GET(
           console.log(`[social-pulse] Tweet posted: ${gen.name}`);
         } else {
           console.error(`[social-pulse] Tweet failed: ${twRes.error}`);
+        }
+      }
+
+      // Instagram — post if we have an image (IG requires images)
+      if (content.image) {
+        const igRes = await postCustomInstagram(content.text, content.image);
+        results.instagram = igRes;
+        if (igRes.success) {
+          console.log(`[social-pulse] Instagram posted: ${gen.name}`);
+        } else {
+          console.error(`[social-pulse] Instagram failed: ${igRes.error}`);
         }
       }
 

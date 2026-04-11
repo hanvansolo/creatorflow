@@ -23,7 +23,7 @@ import {
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
 import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/api/match-reports';
 import { postCustomTweet } from '@/lib/social/twitter';
-import { postCustomFacebook } from '@/lib/social/facebook';
+import { postCustomFacebook, postCustomInstagram } from '@/lib/social/facebook';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -598,6 +598,12 @@ export async function GET(
           const fbErr = fbResult.status === 'rejected' ? fbResult.reason?.message : fbResult.value?.error;
           console.error(`[live-sync] Facebook FAILED for ${kick.home} vs ${kick.away}: ${fbErr || 'unknown'}`);
         }
+
+        // Instagram — post with match image (non-blocking, don't hold up the loop)
+        const igCaption = `${fbText}\n\n${matchUrl}`;
+        postCustomInstagram(igCaption, ogImageUrl)
+          .then(r => r.success ? console.log(`[live-sync] Instagram posted: ${kick.home} vs ${kick.away}`) : null)
+          .catch(() => {});
       } catch (err) {
         console.error(`[live-sync] Kickoff post error:`, err);
       }

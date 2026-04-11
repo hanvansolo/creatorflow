@@ -157,14 +157,24 @@ export async function postCustomFacebook(
  *   - INSTAGRAM_ACCOUNT_ID env var set
  *   - FACEBOOK_ACCESS_TOKEN with instagram_basic + instagram_content_publish scopes
  */
+async function getInstagramAccountId(): Promise<string | null> {
+  try {
+    const { db, siteSettings } = await import('@/lib/db');
+    const { eq } = await import('drizzle-orm');
+    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'instagram_account_id')).limit(1);
+    if (row?.value) return row.value;
+  } catch { /* DB read failed */ }
+  return process.env.INSTAGRAM_ACCOUNT_ID || null;
+}
+
 export async function postToInstagram(
   title: string,
   slug: string,
   imageUrl: string,
   tags?: string[]
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const igUserId = process.env.INSTAGRAM_ACCOUNT_ID;
-  const accessToken = process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN;
+  const igUserId = await getInstagramAccountId();
+  const accessToken = await getPageToken() || process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN;
 
   if (!igUserId || !accessToken) {
     return { success: false, error: 'Instagram credentials not configured. Set INSTAGRAM_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN.' };
@@ -234,6 +244,71 @@ export async function postToInstagram(
       success: false,
       error: `Publish failed: ${publishData.error?.message || JSON.stringify(publishData).slice(0, 300)}`,
     };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+/**
+ * Post a custom image + caption to Instagram.
+ * Used for kickoff alerts, score updates, etc.
+ * Requires a publicly accessible image URL (Instagram won't accept local files).
+ */
+export async function postCustomInstagram(
+  caption: string,
+  imageUrl: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const igUserId = await getInstagramAccountId();
+  const accessToken = await getPageToken() || process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN;
+
+  if (!igUserId || !accessToken) {
+    return { success: false, error: 'Instagram not configured' };
+  }
+
+  if (!imageUrl) {
+    return { success: false, error: 'Instagram requires an image URL' };
+  }
+
+  const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://www.footy-feed.com${imageUrl}`;
+
+  try {
+    // Step 1: Create media container
+    const createRes = await fetch(`https://graph.facebook.com/v25.0/${igUserId}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: fullImageUrl,
+        caption: caption.slice(0, 2200),
+        access_token: accessToken,
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const createData = await createRes.json();
+    if (!createRes.ok || !createData.id) {
+      return { success: false, error: `Container failed: ${createData.error?.message || JSON.stringify(createData).slice(0, 200)}` };
+    }
+
+    console.log(`[Instagram] Container created: ${createData.id}`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const publishRes = await fetch(`https://graph.facebook.com/v25.0/${igUserId}/media_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creation_id: createData.id,
+        access_token: accessToken,
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const publishData = await publishRes.json();
+    if (publishRes.ok && publishData.id) {
+      console.log(`[Instagram] Published: ${publishData.id}`);
+      return { success: true, id: publishData.id };
+    }
+
+    return { success: false, error: `Publish failed: ${publishData.error?.message || JSON.stringify(publishData).slice(0, 200)}` };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
