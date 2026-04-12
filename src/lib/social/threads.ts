@@ -30,8 +30,18 @@ export async function postToThreads(title: string, slug: string, imageUrl?: stri
     return { success: false, error: 'Threads credentials not configured' };
   }
 
-  const url = `${SITE_URL}/news/${slug}`;
-  const text = `${title}\n\n${url}\n\n#Football #Soccer`;
+  // If title already contains hashtags (from social-pulse), use as-is
+  // Otherwise build standard format with URL and smart hashtags
+  const hasHashtags = title.includes('#');
+  let text: string;
+  if (hasHashtags) {
+    text = title;
+  } else {
+    const { buildHashtags } = await import('./twitter');
+    const hashtags = buildHashtags(title, []);
+    const url = `${SITE_URL}/news/${slug}`;
+    text = `${title}\n\n${url}\n\n${hashtags}`;
+  }
   const truncated = text.length > 500 ? text.slice(0, 497) + '...' : text;
 
   try {
