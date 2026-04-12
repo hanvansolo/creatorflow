@@ -2,6 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import PitchShotMap from '../PitchShotMap';
 import {
   AlertTriangle,
   TrendingUp,
@@ -244,6 +245,11 @@ export default function SummaryTab({
             Live updates will appear here once the match begins.
           </p>
         </section>
+      )}
+
+      {/* ---- Shot Analysis Pitch ---- */}
+      {(homeStats || awayStats) && (isLive || isFinished) && (
+        <PitchShotMap match={match} homeStats={homeStats} awayStats={awayStats} />
       )}
 
       {/* ---- Quick Stats ---- */}
