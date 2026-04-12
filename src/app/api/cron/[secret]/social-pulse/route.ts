@@ -32,6 +32,7 @@ import {
 } from '@/lib/db';
 import { postCustomTweet } from '@/lib/social/twitter';
 import { postCustomFacebook, postCustomInstagram } from '@/lib/social/facebook';
+import { postToThreads } from '@/lib/social/threads';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -407,6 +408,18 @@ export async function GET(
           console.log(`[social-pulse] Instagram posted: ${gen.name}`);
         } else {
           console.error(`[social-pulse] Instagram failed: ${igRes.error}`);
+        }
+      }
+
+      // Threads — post with image if available, text-only otherwise
+      if (process.env.THREADS_USER_ID || process.env.THREADS_ACCESS_TOKEN) {
+        const slug = content.url.replace('https://www.footy-feed.com/', '').replace(/^\//, '');
+        const thRes = await postToThreads(content.text.slice(0, 400), slug, content.image);
+        results.threads = thRes;
+        if (thRes.success) {
+          console.log(`[social-pulse] Threads posted: ${gen.name}`);
+        } else {
+          console.error(`[social-pulse] Threads failed: ${thRes.error}`);
         }
       }
 
