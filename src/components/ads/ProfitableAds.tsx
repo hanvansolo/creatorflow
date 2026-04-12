@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 /**
  * HilltopAds zones for footy-feed.com (site #889366)
  *
