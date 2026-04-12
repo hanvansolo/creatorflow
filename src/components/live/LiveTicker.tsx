@@ -112,10 +112,10 @@ export async function LiveTicker() {
   const hasLive = tickerMatches.some(m => ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status));
 
   return (
-    <div className="relative bg-zinc-950 border-b border-zinc-800">
+    <div className="relative">
       <div className="flex items-center">
         {/* Live/Today label */}
-        <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 shrink-0 border-r border-zinc-800 bg-zinc-900/50">
+        <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 shrink-0">
           {hasLive ? (
             <>
               <span className="relative flex h-2 w-2">
@@ -141,12 +141,12 @@ export async function LiveTicker() {
                 href={`/matches/${match.id}`}
                 className="shrink-0 mx-1 my-1.5"
               >
-                <div className={`flex flex-col items-center rounded-lg px-3 py-1.5 min-w-[80px] transition-colors hover:bg-zinc-700/50 ${
-                  isLive ? 'bg-zinc-800 ring-1 ring-emerald-500/30' : 'bg-zinc-800/60'
+                <div className={`flex flex-col items-center justify-center rounded-lg px-3 py-1.5 w-[110px] h-[56px] transition-colors hover:bg-zinc-700/50 ${
+                  isLive ? 'bg-zinc-800/40 ring-1 ring-emerald-500/30' : 'bg-zinc-800/30'
                 }`}>
                   {/* Competition tag */}
                   {match.competition_short && (
-                    <span className="text-[7px] font-medium text-zinc-500 uppercase tracking-wider mb-0.5 truncate max-w-[80px]">
+                    <span className="text-[7px] font-medium text-zinc-500 uppercase tracking-wider truncate max-w-[100px]">
                       {match.competition_short}
                     </span>
                   )}
@@ -179,6 +179,9 @@ export async function LiveTicker() {
                   {isFinished && (
                     <span className="text-[8px] font-medium text-zinc-500 mt-0.5">FT</span>
                   )}
+                  {!isLive && !isFinished && (
+                    <span className="text-[8px] font-medium text-zinc-600 mt-0.5">&nbsp;</span>
+                  )}
                 </div>
               </Link>
             );
@@ -188,9 +191,9 @@ export async function LiveTicker() {
         {/* View all */}
         <Link
           href={hasLive ? '/live' : '/fixtures'}
-          className="flex items-center px-3 sm:px-4 py-2.5 shrink-0 border-l border-zinc-800 text-[10px] sm:text-xs font-bold text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800/40 transition-colors whitespace-nowrap"
+          className="flex items-center px-3 sm:px-4 py-2.5 shrink-0 text-[10px] sm:text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors whitespace-nowrap"
         >
-          {hasLive ? 'All →' : 'All →'}
+          All →
         </Link>
       </div>
     </div>
