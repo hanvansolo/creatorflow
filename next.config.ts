@@ -28,6 +28,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        // Ezoic managed ads.txt — auto-updated with all demand partners
+        source: '/ads.txt',
+        destination: 'https://srv.adstxtmanager.com/19390/footy-feed.com',
+        permanent: false, // 302 so Ezoic can update content
+      },
+    ];
+  },
   async headers() {
     return [
       {
