@@ -4,6 +4,13 @@ import { useEffect, useRef } from 'react';
 
 /**
  * HilltopAds zones for footy-feed.com (site #889366)
+ *
+ * The bootstrap (function(mkaf){...}) pattern just creates a <script> with
+ * the src URL and inserts it into the DOM. We skip the wrapper and load
+ * the script directly — same end result.
+ *
+ * The s.settings = mkaf || {} line passes an empty config object.
+ * We replicate this by setting a .settings property on the script element.
  */
 
 function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className?: string }) {
@@ -11,24 +18,24 @@ function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className
   const loaded = useRef(false);
 
   useEffect(() => {
-    if (loaded.current || !containerRef.current) return;
+    if (loaded.current) return;
     loaded.current = true;
 
-    // Create and execute the bootstrap script directly
-    const script = document.createElement('script');
-    script.textContent = `
-(function(mkaf){
-var d = document,
-    s = d.createElement('script'),
-    l = d.scripts[d.scripts.length - 1];
-s.settings = mkaf || {};
-s.src = "${scriptSrc}";
-s.async = true;
-s.referrerPolicy = 'no-referrer-when-downgrade';
-l.parentNode.insertBefore(s, l);
-})({})`;
-    // Append to document.body so d.scripts[d.scripts.length-1] works
-    document.body.appendChild(script);
+    const s = document.createElement('script');
+    // The escaped \/\/ in the original code is just // in actual JS
+    // Convert the escaped src to a real URL
+    const realSrc = scriptSrc.replace(/\\\//g, '/');
+    (s as any).settings = {};
+    s.src = realSrc;
+    s.async = true;
+    s.referrerPolicy = 'no-referrer-when-downgrade';
+
+    // Append to the container div or body
+    if (containerRef.current) {
+      containerRef.current.appendChild(s);
+    } else {
+      document.body.appendChild(s);
+    }
   }, [scriptSrc]);
 
   return <div ref={containerRef} className={className} />;
@@ -40,7 +47,7 @@ l.parentNode.insertBefore(s, l);
 export function SidebarAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-4 ${className}`}>
-      <HilltopAd scriptSrc="\/\/untimely-hello.com\/bbXcV.sudxG_l\/0VYlWlcr\/fe\/mP9RubZ\/U\/lHkoP\/TNYv5CN-TPISxLNsjGkxt\/NLjokB1QMljnEJ3\/M\/wi" />
+      <HilltopAd scriptSrc="//untimely-hello.com/bbXcV.sudxG_l/0VYlWlcr/fe/mP9RubZ/U/lHkoP/TNYv5CN-TPISxLNsjGkxt/NLjokB1QMljnEJ3/M/wi" />
     </div>
   );
 }
@@ -49,19 +56,19 @@ export function SidebarAd({ className = '' }: { className?: string }) {
 export function CompactBannerAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-3 ${className}`}>
-      <HilltopAd scriptSrc="\/\/untimely-hello.com\/b.XGV\/s\/dQGclA0yYZWMcJ\/CeLmb9muuZOUml\/kMPTTHY\/5gNbT_IUx\/NjT_cmtLNsj\/kA1\/MzjQEX2KMcQ-" />
+      <HilltopAd scriptSrc="//untimely-hello.com/b.XGV/s/dQGclA0yYZWMcJ/CeLmb9muuZOUml/kMPTTHY/5gNbT_IUx/NjT_cmtLNsj/kA1/MzjQEX2KMcQ-" />
     </div>
   );
 }
 
 /** MultiTag Video Slider. Zone #6952201 */
 export function VideoSliderAd({ className = '' }: { className?: string }) {
-  return <HilltopAd scriptSrc="\/\/untimely-hello.com\/b.XyVrs-dWG\/lU0aYGWGcY\/SefmW9\/uGZBUgl\/ksP\/TZY\/5\/NNTuIxyUMCDzEgtLNrj\/kc1GMij\/IVwPNbQW" className={className} />;
+  return <HilltopAd scriptSrc="//untimely-hello.com/b.XyVrs-dWG/lU0aYGWGcY/SefmW9/uGZBUgl/ksP/TZY/5/NNTuIxyUMCDzEgtLNrj/kc1GMij/IVwPNbQW" className={className} />;
 }
 
 /** MultiTag In-Page Push. Zone #6952185 */
 export function InPagePushAd({ className = '' }: { className?: string }) {
-  return <HilltopAd scriptSrc="\/\/untimely-hello.com\/b-XGV.sWdHGClo0HYHWWcx\/Xe\/mh9ZuBZRUnlGk\/PBTiYR5JN\/TpIUxaOIDbUStVNFjZkB1_MzjNEZ4nOxQq" className={className} />;
+  return <HilltopAd scriptSrc="//untimely-hello.com/b-XGV.sWdHGClo0HYHWWcx/Xe/mh9ZuBZRUnlGk/PBTiYR5JN/TpIUxaOIDbUStVNFjZkB1_MzjNEZ4nOxQq" className={className} />;
 }
 
 /** Responsive horizontal ad */
