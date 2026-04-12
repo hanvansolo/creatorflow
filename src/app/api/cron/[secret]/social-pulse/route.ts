@@ -40,11 +40,14 @@ export const maxDuration = 30;
 
 const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
-// Rate limits
-const FB_MIN_GAP_MS = 30 * 60 * 1000;  // 30 min between FB posts (they rate limit at ~20min)
-const TW_MIN_GAP_MS = 30 * 60 * 1000;  // 30 min between tweets
-const FB_MAX_PER_DAY = 999; // No limit — push until they complain
-const TW_MAX_PER_DAY = 15;
+// Rate limits per platform
+const PLATFORM_LIMITS: Record<string, { minGapMs: number; maxPerDay: number }> = {
+  fb:      { minGapMs: 30 * 60 * 1000, maxPerDay: 999 },  // 30 min gap, no daily cap
+  tw:      { minGapMs: 30 * 60 * 1000, maxPerDay: 15 },   // 30 min gap, 15/day
+  ig:      { minGapMs: 60 * 60 * 1000, maxPerDay: 25 },   // 1 hour gap, 25/day (IG limit)
+  threads: { minGapMs: 30 * 60 * 1000, maxPerDay: 50 },   // 30 min gap, 50/day
+  bsky:    { minGapMs: 20 * 60 * 1000, maxPerDay: 50 },   // 20 min gap, 50/day
+};
 
 // Dead hours (UTC) — skip posting
 const DEAD_HOUR_START = 1;
@@ -63,19 +66,19 @@ async function setSetting(key: string, value: string): Promise<void> {
     .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: new Date() } });
 }
 
-async function canPost(platform: 'fb' | 'tw'): Promise<boolean> {
+async function canPost(platform: string): Promise<boolean> {
+  const limits = PLATFORM_LIMITS[platform];
+  if (!limits) return true;
+
   const now = new Date();
   const hour = now.getUTCHours();
   if (hour >= DEAD_HOUR_START && hour < DEAD_HOUR_END) return false;
-
-  const minGap = platform === 'fb' ? FB_MIN_GAP_MS : TW_MIN_GAP_MS;
-  const maxPerDay = platform === 'fb' ? FB_MAX_PER_DAY : TW_MAX_PER_DAY;
 
   // Check last post time
   const lastStr = await getSetting(`social_pulse_last_${platform}`);
   if (lastStr) {
     const elapsed = now.getTime() - new Date(lastStr).getTime();
-    if (elapsed < minGap) return false;
+    if (elapsed < limits.minGapMs) return false;
   }
 
   // Check daily count
@@ -84,13 +87,13 @@ async function canPost(platform: 'fb' | 'tw'): Promise<boolean> {
   const today = now.toISOString().split('T')[0];
 
   if (dateStr === today && countStr) {
-    if (parseInt(countStr) >= maxPerDay) return false;
+    if (parseInt(countStr) >= limits.maxPerDay) return false;
   }
 
   return true;
 }
 
-async function markPosted(platform: 'fb' | 'tw'): Promise<void> {
+async function markPosted(platform: string): Promise<void> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
 
@@ -360,9 +363,9 @@ export async function GET(
   const testMode = platformFilter !== 'all';
   const canFb = testMode ? platformFilter === 'fb' : await canPost('fb');
   const canTw = testMode ? platformFilter === 'tw' : await canPost('tw');
-  const canIg = testMode ? platformFilter === 'ig' : true;
-  const canThreads = testMode ? platformFilter === 'threads' : true;
-  const canBsky = testMode ? platformFilter === 'bsky' : true;
+  const canIg = testMode ? platformFilter === 'ig' : await canPost('ig');
+  const canThreads = testMode ? platformFilter === 'threads' : await canPost('threads');
+  const canBsky = testMode ? platformFilter === 'bsky' : await canPost('bsky');
 
   if (!canFb && !canTw && !canIg && !canThreads && !canBsky) {
     return NextResponse.json({ message: 'Rate limited — too soon or daily cap reached' });
@@ -415,6 +418,7 @@ export async function GET(
         const igRes = await postCustomInstagram(content.text, content.image);
         results.instagram = igRes;
         if (igRes.success) {
+          await markPosted('ig');
           console.log(`[social-pulse] Instagram posted: ${gen.name}`);
         } else {
           console.error(`[social-pulse] Instagram failed: ${igRes.error}`);
@@ -426,6 +430,7 @@ export async function GET(
         const thRes = await postToThreads(content.text.slice(0, 400), content.url, content.image);
         results.threads = thRes;
         if (thRes.success) {
+          await markPosted('threads');
           console.log(`[social-pulse] Threads posted: ${gen.name}`);
         } else {
           console.error(`[social-pulse] Threads failed: ${thRes.error}`);
@@ -437,6 +442,7 @@ export async function GET(
         const bsRes = await postToBluesky(content.text.slice(0, 280), content.url, [], content.image);
         results.bluesky = bsRes;
         if (bsRes.success) {
+          await markPosted('bsky');
           console.log(`[social-pulse] Bluesky posted: ${gen.name}`);
         } else {
           console.error(`[social-pulse] Bluesky failed: ${bsRes.error}`);
