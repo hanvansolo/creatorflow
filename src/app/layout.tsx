@@ -81,19 +81,6 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <BodyEndScripts />
         </Suspense>
-        {/* HilltopAds PopUnder — zone #6952125 */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function(mkaf){
-            var d = document,
-                s = d.createElement('script'),
-                l = d.scripts[d.scripts.length - 1];
-            s.settings = mkaf || {};
-            s.src = "\\/\\/plasticdamage.com\\/cxDi9.6_bI2Q5BlJSbWFQj9-N\\/jbk\\/1IM\\/jpEZyBN\\/SB0x2VOhTsUEyUM\\/TwI\\/5y";
-            s.async = true;
-            s.referrerPolicy = 'no-referrer-when-downgrade';
-            l.parentNode.insertBefore(s, l);
-          })({})
-        `}} />
         {/* HilltopAds In-Page Push — zone #6952185 */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(mkaf){
