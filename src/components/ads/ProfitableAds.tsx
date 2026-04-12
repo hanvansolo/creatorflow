@@ -5,12 +5,11 @@ import { useEffect, useRef } from 'react';
 /**
  * HilltopAds zones for footy-feed.com (site #889366)
  *
- * The bootstrap (function(mkaf){...}) pattern just creates a <script> with
- * the src URL and inserts it into the DOM. We skip the wrapper and load
- * the script directly — same end result.
- *
- * The s.settings = mkaf || {} line passes an empty config object.
- * We replicate this by setting a .settings property on the script element.
+ * The ad scripts look for themselves in the DOM via
+ * document.querySelectorAll('script[src*="..."]') and read .settings
+ * from the script element. We must create the script with .settings
+ * set BEFORE appending, and append to a location where the script
+ * can find itself and insert the ad iframe nearby.
  */
 
 function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className?: string }) {
@@ -18,24 +17,17 @@ function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className
   const loaded = useRef(false);
 
   useEffect(() => {
-    if (loaded.current) return;
+    if (loaded.current || !containerRef.current) return;
     loaded.current = true;
 
+    const container = containerRef.current;
     const s = document.createElement('script');
-    // The escaped \/\/ in the original code is just // in actual JS
-    // Convert the escaped src to a real URL
-    const realSrc = scriptSrc.replace(/\\\//g, '/');
     (s as any).settings = {};
-    s.src = realSrc;
+    s.src = scriptSrc;
     s.async = true;
     s.referrerPolicy = 'no-referrer-when-downgrade';
-
-    // Append to the container div or body
-    if (containerRef.current) {
-      containerRef.current.appendChild(s);
-    } else {
-      document.body.appendChild(s);
-    }
+    // Must append to the container so the ad iframe renders inside it
+    container.appendChild(s);
   }, [scriptSrc]);
 
   return <div ref={containerRef} className={className} />;
