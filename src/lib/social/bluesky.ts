@@ -62,9 +62,15 @@ export async function postToBluesky(title: string, slug: string, tags?: string[]
       }
     }
 
-    // Build post text
-    const hashtags = (tags || []).slice(0, 2).map(t => `#${t.replace(/\s+/g, '')}`).join(' ');
-    const postText = `${title}\n\n${hashtags ? `${hashtags} #Football` : '#Football'}`;
+    // Build post text — use existing hashtags from social-pulse, or generate smart ones
+    let postText: string;
+    if (title.includes('#')) {
+      postText = title;
+    } else {
+      const { buildHashtags } = await import('./twitter');
+      const hashtags = buildHashtags(title, tags || []);
+      postText = `${title}\n\n${hashtags}`;
+    }
     const text = postText.length > 300 ? postText.slice(0, 297) + '...' : postText;
 
     // Build external embed (link card with image)
