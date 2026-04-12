@@ -15,6 +15,7 @@ import {
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
 import { CookieConsent } from '@/components/layout/CookieConsent';
+import { FloatingVideoAd } from '@/components/ads/ProfitableAds';
 import './globals.css';
 
 const geistSans = Geist({
@@ -78,6 +79,8 @@ export default function RootLayout({
             </Suspense>
           </div>
         </LocationProvider>
+        {/* Floating VAST video ad — bottom-right corner */}
+        <FloatingVideoAd />
         <Suspense fallback={null}>
           <BodyEndScripts />
         </Suspense>

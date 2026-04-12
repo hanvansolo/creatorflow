@@ -127,3 +127,121 @@ export function LeaderboardAd({ className = '' }: { className?: string }) {
 export function MediumBannerAd({ className = '' }: { className?: string }) {
   return <CompactBannerAd className={className} />;
 }
+
+/**
+ * Floating Video Ad Player — VAST 3.0 via Google IMA SDK
+ * Zone #6952217 — sticky bottom-right video player with close button
+ * Auto-plays muted, expands on interaction
+ */
+export function FloatingVideoAd({ className = '' }: { className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    if (loaded.current || typeof window === 'undefined') return;
+    loaded.current = true;
+
+    const VAST_URL = 'https://plasticdamage.com/dpmOF.zCdwG/NcvrZmGYUt/VemmX9Qu_ZiUnl/kIP_TzYE5aNmTHIRypMOTiCUt/NVjokB1KMljOI/ysM/SNZZsaaFwN1tpbdxDl0exm';
+
+    // Load Google IMA SDK
+    const imaScript = document.createElement('script');
+    imaScript.src = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
+    imaScript.async = true;
+    imaScript.onload = () => initPlayer();
+    document.head.appendChild(imaScript);
+
+    function initPlayer() {
+      if (!containerRef.current || !window.google?.ima) return;
+
+      const wrapper = containerRef.current;
+
+      // Create video element
+      const video = document.createElement('video');
+      video.id = 'vast-video-player';
+      video.style.cssText = 'width:100%;height:100%;background:#000;';
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute('playsinline', '');
+
+      // Create ad container overlay
+      const adContainer = document.createElement('div');
+      adContainer.id = 'vast-ad-container';
+      adContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
+
+      // Create close button
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'position:absolute;top:4px;right:4px;z-index:100;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;';
+      closeBtn.onclick = () => {
+        wrapper.style.display = 'none';
+      };
+
+      wrapper.appendChild(video);
+      wrapper.appendChild(adContainer);
+      wrapper.appendChild(closeBtn);
+
+      // Init IMA
+      try {
+        const adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, video);
+        adDisplayContainer.initialize();
+
+        const adsLoader = new google.ima.AdsLoader(adDisplayContainer);
+
+        adsLoader.addEventListener(
+          google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+          (event: any) => {
+            const adsManager = event.getAdsManager(video, {
+              autoAlign: false,
+            });
+
+            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, () => {
+              wrapper.style.display = 'none';
+            });
+
+            adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => {
+              wrapper.style.display = 'none';
+            });
+
+            try {
+              adsManager.init(300, 169, google.ima.ViewMode.NORMAL);
+              adsManager.start();
+            } catch {
+              wrapper.style.display = 'none';
+            }
+          }
+        );
+
+        adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => {
+          wrapper.style.display = 'none';
+        });
+
+        const adsRequest = new google.ima.AdsRequest();
+        adsRequest.adTagUrl = VAST_URL;
+        adsRequest.linearAdSlotWidth = 300;
+        adsRequest.linearAdSlotHeight = 169;
+
+        adsLoader.requestAds(adsRequest);
+      } catch {
+        wrapper.style.display = 'none';
+      }
+    }
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      style={{
+        position: 'fixed',
+        bottom: '16px',
+        right: '16px',
+        width: '300px',
+        height: '169px',
+        zIndex: 50,
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+      }}
+    />
+  );
+}
