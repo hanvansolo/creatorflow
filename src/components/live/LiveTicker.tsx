@@ -1,7 +1,9 @@
 // @ts-nocheck
 import Link from 'next/link';
+import Image from 'next/image';
 import { db, matches, clubs, competitionSeasons, competitions } from '@/lib/db';
-import { eq, and, gte, lte, asc, inArray, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import { TickerScroller } from './TickerScroller';
 
 interface TickerMatch {
   id: string;
@@ -12,9 +14,11 @@ interface TickerMatch {
   home_name: string;
   home_code: string | null;
   home_color: string | null;
+  home_logo: string | null;
   away_name: string;
   away_code: string | null;
   away_color: string | null;
+  away_logo: string | null;
   kickoff: string;
   competition_short: string | null;
 }
@@ -25,8 +29,8 @@ async function getTickerMatches(): Promise<TickerMatch[]> {
     const liveRows = await db.execute(sql`
       SELECT
         m.id, m.status, m.minute, m.home_score, m.away_score, m.kickoff,
-        hc.name as home_name, hc.code as home_code, hc.primary_color as home_color,
-        ac.name as away_name, ac.code as away_code, ac.primary_color as away_color,
+        hc.name as home_name, hc.code as home_code, hc.primary_color as home_color, hc.logo_url as home_logo,
+        ac.name as away_name, ac.code as away_code, ac.primary_color as away_color, ac.logo_url as away_logo,
         comp.short_name as competition_short
       FROM matches m
       INNER JOIN clubs hc ON m.home_club_id = hc.id
@@ -35,14 +39,10 @@ async function getTickerMatches(): Promise<TickerMatch[]> {
       LEFT JOIN competitions comp ON cs.competition_id = comp.id
       WHERE m.status IN ('live', 'halftime', 'extra_time', 'penalties')
       ORDER BY comp.name, m.kickoff
-      LIMIT 20
+      LIMIT 30
     `);
 
-    if ((liveRows as any[]).length > 0) {
-      return liveRows as any[];
-    }
-
-    // No live matches — show today's fixtures
+    // Also get today's finished + scheduled to fill the bar
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
@@ -50,8 +50,8 @@ async function getTickerMatches(): Promise<TickerMatch[]> {
     const todayRows = await db.execute(sql`
       SELECT
         m.id, m.status, m.minute, m.home_score, m.away_score, m.kickoff,
-        hc.name as home_name, hc.code as home_code, hc.primary_color as home_color,
-        ac.name as away_name, ac.code as away_code, ac.primary_color as away_color,
+        hc.name as home_name, hc.code as home_code, hc.primary_color as home_color, hc.logo_url as home_logo,
+        ac.name as away_name, ac.code as away_code, ac.primary_color as away_color, ac.logo_url as away_logo,
         comp.short_name as competition_short
       FROM matches m
       INNER JOIN clubs hc ON m.home_club_id = hc.id
@@ -59,11 +59,19 @@ async function getTickerMatches(): Promise<TickerMatch[]> {
       LEFT JOIN competition_seasons cs ON m.competition_season_id = cs.id
       LEFT JOIN competitions comp ON cs.competition_id = comp.id
       WHERE m.kickoff >= ${startOfDay} AND m.kickoff <= ${endOfDay}
+      AND m.status NOT IN ('live', 'halftime', 'extra_time', 'penalties')
       ORDER BY m.kickoff
-      LIMIT 20
+      LIMIT 30
     `);
 
-    return todayRows as any[];
+    // Combine: live first, then today's others
+    const liveIds = new Set((liveRows as any[]).map(r => r.id));
+    const combined = [
+      ...(liveRows as any[]),
+      ...(todayRows as any[]).filter(r => !liveIds.has(r.id)),
+    ];
+
+    return combined;
   } catch {
     return [];
   }
@@ -71,6 +79,29 @@ async function getTickerMatches(): Promise<TickerMatch[]> {
 
 function formatTime(kickoff: string): string {
   return new Date(kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function TeamLogo({ logo, name, color }: { logo: string | null; name: string; color: string | null }) {
+  if (logo) {
+    return (
+      <Image
+        src={logo}
+        alt={name}
+        width={20}
+        height={20}
+        className="h-5 w-5 object-contain"
+        unoptimized
+      />
+    );
+  }
+  return (
+    <div
+      className="h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+      style={{ backgroundColor: color || '#52525b' }}
+    >
+      {name?.slice(0, 2).toUpperCase()}
+    </div>
+  );
 }
 
 export async function LiveTicker() {
@@ -82,106 +113,96 @@ export async function LiveTicker() {
 
   return (
     <div className="relative bg-zinc-950 border-b border-zinc-800">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 py-2">
-          {/* Label */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {hasLive ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Live</span>
-              </>
-            ) : (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Today</span>
-            )}
-          </div>
+      <div className="flex items-center">
+        {/* Live/Today label */}
+        <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 shrink-0 border-r border-zinc-800 bg-zinc-900/50">
+          {hasLive ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              </span>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-red-400">Live</span>
+            </>
+          ) : (
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">Scores</span>
+          )}
+        </div>
 
-          {/* Divider */}
-          <div className="h-4 w-px bg-zinc-800 shrink-0" />
+        {/* Draggable scrollable ticker */}
+        <TickerScroller>
+          {tickerMatches.map((match) => {
+            const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
+            const isFinished = match.status === 'finished';
 
-          {/* Scrollable ticker */}
-          <div className="flex-1 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-1">
-              {tickerMatches.map((match) => {
-                const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status);
-                const isFinished = match.status === 'finished';
-                const isScheduled = match.status === 'scheduled';
+            return (
+              <Link
+                key={match.id}
+                href={`/matches/${match.id}`}
+                className={`flex items-center gap-2 px-3 py-2 shrink-0 border-r border-zinc-800/50 transition-colors hover:bg-zinc-800/60 min-w-[120px] ${
+                  isLive ? 'bg-zinc-900/80' : ''
+                }`}
+              >
+                {/* Match card */}
+                <div className="flex flex-col items-center gap-1 w-full">
+                  {/* Competition tag */}
+                  {match.competition_short && (
+                    <span className="text-[8px] font-medium text-zinc-500 uppercase tracking-wider truncate max-w-full">
+                      {match.competition_short}
+                    </span>
+                  )}
 
-                return (
-                  <Link
-                    key={match.id}
-                    href={`/matches/${match.id}`}
-                    className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 shrink-0 transition-colors hover:bg-zinc-800 ${
-                      isLive ? 'bg-zinc-900 border border-emerald-500/20' : 'bg-zinc-900/50'
-                    }`}
-                  >
+                  {/* Teams + Score row */}
+                  <div className="flex items-center gap-1.5 w-full justify-center">
                     {/* Home */}
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: match.home_color || '#52525b' }}
-                      />
-                      <span className="text-[11px] font-semibold text-zinc-300 whitespace-nowrap">
-                        {match.home_code || match.home_name?.slice(0, 3).toUpperCase()}
-                      </span>
-                    </div>
+                    <TeamLogo logo={match.home_logo} name={match.home_name} color={match.home_color} />
 
                     {/* Score / Time */}
-                    {isLive ? (
-                      <div className="flex items-center gap-1 min-w-[40px] justify-center">
-                        <span className="text-[11px] font-bold text-emerald-400">
+                    <div className="flex flex-col items-center min-w-[36px]">
+                      {isLive || isFinished ? (
+                        <span className={`text-sm font-bold tabular-nums ${isLive ? 'text-emerald-400' : 'text-white'}`}>
                           {match.home_score ?? 0} - {match.away_score ?? 0}
                         </span>
-                      </div>
-                    ) : isFinished ? (
-                      <div className="flex items-center gap-1 min-w-[40px] justify-center">
-                        <span className="text-[11px] font-bold text-white">
-                          {match.home_score} - {match.away_score}
+                      ) : (
+                        <span className="text-xs text-zinc-400 font-medium">
+                          {formatTime(match.kickoff)}
                         </span>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-zinc-500 min-w-[40px] text-center">
-                        {formatTime(match.kickoff)}
-                      </span>
-                    )}
-
-                    {/* Away */}
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-semibold text-zinc-300 whitespace-nowrap">
-                        {match.away_code || match.away_name?.slice(0, 3).toUpperCase()}
-                      </span>
-                      <span
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: match.away_color || '#52525b' }}
-                      />
+                      )}
                     </div>
 
-                    {/* Status indicator */}
+                    {/* Away */}
+                    <TeamLogo logo={match.away_logo} name={match.away_name} color={match.away_color} />
+                  </div>
+
+                  {/* Status */}
+                  <div className="h-3 flex items-center">
                     {isLive && (
-                      <span className="text-[9px] font-bold text-emerald-400 ml-0.5">
+                      <span className="text-[9px] font-bold text-emerald-400">
                         {match.status === 'halftime' ? 'HT' : `${match.minute}'`}
                       </span>
                     )}
                     {isFinished && (
-                      <span className="text-[9px] font-medium text-zinc-600 ml-0.5">FT</span>
+                      <span className="text-[9px] font-medium text-zinc-500">FT</span>
                     )}
-                  </Link>
-                );
-              })}
-
-              {/* View all link */}
-              <Link
-                href={hasLive ? '/live' : '/fixtures'}
-                className="flex items-center gap-1 rounded-md px-3 py-1.5 shrink-0 text-[10px] font-medium text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800 transition-colors whitespace-nowrap"
-              >
-                {hasLive ? 'All live →' : 'All fixtures →'}
+                    {!isLive && !isFinished && (
+                      <span className="text-[9px] font-medium text-zinc-600">
+                        {match.status === 'scheduled' ? '' : match.status?.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </Link>
-            </div>
-          </div>
-        </div>
+            );
+          })}
+        </TickerScroller>
+
+        {/* View all */}
+        <Link
+          href={hasLive ? '/live' : '/fixtures'}
+          className="flex items-center px-3 sm:px-4 py-2.5 shrink-0 border-l border-zinc-800 text-[10px] sm:text-xs font-bold text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800/40 transition-colors whitespace-nowrap"
+        >
+          {hasLive ? 'All →' : 'All →'}
+        </Link>
       </div>
     </div>
   );
