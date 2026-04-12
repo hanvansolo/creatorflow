@@ -81,8 +81,32 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <BodyEndScripts />
         </Suspense>
-        {/* Social Bar ad — sticky overlay */}
-        <script src="https://pl29136311.profitablecpmratenetwork.com/6a/9d/a1/6a9da1fd32e2282fdb6d043f88694f44.js" async />
+        {/* HilltopAds PopUnder — zone #6952125 */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(dwg){
+            var d = document,
+                s = d.createElement('script'),
+                l = d.scripts[d.scripts.length - 1];
+            s.settings = dwg || {};
+            s.src = "\\/\\/plasticdamage.com\\/c.Dh9p6\\/ba2Q5Pl\\/S\\/Wl0z9uNij\\/kg1_MOjkEGy-NvS\\/0_2fOVTEUzy\\/MBTmI\\/5r";
+            s.async = true;
+            s.referrerPolicy = 'no-referrer-when-downgrade';
+            l.parentNode.insertBefore(s, l);
+          })({})
+        `}} />
+        {/* HilltopAds In-Page Push — zone #6952185 */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(dwg){
+            var d = document,
+                s = d.createElement('script'),
+                l = d.scripts[d.scripts.length - 1];
+            s.settings = dwg || {};
+            s.src = "\\/\\/untimely-hello.com\\/bkKZV\\/s.doGelc0zYXwucP\\/GejmY9fumZTUh1lwk\\/PDTkYQ5wNXTUIuxmOxDtU\\/t\\/MtjNkR1mHLfOE_4gOpQa";
+            s.async = true;
+            s.referrerPolicy = 'no-referrer-when-downgrade';
+            l.parentNode.insertBefore(s, l);
+          })({})
+        `}} />
       </body>
     </html>
   );
