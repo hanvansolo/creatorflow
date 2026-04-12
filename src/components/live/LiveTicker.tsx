@@ -139,57 +139,46 @@ export async function LiveTicker() {
               <Link
                 key={match.id}
                 href={`/matches/${match.id}`}
-                className={`flex items-center gap-2 px-3 py-2 shrink-0 border-r border-zinc-800/50 transition-colors hover:bg-zinc-800/60 min-w-[120px] ${
-                  isLive ? 'bg-zinc-900/80' : ''
-                }`}
+                className="shrink-0 mx-1 my-1.5"
               >
-                {/* Match card */}
-                <div className="flex flex-col items-center gap-1 w-full">
+                <div className={`flex flex-col items-center rounded-lg px-3 py-1.5 min-w-[80px] transition-colors hover:bg-zinc-700/50 ${
+                  isLive ? 'bg-zinc-800 ring-1 ring-emerald-500/30' : 'bg-zinc-800/60'
+                }`}>
                   {/* Competition tag */}
                   {match.competition_short && (
-                    <span className="text-[8px] font-medium text-zinc-500 uppercase tracking-wider truncate max-w-full">
+                    <span className="text-[7px] font-medium text-zinc-500 uppercase tracking-wider mb-0.5 truncate max-w-[80px]">
                       {match.competition_short}
                     </span>
                   )}
 
-                  {/* Teams + Score row */}
-                  <div className="flex items-center gap-1.5 w-full justify-center">
-                    {/* Home */}
+                  {/* Teams + Score */}
+                  <div className="flex items-center gap-1.5">
                     <TeamLogo logo={match.home_logo} name={match.home_name} color={match.home_color} />
 
-                    {/* Score / Time */}
-                    <div className="flex flex-col items-center min-w-[36px]">
+                    <div className="flex flex-col items-center min-w-[32px]">
                       {isLive || isFinished ? (
-                        <span className={`text-sm font-bold tabular-nums ${isLive ? 'text-emerald-400' : 'text-white'}`}>
+                        <span className={`text-xs font-bold tabular-nums ${isLive ? 'text-emerald-400' : 'text-white'}`}>
                           {match.home_score ?? 0} - {match.away_score ?? 0}
                         </span>
                       ) : (
-                        <span className="text-xs text-zinc-400 font-medium">
+                        <span className="text-[10px] text-zinc-400 font-medium">
                           {formatTime(match.kickoff)}
                         </span>
                       )}
                     </div>
 
-                    {/* Away */}
                     <TeamLogo logo={match.away_logo} name={match.away_name} color={match.away_color} />
                   </div>
 
                   {/* Status */}
-                  <div className="h-3 flex items-center">
-                    {isLive && (
-                      <span className="text-[9px] font-bold text-emerald-400">
-                        {match.status === 'halftime' ? 'HT' : `${match.minute}'`}
-                      </span>
-                    )}
-                    {isFinished && (
-                      <span className="text-[9px] font-medium text-zinc-500">FT</span>
-                    )}
-                    {!isLive && !isFinished && (
-                      <span className="text-[9px] font-medium text-zinc-600">
-                        {match.status === 'scheduled' ? '' : match.status?.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  {isLive && (
+                    <span className="text-[8px] font-bold text-emerald-400 mt-0.5">
+                      {match.status === 'halftime' ? 'HT' : `${match.minute}'`}
+                    </span>
+                  )}
+                  {isFinished && (
+                    <span className="text-[8px] font-medium text-zinc-500 mt-0.5">FT</span>
+                  )}
                 </div>
               </Link>
             );
