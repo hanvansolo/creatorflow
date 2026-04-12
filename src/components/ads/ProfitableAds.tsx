@@ -4,10 +4,6 @@ import { useEffect, useRef } from 'react';
 
 /**
  * HilltopAds zones for footy-feed.com (site #889366)
- *
- * These scripts MUST use the original bootstrap pattern because the ad server
- * expects d.scripts[d.scripts.length-1] to find the insertion point.
- * We inject the full <script> block via innerHTML to preserve this behavior.
  */
 
 function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className?: string }) {
@@ -18,10 +14,9 @@ function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className
     if (loaded.current || !containerRef.current) return;
     loaded.current = true;
 
-    // Inject as raw HTML so the bootstrap pattern works correctly
-    // The (function(mkaf){...}) wrapper needs d.scripts to reference itself
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<script>
+    // Create and execute the bootstrap script directly
+    const script = document.createElement('script');
+    script.textContent = `
 (function(mkaf){
 var d = document,
     s = d.createElement('script'),
@@ -31,16 +26,9 @@ s.src = "${scriptSrc}";
 s.async = true;
 s.referrerPolicy = 'no-referrer-when-downgrade';
 l.parentNode.insertBefore(s, l);
-})({})
-<\/script>`;
-
-    // innerHTML doesn't execute scripts, so we need to clone them
-    const scripts = wrapper.querySelectorAll('script');
-    scripts.forEach((origScript) => {
-      const newScript = document.createElement('script');
-      newScript.text = origScript.text;
-      containerRef.current?.appendChild(newScript);
-    });
+})({})`;
+    // Append to document.body so d.scripts[d.scripts.length-1] works
+    document.body.appendChild(script);
   }, [scriptSrc]);
 
   return <div ref={containerRef} className={className} />;
@@ -48,10 +36,7 @@ l.parentNode.insertBefore(s, l);
 
 // ===== EXPORTED AD COMPONENTS =====
 
-/**
- * 300x250 MultiTag Banner — sidebar rectangle
- * Zone #6952169
- */
+/** 300x250 MultiTag Banner — sidebar. Zone #6952169 */
 export function SidebarAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-4 ${className}`}>
@@ -60,10 +45,7 @@ export function SidebarAd({ className = '' }: { className?: string }) {
   );
 }
 
-/**
- * 300x100 MultiTag Banner — compact horizontal, between content
- * Zone #6952157
- */
+/** 300x100 MultiTag Banner — between content. Zone #6952157 */
 export function CompactBannerAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-3 ${className}`}>
@@ -72,24 +54,14 @@ export function CompactBannerAd({ className = '' }: { className?: string }) {
   );
 }
 
-/**
- * MultiTag Video Slider — auto-play video overlay
- * Zone #6952201
- */
+/** MultiTag Video Slider. Zone #6952201 */
 export function VideoSliderAd({ className = '' }: { className?: string }) {
-  return (
-    <HilltopAd scriptSrc="\/\/untimely-hello.com\/b.XyVrs-dWG\/lU0aYGWGcY\/SefmW9\/uGZBUgl\/ksP\/TZY\/5\/NNTuIxyUMCDzEgtLNrj\/kc1GMij\/IVwPNbQW" className={className} />
-  );
+  return <HilltopAd scriptSrc="\/\/untimely-hello.com\/b.XyVrs-dWG\/lU0aYGWGcY\/SefmW9\/uGZBUgl\/ksP\/TZY\/5\/NNTuIxyUMCDzEgtLNrj\/kc1GMij\/IVwPNbQW" className={className} />;
 }
 
-/**
- * MultiTag In-Page Push — notification-style ads
- * Zone #6952185
- */
+/** MultiTag In-Page Push. Zone #6952185 */
 export function InPagePushAd({ className = '' }: { className?: string }) {
-  return (
-    <HilltopAd scriptSrc="\/\/untimely-hello.com\/b-XGV.sWdHGClo0HYHWWcx\/Xe\/mh9ZuBZRUnlGk\/PBTiYR5JN\/TpIUxaOIDbUStVNFjZkB1_MzjNEZ4nOxQq" className={className} />
-  );
+  return <HilltopAd scriptSrc="\/\/untimely-hello.com\/b-XGV.sWdHGClo0HYHWWcx\/Xe\/mh9ZuBZRUnlGk\/PBTiYR5JN\/TpIUxaOIDbUStVNFjZkB1_MzjNEZ4nOxQq" className={className} />;
 }
 
 /** Responsive horizontal ad */
@@ -97,17 +69,15 @@ export function HorizontalAd({ className = '' }: { className?: string }) {
   return <CompactBannerAd className={className} />;
 }
 
-/** Native ad — video slider in-feed */
+/** Native ad — video slider */
 export function NativeAd({ className = '' }: { className?: string }) {
   return <VideoSliderAd className={className} />;
 }
 
-/** Leaderboard — alias */
+/** Aliases */
 export function LeaderboardAd({ className = '' }: { className?: string }) {
   return <HorizontalAd className={className} />;
 }
-
-/** Medium banner — alias */
 export function MediumBannerAd({ className = '' }: { className?: string }) {
   return <CompactBannerAd className={className} />;
 }
