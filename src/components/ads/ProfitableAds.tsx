@@ -5,16 +5,12 @@ import { useEffect, useRef } from 'react';
 /**
  * HilltopAds zones for footy-feed.com (site #889366)
  *
- * Zone mapping:
- *   #6952201 - MultiTag Video Slider → article pages, homepage
- *   #6952185 - MultiTag In-Page Push → global notification-style ads
- *   #6952169 - MultiTag Banner 300x250 → sidebar
- *   #6952157 - MultiTag Banner 300x100 → between content sections
- *   #6952125 - PopUnder → global (layout.tsx before </body>)
+ * These scripts MUST use the original bootstrap pattern because the ad server
+ * expects d.scripts[d.scripts.length-1] to find the insertion point.
+ * We inject the full <script> block via innerHTML to preserve this behavior.
  */
 
-/** Direct script loader — creates an external <script> tag and appends to container */
-function HilltopScript({ src, className = '' }: { src: string; className?: string }) {
+function HilltopAd({ scriptSrc, className = '' }: { scriptSrc: string; className?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loaded = useRef(false);
 
@@ -22,12 +18,30 @@ function HilltopScript({ src, className = '' }: { src: string; className?: strin
     if (loaded.current || !containerRef.current) return;
     loaded.current = true;
 
-    const script = document.createElement('script');
-    script.src = src;
-    script.async = true;
-    script.referrerPolicy = 'no-referrer-when-downgrade';
-    containerRef.current.appendChild(script);
-  }, [src]);
+    // Inject as raw HTML so the bootstrap pattern works correctly
+    // The (function(mkaf){...}) wrapper needs d.scripts to reference itself
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `<script>
+(function(mkaf){
+var d = document,
+    s = d.createElement('script'),
+    l = d.scripts[d.scripts.length - 1];
+s.settings = mkaf || {};
+s.src = "${scriptSrc}";
+s.async = true;
+s.referrerPolicy = 'no-referrer-when-downgrade';
+l.parentNode.insertBefore(s, l);
+})({})
+<\/script>`;
+
+    // innerHTML doesn't execute scripts, so we need to clone them
+    const scripts = wrapper.querySelectorAll('script');
+    scripts.forEach((origScript) => {
+      const newScript = document.createElement('script');
+      newScript.text = origScript.text;
+      containerRef.current?.appendChild(newScript);
+    });
+  }, [scriptSrc]);
 
   return <div ref={containerRef} className={className} />;
 }
@@ -41,7 +55,7 @@ function HilltopScript({ src, className = '' }: { src: string; className?: strin
 export function SidebarAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-4 ${className}`}>
-      <HilltopScript src="//untimely-hello.com/b.XLVsswdbGd1G0VYBlwkcp/Ne/mt9PurZkU-1/k/PCTTYy5MN-T/I/xsNjjJ/kqt/Nmj/k/1fMejkEf3ZMOwa" />
+      <HilltopAd scriptSrc="\/\/untimely-hello.com\/bbXcV.sudxG_l\/0VYlWlcr\/fe\/mP9RubZ\/U\/lHkoP\/TNYv5CN-TPISxLNsjGkxt\/NLjokB1QMljnEJ3\/M\/wi" />
     </div>
   );
 }
@@ -53,7 +67,7 @@ export function SidebarAd({ className = '' }: { className?: string }) {
 export function CompactBannerAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-3 ${className}`}>
-      <HilltopScript src="//untimely-hello.com/bvXcVqs.d/GZl/0IY/WXcP/seZmv9jueZUUHl/k/POTXY-5zNETkIXxvNaThic/tGNFjmkw1eM/j/Ey2bM_Qz" />
+      <HilltopAd scriptSrc="\/\/untimely-hello.com\/b.XGV\/s\/dQGclA0yYZWMcJ\/CeLmb9muuZOUml\/kMPTTHY\/5gNbT_IUx\/NjT_cmtLNsj\/kA1\/MzjQEX2KMcQ-" />
     </div>
   );
 }
@@ -64,7 +78,7 @@ export function CompactBannerAd({ className = '' }: { className?: string }) {
  */
 export function VideoSliderAd({ className = '' }: { className?: string }) {
   return (
-    <HilltopScript src="//untimely-hello.com/bnX.VuscdtGs1K0DY/WBcH/jeimr9BubZGUNldk/PbTtY_5PNKTMIny/MpDLEAt/tyjgkf1bMOJkIGwnNuQI" className={className} />
+    <HilltopAd scriptSrc="\/\/untimely-hello.com\/b.XyVrs-dWG\/lU0aYGWGcY\/SefmW9\/uGZBUgl\/ksP\/TZY\/5\/NNTuIxyUMCDzEgtLNrj\/kc1GMij\/IVwPNbQW" className={className} />
   );
 }
 
@@ -74,11 +88,11 @@ export function VideoSliderAd({ className = '' }: { className?: string }) {
  */
 export function InPagePushAd({ className = '' }: { className?: string }) {
   return (
-    <HilltopScript src="//untimely-hello.com/bkKZV/s.doGelc0zYXwucP/GejmY9fumZTUh1lwk/PDTkYQ5wNXTUIuxmOxDtU/t/MtjNkR1mHLfOE_4gOpQa" className={className} />
+    <HilltopAd scriptSrc="\/\/untimely-hello.com\/b-XGV.sWdHGClo0HYHWWcx\/Xe\/mh9ZuBZRUnlGk\/PBTiYR5JN\/TpIUxaOIDbUStVNFjZkB1_MzjNEZ4nOxQq" className={className} />
   );
 }
 
-/** Responsive horizontal ad — compact banner on all screens */
+/** Responsive horizontal ad */
 export function HorizontalAd({ className = '' }: { className?: string }) {
   return <CompactBannerAd className={className} />;
 }
@@ -88,12 +102,12 @@ export function NativeAd({ className = '' }: { className?: string }) {
   return <VideoSliderAd className={className} />;
 }
 
-/** Leaderboard — alias for HorizontalAd */
+/** Leaderboard — alias */
 export function LeaderboardAd({ className = '' }: { className?: string }) {
   return <HorizontalAd className={className} />;
 }
 
-/** Medium banner — alias for CompactBannerAd */
+/** Medium banner — alias */
 export function MediumBannerAd({ className = '' }: { className?: string }) {
   return <CompactBannerAd className={className} />;
 }
