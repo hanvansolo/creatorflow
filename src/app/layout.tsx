@@ -15,6 +15,8 @@ import {
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
 import { CookieConsent } from '@/components/layout/CookieConsent';
+import EzoicRouteHandler from '@/components/ads/EzoicRouteHandler';
+import Script from 'next/script';
 import './globals.css';
 
 const geistSans = Geist({
@@ -55,6 +57,36 @@ export default function RootLayout({
         <JsonLdScript data={websiteStructuredData} />
         <meta name="impact-site-verification" content="cfef735d-47e2-4c0b-8630-84ff2dc0ea39" />
         <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
+        {/* Ezoic privacy/consent scripts — must load first */}
+        <Script
+          id="ezoic-cmp"
+          src="https://cmp.gatekeeperconsent.com/min.js"
+          strategy="beforeInteractive"
+          data-cfasync="false"
+        />
+        <Script
+          id="ezoic-cmp-2"
+          src="https://the.gatekeeperconsent.com/cmp.min.js"
+          strategy="beforeInteractive"
+          data-cfasync="false"
+        />
+        {/* Ezoic standalone ad script */}
+        <Script
+          id="ezoic-sa"
+          src="//www.ezojs.com/ezoic/sa.min.js"
+          strategy="afterInteractive"
+        />
+        <Script id="ezoic-init" strategy="afterInteractive">
+          {`
+            window.ezstandalone = window.ezstandalone || {};
+            window.ezstandalone.cmd = window.ezstandalone.cmd || [];
+          `}
+        </Script>
+        <Script
+          id="ezoic-analytics"
+          src="//ezoicanalytics.com/analytics.js"
+          strategy="afterInteractive"
+        />
         {/* HeadScripts injects scripts from admin/scripts (AdSense, GA, etc.)
             directly into <head> as raw <script> tags so SSR crawlers see them */}
         <Suspense fallback={null}>
@@ -64,6 +96,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 antialiased`}
       >
+        <EzoicRouteHandler />
         <Suspense fallback={null}>
           <BodyStartScripts />
         </Suspense>
