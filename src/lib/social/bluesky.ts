@@ -11,7 +11,8 @@ export async function postToBluesky(title: string, slug: string, tags?: string[]
     return { success: false, error: 'Bluesky credentials not configured' };
   }
 
-  const articleUrl = `${SITE_URL}/news/${slug}`;
+  // If slug is already a full URL, use it directly; otherwise build /news/ URL
+  const articleUrl = slug.startsWith('http') ? slug : `${SITE_URL}/news/${slug}`;
 
   try {
     // Login

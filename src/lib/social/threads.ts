@@ -39,7 +39,7 @@ export async function postToThreads(title: string, slug: string, imageUrl?: stri
   } else {
     const { buildHashtags } = await import('./twitter');
     const hashtags = buildHashtags(title, []);
-    const url = `${SITE_URL}/news/${slug}`;
+    const url = slug.startsWith('http') ? slug : `${SITE_URL}/news/${slug}`;
     text = `${title}\n\n${url}\n\n${hashtags}`;
   }
   const truncated = text.length > 500 ? text.slice(0, 497) + '...' : text;

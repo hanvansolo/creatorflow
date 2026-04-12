@@ -423,8 +423,7 @@ export async function GET(
 
       // Threads — post with image if available, text-only otherwise
       if (canThreads && (process.env.THREADS_USER_ID || process.env.THREADS_ACCESS_TOKEN)) {
-        const slug = content.url.replace('https://www.footy-feed.com/', '').replace(/^\//, '');
-        const thRes = await postToThreads(content.text.slice(0, 400), slug, content.image);
+        const thRes = await postToThreads(content.text.slice(0, 400), content.url, content.image);
         results.threads = thRes;
         if (thRes.success) {
           console.log(`[social-pulse] Threads posted: ${gen.name}`);
@@ -435,8 +434,7 @@ export async function GET(
 
       // Bluesky — post with link card and image
       if (canBsky && process.env.BLUESKY_HANDLE) {
-        const slug = content.url.replace('https://www.footy-feed.com/', '').replace(/^\//, '');
-        const bsRes = await postToBluesky(content.text.slice(0, 280), slug, [], content.image);
+        const bsRes = await postToBluesky(content.text.slice(0, 280), content.url, [], content.image);
         results.bluesky = bsRes;
         if (bsRes.success) {
           console.log(`[social-pulse] Bluesky posted: ${gen.name}`);
