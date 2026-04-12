@@ -81,6 +81,8 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <BodyEndScripts />
         </Suspense>
+        {/* Social Bar ad — sticky overlay */}
+        <script src="https://pl29136311.profitablecpmratenetwork.com/6a/9d/a1/6a9da1fd32e2282fdb6d043f88694f44.js" async />
       </body>
     </html>
   );

@@ -16,6 +16,7 @@ import { SITE_CONFIG, DEFAULT_KEYWORDS, generateFAQStructuredData, HOMEPAGE_FAQ,
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
 import { LiveTicker } from '@/components/live/LiveTicker';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd, SidebarAd, NativeAd } from '@/components/ads/ProfitableAds';
 
 
 export const dynamic = 'force-dynamic';
@@ -406,9 +407,7 @@ export default async function HomePage() {
         </section>
 
         {/* Ad between hero/content and More News */}
-        <div className="my-6">
-          <AdSlot format="horizontal" />
-        </div>
+        <HorizontalAd className="my-6" />
 
         {/* More News + Sidebar */}
         <section className="mt-8">
@@ -421,8 +420,12 @@ export default async function HomePage() {
                     <h2 className="text-xl font-bold text-zinc-900 dark:text-white">More News</h2>
                   </div>
                   <div className="space-y-3">
-                    {latestArticles.slice(0, 15).map((article) => (
-                      <NewsListItem key={article.id} article={article} />
+                    {latestArticles.slice(0, 15).map((article, i) => (
+                      <div key={article.id}>
+                        <NewsListItem article={article} />
+                        {/* Native ad after 5th article */}
+                        {i === 4 && <NativeAd className="my-3" />}
+                      </div>
                     ))}
                   </div>
                 </>
@@ -567,9 +570,7 @@ export default async function HomePage() {
               </div>
 
               {/* Sidebar Ad */}
-              <div className="my-4">
-                <AdSlot format="auto" />
-              </div>
+              <SidebarAd />
 
               {/* Latest Videos */}
               {latestVideos.length > 0 && (

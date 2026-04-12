@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { Calendar, ChevronLeft, ChevronRight, Info, Clock } from 'lucide-react';
 import { CompetitionSelector } from '@/components/competitions';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd } from '@/components/ads/ProfitableAds';
 
 export const dynamic = 'force-dynamic';
 
@@ -301,7 +302,7 @@ export default async function FixturesPage({ searchParams }: PageProps) {
 
         {/* Ad below competition selector */}
         <div className="my-4">
-          <AdSlot format="horizontal" />
+          <HorizontalAd />
         </div>
 
         {/* Date display */}

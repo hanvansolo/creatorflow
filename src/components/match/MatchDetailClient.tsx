@@ -18,6 +18,7 @@ import OddsTab from './tabs/OddsTab';
 import NewsTab from './tabs/NewsTab';
 import HeadToHeadTab from './tabs/HeadToHeadTab';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd } from '@/components/ads/ProfitableAds';
 import type { MatchPageData, LiveRefreshData, MatchEvent, TeamStats, MatchAnalysisRow } from './types';
 
 function isLiveStatus(status: string) {
@@ -337,7 +338,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
 
         {/* Ad */}
         <div className="my-6">
-          <AdSlot format="horizontal" />
+          <HorizontalAd />
         </div>
 
         {/* Footer links */}

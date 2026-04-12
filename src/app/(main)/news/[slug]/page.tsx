@@ -22,6 +22,7 @@ import { formatRelativeTime } from '@/lib/utils';
 import { prepareAnnotatedContent } from '@/lib/utils/prepare-annotated-content';
 import type { CredibilityRating } from '@/types';
 import { AdSlot, InArticleAd } from '@/components/ads/AdSlot';
+import { NativeAd, SidebarAd } from '@/components/ads/ProfitableAds';
 import {
   generateArticleMetadata,
   generateAlternates,
@@ -402,7 +403,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
         {/* In-article ad */}
         <div className="my-6">
-          <InArticleAd />
+          <NativeAd className="my-8" />
         </div>
 
         {/* Comments */}
@@ -585,7 +586,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
         {/* Sidebar Ad */}
         <div className="my-4">
-          <AdSlot format="auto" />
+          <SidebarAd />
         </div>
       </aside>
       </div>

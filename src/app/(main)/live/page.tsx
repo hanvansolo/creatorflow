@@ -10,6 +10,7 @@ import { COMPETITIONS } from '@/lib/constants/competitions';
 import { CompetitionSelector } from '@/components/competitions';
 import { LiveMatchCard } from '@/components/live/LiveMatchCard';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd } from '@/components/ads/ProfitableAds';
 
 const ALL_COMPETITIONS = COMPETITIONS.map(c => ({
   name: c.name,
@@ -234,7 +235,7 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
 
         {/* Ad below match count banner */}
         <div className="my-4">
-          <AdSlot format="horizontal" />
+          <HorizontalAd />
         </div>
 
         {/* Competition selector */}

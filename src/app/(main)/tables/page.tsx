@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { Trophy, ArrowRight, LayoutGrid } from 'lucide-react';
 import { CompetitionSelector } from '@/components/competitions';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd } from '@/components/ads/ProfitableAds';
 
 export const dynamic = 'force-dynamic';
 
@@ -233,7 +234,7 @@ export default async function TablesPage({ searchParams }: PageProps) {
 
         {/* Ad below standings table */}
         <div className="my-6">
-          <AdSlot format="horizontal" />
+          <HorizontalAd />
         </div>
 
         {/* Legend — only show for league type */}

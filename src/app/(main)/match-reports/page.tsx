@@ -7,6 +7,7 @@ import { db, newsArticles, newsSources } from '@/lib/db';
 import { desc, eq, sql } from 'drizzle-orm';
 import { createPageMetadata } from '@/lib/seo';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd } from '@/components/ads/ProfitableAds';
 
 export const dynamic = 'force-dynamic';
 
@@ -178,7 +179,7 @@ export default async function MatchReportsPage() {
 
         {/* Ad slot */}
         <div className="mt-8">
-          <AdSlot slot="match-reports-bottom" />
+          <HorizontalAd />
         </div>
       </div>
     </div>

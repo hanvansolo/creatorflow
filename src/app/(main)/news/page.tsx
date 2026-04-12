@@ -10,6 +10,7 @@ import type { NewsArticle, CredibilityRating } from '@/types';
 import { createPageMetadata } from '@/lib/seo';
 import { getRelatedImageSync } from '@/lib/getFallbackImage';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { HorizontalAd } from '@/components/ads/ProfitableAds';
 
 export const dynamic = 'force-dynamic';
 
@@ -152,7 +153,7 @@ export default async function NewsPage() {
 
         {/* Ad after article listing */}
         <div className="my-6">
-          <AdSlot format="horizontal" />
+          <HorizontalAd />
         </div>
       </div>
     </div>
