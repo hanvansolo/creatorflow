@@ -59,7 +59,7 @@ export function SidebarAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-4 ${className}`}>
       <HilltopScript
-        src="\/\/untimely-hello.com\/b.XLVsswdbGd1G0VYBlwkcp\/Ne\/mt9PurZkU-1\/k\/PCTTYy5MN-T\/I\/xsNjjJ\/kqt\/Nmj\/k\/1fMejkEf3ZMOwa"
+        src="//untimely-hello.com/b.XLVsswdbGd1G0VYBlwkcp/Ne/mt9PurZkU-1/k/PCTTYy5MN-T/I/xsNjjJ/kqt/Nmj/k/1fMejkEf3ZMOwa"
       />
     </div>
   );
@@ -73,7 +73,7 @@ export function CompactBannerAd({ className = '' }: { className?: string }) {
   return (
     <div className={`flex justify-center my-3 ${className}`}>
       <HilltopScript
-        src="\/\/untimely-hello.com\/bvXcVqs.d\/GZl\/0IY\/WXcP\/seZmv9jueZUUHl\/k\/POTXY-5zNETkIXxvNaThic\/tGNFjmkw1eM\/j\/Ey2bM_Qz"
+        src="//untimely-hello.com/bvXcVqs.d/GZl/0IY/WXcP/seZmv9jueZUUHl/k/POTXY-5zNETkIXxvNaThic/tGNFjmkw1eM/j/Ey2bM_Qz"
       />
     </div>
   );
@@ -86,7 +86,7 @@ export function CompactBannerAd({ className = '' }: { className?: string }) {
 export function VideoSliderAd({ className = '' }: { className?: string }) {
   return (
     <HilltopScript
-      src="\/\/untimely-hello.com\/bnX.VuscdtGs1K0DY\/WBcH\/jeimr9BubZGUNldk\/PbTtY_5PNKTMIny\/MpDLEAt\/tyjgkf1bMOJkIGwnNuQI"
+      src="//untimely-hello.com/bnX.VuscdtGs1K0DY/WBcH/jeimr9BubZGUNldk/PbTtY_5PNKTMIny/MpDLEAt/tyjgkf1bMOJkIGwnNuQI"
       className={className}
     />
   );
@@ -99,7 +99,7 @@ export function VideoSliderAd({ className = '' }: { className?: string }) {
 export function InPagePushAd({ className = '' }: { className?: string }) {
   return (
     <HilltopScript
-      src="\/\/untimely-hello.com\/bkKZV\/s.doGelc0zYXwucP\/GejmY9fumZTUh1lwk\/PDTkYQ5wNXTUIuxmOxDtU\/t\/MtjNkR1mHLfOE_4gOpQa"
+      src="//untimely-hello.com/bkKZV/s.doGelc0zYXwucP/GejmY9fumZTUh1lwk/PDTkYQ5wNXTUIuxmOxDtU/t/MtjNkR1mHLfOE_4gOpQa"
       className={className}
     />
   );

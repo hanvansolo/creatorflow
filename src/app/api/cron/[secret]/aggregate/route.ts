@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { db, newsSources, newsArticles, aggregationJobs } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { parseMultipleFeeds, type RSSFeedConfig } from '@/lib/aggregation';
 import { RSS_FEEDS } from '@/lib/constants/sources';
 import { spinArticle } from '@/lib/api/article-spinner';
@@ -89,9 +89,42 @@ export async function GET(
     console.log(`Parsing ${feedConfigs.length} feeds...`);
     const articlesBySource = await parseMultipleFeeds(feedConfigs);
 
+    // Load recent article titles from DB for similarity dedup (last 48h)
+    const recentCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const recentTitles = await db
+      .select({ title: newsArticles.title, originalTitle: newsArticles.originalTitle })
+      .from(newsArticles)
+      .where(gte(newsArticles.publishedAt, recentCutoff));
+
+    function normalizeTitle(title: string): string {
+      return title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+    }
+    function titleSimilarity(a: string, b: string): number {
+      const setA = new Set(a.split(' '));
+      const setB = new Set(b.split(' '));
+      const intersection = new Set([...setA].filter(x => setB.has(x)));
+      const union = new Set([...setA, ...setB]);
+      return union.size > 0 ? intersection.size / union.size : 0;
+    }
+    // Build normalized title set from DB + current batch
+    const knownTitles = new Set<string>();
+    for (const row of recentTitles) {
+      knownTitles.add(normalizeTitle(row.title));
+      if (row.originalTitle) knownTitles.add(normalizeTitle(row.originalTitle));
+    }
+
+    function isSimilarToKnown(title: string): boolean {
+      const normalized = normalizeTitle(title);
+      for (const known of knownTitles) {
+        if (titleSimilarity(normalized, known) >= 0.65) return true;
+      }
+      return false;
+    }
+
     // Insert articles into database
     let insertedCount = 0;
     let skippedCount = 0;
+    let dedupedCount = 0;
     let spunCount = 0;
     let imagesDownloaded = 0;
     let imagesGenerated = 0;
@@ -144,6 +177,16 @@ export async function GET(
           skippedCount++;
           continue;
         }
+
+        // Title similarity dedup — catch "same story, different ID" from same or different sources
+        if (isSimilarToKnown(article.title)) {
+          console.log(`[Aggregate] Skipped similar: "${article.title?.slice(0, 60)}..."`);
+          dedupedCount++;
+          skippedCount++;
+          continue;
+        }
+        // Add this title to known set so later articles in this batch also get deduped
+        knownTitles.add(normalizeTitle(article.title));
 
         // Spin the article content if enabled
         const MAX_SPINS_PER_RUN = 20;
@@ -392,6 +435,7 @@ export async function GET(
       success: true,
       inserted: insertedCount,
       skipped: skippedCount,
+      deduped: dedupedCount,
       spun: spunCount,
       imagesDownloaded,
       imagesGenerated,
