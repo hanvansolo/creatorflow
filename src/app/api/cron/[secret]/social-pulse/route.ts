@@ -33,6 +33,7 @@ import {
 import { postCustomTweet } from '@/lib/social/twitter';
 import { postCustomFacebook, postCustomInstagram } from '@/lib/social/facebook';
 import { postToThreads } from '@/lib/social/threads';
+import { postToBluesky } from '@/lib/social/bluesky';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -361,8 +362,9 @@ export async function GET(
   const canTw = testMode ? platformFilter === 'tw' : await canPost('tw');
   const canIg = testMode ? platformFilter === 'ig' : true;
   const canThreads = testMode ? platformFilter === 'threads' : true;
+  const canBsky = testMode ? platformFilter === 'bsky' : true;
 
-  if (!canFb && !canTw && !canIg && !canThreads) {
+  if (!canFb && !canTw && !canIg && !canThreads && !canBsky) {
     return NextResponse.json({ message: 'Rate limited — too soon or daily cap reached' });
   }
 
@@ -428,6 +430,18 @@ export async function GET(
           console.log(`[social-pulse] Threads posted: ${gen.name}`);
         } else {
           console.error(`[social-pulse] Threads failed: ${thRes.error}`);
+        }
+      }
+
+      // Bluesky — post with link card and image
+      if (canBsky && process.env.BLUESKY_HANDLE) {
+        const slug = content.url.replace('https://www.footy-feed.com/', '').replace(/^\//, '');
+        const bsRes = await postToBluesky(content.text.slice(0, 280), slug, [], content.image);
+        results.bluesky = bsRes;
+        if (bsRes.success) {
+          console.log(`[social-pulse] Bluesky posted: ${gen.name}`);
+        } else {
+          console.error(`[social-pulse] Bluesky failed: ${bsRes.error}`);
         }
       }
 
