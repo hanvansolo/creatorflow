@@ -5,18 +5,26 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com
  * Supports text posts and image posts.
  */
 export async function postToThreads(title: string, slug: string, imageUrl?: string): Promise<{ success: boolean; id?: string; error?: string }> {
-  // Try DB first (stored by OAuth flow), then env vars
+  // Env vars take priority, then DB (env is freshest source of truth)
   let userId = process.env.THREADS_USER_ID;
   let accessToken = process.env.THREADS_ACCESS_TOKEN;
 
-  try {
-    const { db, siteSettings } = await import('@/lib/db');
-    const { eq } = await import('drizzle-orm');
-    const [tokenRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'threads_access_token')).limit(1);
-    const [userRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'threads_user_id')).limit(1);
-    if (tokenRow?.value) accessToken = tokenRow.value;
-    if (userRow?.value) userId = userRow.value;
-  } catch { /* DB read failed, use env vars */ }
+  if (!userId || !accessToken) {
+    try {
+      const { db, siteSettings } = await import('@/lib/db');
+      const { eq } = await import('drizzle-orm');
+      if (!accessToken) {
+        const [tokenRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'threads_access_token')).limit(1);
+        if (tokenRow?.value) accessToken = tokenRow.value;
+      }
+      if (!userId) {
+        const [userRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'threads_user_id')).limit(1);
+        if (userRow?.value) userId = userRow.value;
+      }
+    } catch { /* DB read failed */ }
+  }
+
+  console.log(`[Threads] userId: ${userId?.slice(0, 8)}..., token: ${accessToken ? accessToken.slice(0, 10) + '...' : 'MISSING'}`);
 
   if (!userId || !accessToken) {
     return { success: false, error: 'Threads credentials not configured' };
