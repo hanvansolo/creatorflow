@@ -28,13 +28,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  async redirects() {
+  async rewrites() {
     return [
       {
-        // Ezoic managed ads.txt — auto-updated with all demand partners
+        // Ezoic managed ads.txt — proxy instead of redirect so crawlers see content directly
         source: '/ads.txt',
         destination: 'https://srv.adstxtmanager.com/19390/footy-feed.com',
-        permanent: false, // 302 so Ezoic can update content
       },
     ];
   },
