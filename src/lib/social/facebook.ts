@@ -185,11 +185,10 @@ export async function postToInstagram(
   imageUrl: string,
   tags?: string[]
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const igUserId = await getInstagramAccountId();
   const accessToken = await getInstagramToken();
 
-  if (!igUserId || !accessToken) {
-    return { success: false, error: 'Instagram credentials not configured. Set INSTAGRAM_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN.' };
+  if (!accessToken) {
+    return { success: false, error: 'Instagram not configured. Set INSTAGRAM_ACCESS_TOKEN.' };
   }
 
   if (!imageUrl) {
@@ -198,17 +197,20 @@ export async function postToInstagram(
 
   const articleUrl = `${SITE_URL}/news/${slug}`;
   const hashtags = buildHashtags(title, tags || []);
-
-  // Build caption: title + hashtags + link
-  // Instagram doesn't make links clickable in captions, but include for reference
   const caption = `${title}\n\n${hashtags}\n\n${articleUrl}`;
-
-  // Ensure image URL is absolute
   const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `${SITE_URL}${imageUrl}`;
 
   try {
+    // Resolve IG user ID from token (new Instagram API)
+    const meRes = await fetch(`https://graph.instagram.com/v25.0/me?fields=id&access_token=${accessToken}`, { signal: AbortSignal.timeout(10000) });
+    const meData = await meRes.json();
+    const igUserId = meData.id;
+    if (!igUserId) {
+      return { success: false, error: `Could not resolve IG user: ${meData.error?.message || 'unknown'}` };
+    }
+
     // Step 1: Create media container
-    const createRes = await fetch(`https://graph.facebook.com/v19.0/${igUserId}/media`, {
+    const createRes = await fetch(`https://graph.instagram.com/v25.0/${igUserId}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -231,11 +233,9 @@ export async function postToInstagram(
     const containerId = createData.id;
     console.log(`[Instagram] Media container created: ${containerId}`);
 
-    // Step 2: Wait briefly for container to be ready, then publish
-    // The container may take a moment to process the image
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    const publishRes = await fetch(`https://graph.facebook.com/v19.0/${igUserId}/media_publish`, {
+    const publishRes = await fetch(`https://graph.instagram.com/v25.0/${igUserId}/media_publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -270,10 +270,9 @@ export async function postCustomInstagram(
   caption: string,
   imageUrl: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const igUserId = await getInstagramAccountId();
   const accessToken = await getInstagramToken();
 
-  if (!igUserId || !accessToken) {
+  if (!accessToken) {
     return { success: false, error: 'Instagram not configured' };
   }
 
@@ -284,8 +283,16 @@ export async function postCustomInstagram(
   const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://www.footy-feed.com${imageUrl}`;
 
   try {
-    // Step 1: Create media container
-    const createRes = await fetch(`https://graph.facebook.com/v25.0/${igUserId}/media`, {
+    // Resolve the IG user ID from the token (new Instagram API)
+    const meRes = await fetch(`https://graph.instagram.com/v25.0/me?fields=id&access_token=${accessToken}`, { signal: AbortSignal.timeout(10000) });
+    const meData = await meRes.json();
+    const igUserId = meData.id;
+    if (!igUserId) {
+      return { success: false, error: `Could not resolve IG user: ${meData.error?.message || 'unknown'}` };
+    }
+
+    // Step 1: Create media container (Instagram Graph API)
+    const createRes = await fetch(`https://graph.instagram.com/v25.0/${igUserId}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -304,7 +311,7 @@ export async function postCustomInstagram(
     console.log(`[Instagram] Container created: ${createData.id}`);
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    const publishRes = await fetch(`https://graph.facebook.com/v25.0/${igUserId}/media_publish`, {
+    const publishRes = await fetch(`https://graph.instagram.com/v25.0/${igUserId}/media_publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
