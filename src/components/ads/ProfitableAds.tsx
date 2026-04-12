@@ -6,6 +6,8 @@ declare global {
   interface Window {
     google: any;
   }
+  // eslint-disable-next-line no-var
+  var google: any;
 }
 
 /**
