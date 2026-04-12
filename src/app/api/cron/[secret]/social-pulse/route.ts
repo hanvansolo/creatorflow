@@ -346,15 +346,23 @@ export async function GET(
   const now = new Date();
   const hour = now.getUTCHours();
 
-  // Dead hours
-  if (hour >= DEAD_HOUR_START && hour < DEAD_HOUR_END) {
+  // ?platform=fb|tw|ig|threads — test a single platform (skips rate limits)
+  // ?platform=all — normal mode (default)
+  const platformFilter = request.nextUrl.searchParams.get('platform') || 'all';
+
+  // Dead hours (skip if testing a specific platform)
+  if (platformFilter === 'all' && hour >= DEAD_HOUR_START && hour < DEAD_HOUR_END) {
     return NextResponse.json({ message: 'Dead hours — skipping', hour });
   }
 
-  const canFb = await canPost('fb');
-  const canTw = await canPost('tw');
+  // When testing a specific platform, skip rate limits
+  const testMode = platformFilter !== 'all';
+  const canFb = testMode ? platformFilter === 'fb' : await canPost('fb');
+  const canTw = testMode ? platformFilter === 'tw' : await canPost('tw');
+  const canIg = testMode ? platformFilter === 'ig' : true;
+  const canThreads = testMode ? platformFilter === 'threads' : true;
 
-  if (!canFb && !canTw) {
+  if (!canFb && !canTw && !canIg && !canThreads) {
     return NextResponse.json({ message: 'Rate limited — too soon or daily cap reached' });
   }
 
@@ -401,7 +409,7 @@ export async function GET(
       }
 
       // Instagram — post if we have an image (IG requires images)
-      if (content.image) {
+      if (canIg && content.image) {
         const igRes = await postCustomInstagram(content.text, content.image);
         results.instagram = igRes;
         if (igRes.success) {
@@ -412,7 +420,7 @@ export async function GET(
       }
 
       // Threads — post with image if available, text-only otherwise
-      if (process.env.THREADS_USER_ID || process.env.THREADS_ACCESS_TOKEN) {
+      if (canThreads && (process.env.THREADS_USER_ID || process.env.THREADS_ACCESS_TOKEN)) {
         const slug = content.url.replace('https://www.footy-feed.com/', '').replace(/^\//, '');
         const thRes = await postToThreads(content.text.slice(0, 400), slug, content.image);
         results.threads = thRes;
