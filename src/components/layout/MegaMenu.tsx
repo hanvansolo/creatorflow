@@ -88,61 +88,61 @@ function formatAgo(mins: number): string {
 
 function ScoresPanel({ onClose, data }: { onClose: () => void; data: MenuData | null }) {
   return (
-    <div className="grid grid-cols-[180px_1fr_280px]">
+    <div className="grid grid-cols-[200px_1fr_320px]">
       {/* Left nav */}
-      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-4 space-y-1">
-        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Scores & Fixtures</h3>
+      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-5 space-y-1">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Scores & Fixtures</h3>
         {[
           { label: 'Live Scores', href: '/live' },
           { label: "Today's Fixtures", href: '/fixtures' },
           { label: 'Results', href: '/fixtures?tab=results' },
           { label: 'Match Reports', href: '/match-reports' },
         ].map(item => (
-          <Link key={item.href} href={item.href} onClick={onClose} className="block rounded px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+          <Link key={item.href} href={item.href} onClick={onClose} className="block rounded-md px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             {item.label}
           </Link>
         ))}
       </div>
 
       {/* Center: fixture cards */}
-      <div className="p-4 border-r border-zinc-200 dark:border-zinc-700/50">
-        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Today</h3>
+      <div className="p-5 border-r border-zinc-200 dark:border-zinc-700/50">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Today</h3>
         <div className="space-y-1">
           {data?.matches.slice(0, 6).map(m => {
             const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status);
             const isFt = m.status === 'finished';
             return (
-              <Link key={m.id} href={`/matches/${m.id}`} onClick={onClose} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                {m.homeLogo && <Logo src={m.homeLogo} name={m.homeName} size={18} />}
-                <span className="text-xs text-zinc-600 dark:text-zinc-400 w-16 truncate text-right">{m.homeName.split(' ').pop()}</span>
-                <span className={cn('text-xs font-bold tabular-nums min-w-[28px] text-center', isLive ? 'text-emerald-500' : isFt ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-400')}>
+              <Link key={m.id} href={`/matches/${m.id}`} onClick={onClose} className="flex items-center gap-2.5 rounded-md px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                {m.homeLogo && <Logo src={m.homeLogo} name={m.homeName} size={22} />}
+                <span className="text-sm text-zinc-600 dark:text-zinc-400 w-20 truncate text-right">{m.homeName.split(' ').pop()}</span>
+                <span className={cn('text-sm font-bold tabular-nums min-w-[32px] text-center', isLive ? 'text-emerald-500' : isFt ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-400')}>
                   {isLive || isFt ? `${m.homeScore ?? 0}-${m.awayScore ?? 0}` : new Date(m.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                 </span>
-                <span className="text-xs text-zinc-600 dark:text-zinc-400 w-16 truncate">{m.awayName.split(' ').pop()}</span>
-                {m.awayLogo && <Logo src={m.awayLogo} name={m.awayName} size={18} />}
-                {isLive && <span className="text-[9px] font-bold text-emerald-500 ml-auto">{m.status === 'halftime' ? 'HT' : `${m.minute}'`}</span>}
-                {isFt && <span className="text-[9px] text-zinc-400 ml-auto">FT</span>}
+                <span className="text-sm text-zinc-600 dark:text-zinc-400 w-20 truncate">{m.awayName.split(' ').pop()}</span>
+                {m.awayLogo && <Logo src={m.awayLogo} name={m.awayName} size={22} />}
+                {isLive && <span className="text-xs font-bold text-emerald-500 ml-auto">{m.status === 'halftime' ? 'HT' : `${m.minute}'`}</span>}
+                {isFt && <span className="text-xs text-zinc-400 ml-auto">FT</span>}
               </Link>
             );
-          }) || <p className="text-xs text-zinc-400">Loading...</p>}
+          }) || <p className="text-sm text-zinc-400">Loading...</p>}
         </div>
       </div>
 
       {/* Right: news snippets */}
-      <div className="p-4">
-        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Latest</h3>
-        <div className="space-y-2">
+      <div className="p-5">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Latest</h3>
+        <div className="space-y-3">
           {data?.news.slice(0, 3).map(article => (
-            <Link key={article.slug} href={`/news/${article.slug}`} onClick={onClose} className="flex gap-2 rounded p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
+            <Link key={article.slug} href={`/news/${article.slug}`} onClick={onClose} className="flex gap-3 rounded-md p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
               {article.imageUrl && (
-                <img src={article.imageUrl} alt="" className="w-16 h-10 rounded object-cover shrink-0" />
+                <img src={article.imageUrl} alt="" className="w-20 h-14 rounded-md object-cover shrink-0" />
               )}
               <div className="min-w-0">
-                <p className="text-[11px] font-medium text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{article.title}</p>
-                <p className="text-[9px] text-zinc-400 mt-0.5">{article.source} · {formatAgo(article.ago)}</p>
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{article.title}</p>
+                <p className="text-xs text-zinc-400 mt-1">{article.source} · {formatAgo(article.ago)}</p>
               </div>
             </Link>
-          )) || <p className="text-xs text-zinc-400">Loading...</p>}
+          )) || <p className="text-sm text-zinc-400">Loading...</p>}
         </div>
       </div>
     </div>
@@ -151,18 +151,18 @@ function ScoresPanel({ onClose, data }: { onClose: () => void; data: MenuData | 
 
 function CompetitionsPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="p-5">
-      <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-3">Competitions</h3>
-      <div className="grid grid-cols-4 gap-x-4 gap-y-0.5">
+    <div className="p-6">
+      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Competitions</h3>
+      <div className="grid grid-cols-4 gap-x-4 gap-y-1">
         {COMPETITIONS.map(c => (
-          <Link key={c.slug} href={`/tables?competition=${c.slug}`} onClick={onClose} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-            <Logo src={c.logo} name={c.name} />
-            <span className="text-sm text-zinc-700 dark:text-zinc-300">{c.name}</span>
+          <Link key={c.slug} href={`/tables?competition=${c.slug}`} onClick={onClose} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <Logo src={c.logo} name={c.name} size={26} />
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{c.name}</span>
           </Link>
         ))}
       </div>
-      <div className="mt-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/50">
-        <Link href="/tables" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">All Competitions →</Link>
+      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700/50">
+        <Link href="/tables" onClick={onClose} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">All Competitions →</Link>
       </div>
     </div>
   );
@@ -170,18 +170,18 @@ function CompetitionsPanel({ onClose }: { onClose: () => void }) {
 
 function TeamsPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="p-5">
-      <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-3">Popular Teams</h3>
-      <div className="grid grid-cols-4 gap-x-4 gap-y-0.5">
+    <div className="p-6">
+      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Popular Teams</h3>
+      <div className="grid grid-cols-4 gap-x-4 gap-y-1">
         {POPULAR_TEAMS.map(t => (
-          <Link key={t.slug} href={`/teams/${t.slug}`} onClick={onClose} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-            <Logo src={t.logo} name={t.name} />
-            <span className="text-sm text-zinc-700 dark:text-zinc-300">{t.name}</span>
+          <Link key={t.slug} href={`/teams/${t.slug}`} onClick={onClose} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <Logo src={t.logo} name={t.name} size={26} />
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t.name}</span>
           </Link>
         ))}
       </div>
-      <div className="mt-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/50">
-        <Link href="/teams" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">All Teams →</Link>
+      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700/50">
+        <Link href="/teams" onClick={onClose} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">All Teams →</Link>
       </div>
     </div>
   );
@@ -189,9 +189,9 @@ function TeamsPanel({ onClose }: { onClose: () => void }) {
 
 function NewsPanel({ onClose, data }: { onClose: () => void; data: MenuData | null }) {
   return (
-    <div className="grid grid-cols-[180px_1fr]">
-      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-4 space-y-1">
-        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Sections</h3>
+    <div className="grid grid-cols-[200px_1fr]">
+      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-5 space-y-1">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Sections</h3>
         {[
           { label: 'Latest News', href: '/news' },
           { label: 'Match Reports', href: '/match-reports' },
@@ -199,25 +199,25 @@ function NewsPanel({ onClose, data }: { onClose: () => void; data: MenuData | nu
           { label: 'Videos', href: '/videos' },
           { label: 'Predictions', href: '/predictions' },
         ].map(item => (
-          <Link key={item.href} href={item.href} onClick={onClose} className="block rounded px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+          <Link key={item.href} href={item.href} onClick={onClose} className="block rounded-md px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             {item.label}
           </Link>
         ))}
       </div>
-      <div className="p-4">
-        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Latest News</h3>
-        <div className="grid grid-cols-2 gap-3">
+      <div className="p-5">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Latest News</h3>
+        <div className="grid grid-cols-2 gap-4">
           {data?.news.slice(0, 4).map(article => (
             <Link key={article.slug} href={`/news/${article.slug}`} onClick={onClose} className="group rounded-lg overflow-hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
               {article.imageUrl && (
-                <img src={article.imageUrl} alt="" className="w-full h-24 object-cover rounded-t-lg" />
+                <img src={article.imageUrl} alt="" className="w-full h-28 object-cover rounded-t-lg" />
               )}
-              <div className="p-2">
-                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{article.title}</p>
-                <p className="text-[9px] text-zinc-400 mt-1">{article.source} · {formatAgo(article.ago)}</p>
+              <div className="p-2.5">
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{article.title}</p>
+                <p className="text-xs text-zinc-400 mt-1">{article.source} · {formatAgo(article.ago)}</p>
               </div>
             </Link>
-          )) || <p className="text-xs text-zinc-400 col-span-2">Loading...</p>}
+          )) || <p className="text-sm text-zinc-400 col-span-2">Loading...</p>}
         </div>
       </div>
     </div>
@@ -226,17 +226,17 @@ function NewsPanel({ onClose, data }: { onClose: () => void; data: MenuData | nu
 
 function MorePanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="grid grid-cols-4 gap-3 p-5">
+    <div className="grid grid-cols-4 gap-4 p-6">
       {[
         { label: 'Predictions', href: '/predictions', desc: 'AI score forecasts, BTTS & O/U', icon: '🎯' },
         { label: 'League Tables', href: '/tables', desc: 'Full standings', icon: '🏆' },
         { label: 'Rules', href: '/rules', desc: 'Laws of the game', icon: '📋' },
         { label: 'Search', href: '/search', desc: 'Find anything', icon: '🔍' },
       ].map(item => (
-        <Link key={item.href} href={item.href} onClick={onClose} className="flex flex-col rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
-          <span className="text-xl mb-1">{item.icon}</span>
-          <span className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{item.label}</span>
-          <span className="text-[10px] text-zinc-500 mt-0.5">{item.desc}</span>
+        <Link key={item.href} href={item.href} onClick={onClose} className="flex flex-col rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
+          <span className="text-2xl mb-2">{item.icon}</span>
+          <span className="text-base font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{item.label}</span>
+          <span className="text-xs text-zinc-500 mt-1">{item.desc}</span>
         </Link>
       ))}
     </div>
