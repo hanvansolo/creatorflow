@@ -141,7 +141,7 @@ export async function LiveTicker() {
                 href={`/matches/${match.id}`}
                 className="shrink-0 mx-1 my-1.5"
               >
-                <div className={`flex flex-col items-center justify-center rounded-xl px-5 py-3 w-[170px] h-[90px] transition-colors hover:bg-zinc-700/50 ${
+                <div className={`flex flex-col items-center justify-center rounded-xl px-5 py-3 w-[170px] h-[100px] transition-colors hover:bg-zinc-700/50 ${
                   isLive ? 'bg-zinc-800/40 ring-1 ring-emerald-500/30' : 'bg-zinc-800/30'
                 }`}>
                   {/* Competition tag */}
