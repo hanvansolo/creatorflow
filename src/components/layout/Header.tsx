@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
-import { Navigation } from './Navigation';
+import { MegaMenu } from './MegaMenu';
 import { UserMenu } from './UserMenu';
 import { cn } from '@/lib/utils';
 import logo from '@/app/logo.png';
@@ -28,8 +28,8 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-4">
-            <Navigation />
+          <div className="hidden md:flex md:items-center md:gap-2">
+            <MegaMenu />
             <UserMenu />
           </div>
 
@@ -60,7 +60,7 @@ export function Header() {
         )}
       >
         <div className="px-4 py-4">
-          <Navigation vertical onItemClick={() => setMobileMenuOpen(false)} />
+          <MegaMenu vertical onItemClick={() => setMobileMenuOpen(false)} />
         </div>
       </div>
     </header>
