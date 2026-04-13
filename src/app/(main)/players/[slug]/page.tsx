@@ -206,6 +206,23 @@ export default async function PlayerDetailPage({ params }: PageProps) {
     .orderBy(desc(newsArticles.publishedAt))
     .limit(3);
 
+  // If DB has no stats, try fetching from API-Football directly
+  let apiStats: any = null;
+  if (seasonStats.length === 0 && player.apiFootballId) {
+    try {
+      const { getPlayerStats } = await import('@/lib/api/football-api');
+      const currentYear = new Date().getFullYear();
+      // Try current season, then previous
+      for (const season of [currentYear, currentYear - 1]) {
+        const res = await getPlayerStats(player.apiFootballId, season);
+        if (res.response?.length > 0) {
+          apiStats = res.response[0];
+          break;
+        }
+      }
+    } catch { /* API fetch failed, show empty state */ }
+  }
+
   // Calculate age
   let age: number | null = null;
   if (player.dateOfBirth) {
@@ -224,30 +241,82 @@ export default async function PlayerDetailPage({ params }: PageProps) {
     ? seasonStats.filter((s) => s.seasonYear === currentSeasonYear)
     : [];
 
-  // Compute aggregated stats for the primary stats dashboard
-  const agg = {
-    appearances: currentSeasonStats.reduce((sum, s) => sum + (s.appearances ?? 0), 0),
-    minutesPlayed: currentSeasonStats.reduce((sum, s) => sum + (s.minutesPlayed ?? 0), 0),
-    goals: currentSeasonStats.reduce((sum, s) => sum + (s.goals ?? 0), 0),
-    assists: currentSeasonStats.reduce((sum, s) => sum + (s.assists ?? 0), 0),
-    yellowCards: currentSeasonStats.reduce((sum, s) => sum + (s.yellowCards ?? 0), 0),
-    redCards: currentSeasonStats.reduce((sum, s) => sum + (s.redCards ?? 0), 0),
-    cleanSheets: currentSeasonStats.reduce((sum, s) => sum + (s.cleanSheets ?? 0), 0),
-    penaltiesScored: currentSeasonStats.reduce((sum, s) => sum + (s.penaltiesScored ?? 0), 0),
-    penaltiesMissed: currentSeasonStats.reduce((sum, s) => sum + (s.penaltiesMissed ?? 0), 0),
-    shotsOnTarget: currentSeasonStats.reduce((sum, s) => sum + (s.shotsOnTarget ?? 0), 0),
-    tackles: currentSeasonStats.reduce((sum, s) => sum + (s.tackles ?? 0), 0),
-    interceptions: currentSeasonStats.reduce((sum, s) => sum + (s.interceptions ?? 0), 0),
-    saves: currentSeasonStats.reduce((sum, s) => sum + (s.saves ?? 0), 0),
-    passAccuracy: (() => {
-      const vals = currentSeasonStats.filter((s) => s.passAccuracy).map((s) => Number(s.passAccuracy));
-      return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
-    })(),
-    averageRating: (() => {
-      const vals = currentSeasonStats.filter((s) => s.averageRating).map((s) => Number(s.averageRating));
-      return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
-    })(),
+  // Compute aggregated stats — from DB if available, from API-Football if not
+  let agg: {
+    appearances: number; minutesPlayed: number; goals: number; assists: number;
+    yellowCards: number; redCards: number; cleanSheets: number;
+    penaltiesScored: number; penaltiesMissed: number; shotsOnTarget: number;
+    tackles: number; interceptions: number; saves: number;
+    passAccuracy: string | null; averageRating: string | null;
+    shotsTotal?: number; keyPasses?: number; dribbleSuccess?: number; dribbleAttempts?: number;
+    foulsDrawn?: number; foulsCommitted?: number; blocks?: number;
   };
+
+  if (currentSeasonStats.length > 0) {
+    agg = {
+      appearances: currentSeasonStats.reduce((sum, s) => sum + (s.appearances ?? 0), 0),
+      minutesPlayed: currentSeasonStats.reduce((sum, s) => sum + (s.minutesPlayed ?? 0), 0),
+      goals: currentSeasonStats.reduce((sum, s) => sum + (s.goals ?? 0), 0),
+      assists: currentSeasonStats.reduce((sum, s) => sum + (s.assists ?? 0), 0),
+      yellowCards: currentSeasonStats.reduce((sum, s) => sum + (s.yellowCards ?? 0), 0),
+      redCards: currentSeasonStats.reduce((sum, s) => sum + (s.redCards ?? 0), 0),
+      cleanSheets: currentSeasonStats.reduce((sum, s) => sum + (s.cleanSheets ?? 0), 0),
+      penaltiesScored: currentSeasonStats.reduce((sum, s) => sum + (s.penaltiesScored ?? 0), 0),
+      penaltiesMissed: currentSeasonStats.reduce((sum, s) => sum + (s.penaltiesMissed ?? 0), 0),
+      shotsOnTarget: currentSeasonStats.reduce((sum, s) => sum + (s.shotsOnTarget ?? 0), 0),
+      tackles: currentSeasonStats.reduce((sum, s) => sum + (s.tackles ?? 0), 0),
+      interceptions: currentSeasonStats.reduce((sum, s) => sum + (s.interceptions ?? 0), 0),
+      saves: currentSeasonStats.reduce((sum, s) => sum + (s.saves ?? 0), 0),
+      passAccuracy: (() => {
+        const vals = currentSeasonStats.filter((s) => s.passAccuracy).map((s) => Number(s.passAccuracy));
+        return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+      })(),
+      averageRating: (() => {
+        const vals = currentSeasonStats.filter((s) => s.averageRating).map((s) => Number(s.averageRating));
+        return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+      })(),
+    };
+  } else if (apiStats) {
+    // Aggregate from API-Football response
+    const stats = apiStats.statistics || [];
+    const sum = (fn: (s: any) => number | null) => stats.reduce((acc: number, s: any) => acc + (fn(s) ?? 0), 0);
+    const avg = (fn: (s: any) => number | null) => {
+      const vals = stats.map(fn).filter((v: any) => v != null) as number[];
+      return vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length).toFixed(1) : null;
+    };
+    agg = {
+      appearances: sum(s => s.games?.appearences),
+      minutesPlayed: sum(s => s.games?.minutes),
+      goals: sum(s => s.goals?.total),
+      assists: sum(s => s.goals?.assists),
+      yellowCards: sum(s => s.cards?.yellow),
+      redCards: sum(s => s.cards?.red),
+      cleanSheets: 0,
+      penaltiesScored: sum(s => s.penalty?.scored),
+      penaltiesMissed: sum(s => s.penalty?.missed),
+      shotsOnTarget: sum(s => s.shots?.on),
+      shotsTotal: sum(s => s.shots?.total),
+      tackles: sum(s => s.tackles?.total),
+      interceptions: sum(s => s.tackles?.interceptions),
+      blocks: sum(s => s.tackles?.blocks),
+      saves: sum(s => s.goals?.saves),
+      passAccuracy: avg(s => s.passes?.accuracy ? parseInt(s.passes.accuracy) : null),
+      averageRating: avg(s => s.games?.rating ? parseFloat(s.games.rating) : null),
+      keyPasses: sum(s => s.passes?.key),
+      dribbleSuccess: sum(s => s.dribbles?.success),
+      dribbleAttempts: sum(s => s.dribbles?.attempts),
+      foulsDrawn: sum(s => s.fouls?.drawn),
+      foulsCommitted: sum(s => s.fouls?.committed),
+    };
+  } else {
+    agg = {
+      appearances: 0, minutesPlayed: 0, goals: 0, assists: 0,
+      yellowCards: 0, redCards: 0, cleanSheets: 0,
+      penaltiesScored: 0, penaltiesMissed: 0, shotsOnTarget: 0,
+      tackles: 0, interceptions: 0, saves: 0,
+      passAccuracy: null, averageRating: null,
+    };
+  }
 
   // Ratings from all competitions for form indicator
   const ratingsForForm = currentSeasonStats
@@ -543,10 +612,34 @@ export default async function PlayerDetailPage({ params }: PageProps) {
             </div>
           </div>
         ) : (
-          <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800 p-12 text-center">
-            <BarChart3 className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-            <p className="text-zinc-400">Season statistics are being synced. Check back soon.</p>
-          </div>
+          {agg.appearances > 0 ? (
+            <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800/60 p-6">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-yellow-400 mb-4">Season Statistics (via API)</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <StatCard label="Appearances" value={agg.appearances} subValue={`${agg.minutesPlayed} mins`} />
+                <StatCard label="Goals" value={agg.goals} accent={agg.goals > 0} />
+                <StatCard label="Assists" value={agg.assists} accent={agg.assists > 0} />
+                {agg.averageRating && <StatCard label="Avg Rating" value={agg.averageRating} accent />}
+                {agg.shotsTotal ? <StatCard label="Shots" value={`${agg.shotsOnTarget}/${agg.shotsTotal}`} subValue="on target" /> : agg.shotsOnTarget > 0 && <StatCard label="Shots on Target" value={agg.shotsOnTarget} />}
+                {agg.passAccuracy && <StatCard label="Pass Accuracy" value={`${agg.passAccuracy}%`} />}
+                {agg.keyPasses ? <StatCard label="Key Passes" value={agg.keyPasses} /> : null}
+                <StatCard label="Tackles" value={agg.tackles} />
+                {agg.interceptions > 0 && <StatCard label="Interceptions" value={agg.interceptions} />}
+                {agg.blocks ? <StatCard label="Blocks" value={agg.blocks} /> : null}
+                {agg.dribbleAttempts ? <StatCard label="Dribbles" value={`${agg.dribbleSuccess}/${agg.dribbleAttempts}`} subValue="success" /> : null}
+                {agg.yellowCards > 0 && <StatCard label="Yellow Cards" value={agg.yellowCards} warn />}
+                {agg.redCards > 0 && <StatCard label="Red Cards" value={agg.redCards} warn />}
+                {agg.saves > 0 && <StatCard label="Saves" value={agg.saves} accent />}
+                {agg.penaltiesScored > 0 && <StatCard label="Penalties" value={`${agg.penaltiesScored}/${agg.penaltiesScored + agg.penaltiesMissed}`} subValue="scored" />}
+                {agg.foulsDrawn ? <StatCard label="Fouls Drawn" value={agg.foulsDrawn} /> : null}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800 p-12 text-center">
+              <BarChart3 className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+              <p className="text-zinc-400">Season statistics are being synced. Check back soon.</p>
+            </div>
+          )}
         )}
 
         {/* ===== PER-COMPETITION BREAKDOWN ===== */}
