@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Search, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ===== COMPETITION DATA WITH API-FOOTBALL LOGO URLs =====
+// ===== DATA =====
 
 const COMPETITIONS = [
   { name: 'Premier League', slug: 'premier-league', logo: 'https://media.api-sports.io/football/leagues/39.png' },
@@ -19,7 +19,6 @@ const COMPETITIONS = [
   { name: 'Europa League', slug: 'europa-league', logo: 'https://media.api-sports.io/football/leagues/3.png' },
   { name: 'Conference League', slug: 'conference-league', logo: 'https://media.api-sports.io/football/leagues/848.png' },
   { name: 'Championship', slug: 'championship', logo: 'https://media.api-sports.io/football/leagues/40.png' },
-  { name: 'League One', slug: 'league-one', logo: 'https://media.api-sports.io/football/leagues/41.png' },
   { name: 'Scottish Premiership', slug: 'scottish-premiership', logo: 'https://media.api-sports.io/football/leagues/179.png' },
   { name: 'FA Cup', slug: 'fa-cup', logo: 'https://media.api-sports.io/football/leagues/45.png' },
   { name: 'EFL Cup', slug: 'efl-cup', logo: 'https://media.api-sports.io/football/leagues/46.png' },
@@ -30,11 +29,12 @@ const COMPETITIONS = [
   { name: 'Saudi Pro League', slug: 'saudi-pro-league', logo: 'https://media.api-sports.io/football/leagues/307.png' },
   { name: 'Nations League', slug: 'nations-league', logo: 'https://media.api-sports.io/football/leagues/5.png' },
   { name: 'World Cup', slug: 'world-cup', logo: 'https://media.api-sports.io/football/leagues/1.png' },
+  { name: 'League One', slug: 'league-one', logo: 'https://media.api-sports.io/football/leagues/41.png' },
 ];
 
 const POPULAR_TEAMS = [
   { name: 'Arsenal', slug: 'arsenal', logo: 'https://media.api-sports.io/football/teams/42.png' },
-  { name: 'Manchester City', slug: 'manchester-city', logo: 'https://media.api-sports.io/football/teams/50.png' },
+  { name: 'Man City', slug: 'manchester-city', logo: 'https://media.api-sports.io/football/teams/50.png' },
   { name: 'Liverpool', slug: 'liverpool', logo: 'https://media.api-sports.io/football/teams/40.png' },
   { name: 'Man United', slug: 'manchester-united', logo: 'https://media.api-sports.io/football/teams/33.png' },
   { name: 'Chelsea', slug: 'chelsea', logo: 'https://media.api-sports.io/football/teams/49.png' },
@@ -49,61 +49,100 @@ const POPULAR_TEAMS = [
   { name: 'Inter Milan', slug: 'inter-milan', logo: 'https://media.api-sports.io/football/teams/505.png' },
   { name: 'AC Milan', slug: 'ac-milan', logo: 'https://media.api-sports.io/football/teams/489.png' },
   { name: 'Dortmund', slug: 'borussia-dortmund', logo: 'https://media.api-sports.io/football/teams/165.png' },
-  { name: 'West Ham', slug: 'west-ham-united', logo: 'https://media.api-sports.io/football/teams/48.png' },
-  { name: 'Brighton', slug: 'brighton-and-hove-albion', logo: 'https://media.api-sports.io/football/teams/51.png' },
-  { name: 'Everton', slug: 'everton', logo: 'https://media.api-sports.io/football/teams/45.png' },
-  { name: 'Atletico Madrid', slug: 'atletico-madrid', logo: 'https://media.api-sports.io/football/teams/530.png' },
 ];
 
-function CompLogo({ src, name }: { src: string; name: string }) {
-  return (
-    <Image
-      src={src}
-      alt={name}
-      width={24}
-      height={24}
-      className="h-6 w-6 object-contain"
-      unoptimized
-    />
-  );
+function Logo({ src, name, size = 22 }: { src: string; name: string; size?: number }) {
+  return <Image src={src} alt={name} width={size} height={size} className="object-contain" style={{ width: size, height: size }} unoptimized />;
 }
 
-// ===== PANEL COMPONENTS =====
+// ===== LIVE DATA HOOK =====
 
-function ScoresPanel({ onClose }: { onClose: () => void }) {
+interface MenuData {
+  news: Array<{ title: string; slug: string; imageUrl: string; source: string; ago: number }>;
+  matches: Array<{ id: string; status: string; minute: number; homeScore: number; awayScore: number; homeName: string; homeLogo: string; awayName: string; awayLogo: string; comp: string; kickoff: string }>;
+}
+
+function useMenuData(shouldFetch: boolean) {
+  const [data, setData] = useState<MenuData | null>(null);
+  const fetched = useRef(false);
+
+  useEffect(() => {
+    if (!shouldFetch || fetched.current) return;
+    fetched.current = true;
+    fetch('/api/menu-data')
+      .then(r => r.json())
+      .then(setData)
+      .catch(() => {});
+  }, [shouldFetch]);
+
+  return data;
+}
+
+function formatAgo(mins: number): string {
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  return `${hrs}h ago`;
+}
+
+// ===== PANELS =====
+
+function ScoresPanel({ onClose, data }: { onClose: () => void; data: MenuData | null }) {
   return (
-    <div className="grid grid-cols-[200px_1fr] min-h-[280px]">
-      <div className="border-r border-zinc-200 dark:border-zinc-700 p-5">
-        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Scores & Fixtures</h3>
-        <ul className="space-y-1">
-          {[
-            { label: 'Live Scores', href: '/live' },
-            { label: 'Today\'s Fixtures', href: '/fixtures' },
-            { label: 'Results', href: '/fixtures?tab=results' },
-            { label: 'Match Reports', href: '/match-reports' },
-          ].map(item => (
-            <li key={item.href}>
-              <Link href={item.href} onClick={onClose} className="block rounded-md px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+    <div className="grid grid-cols-[180px_1fr_280px]">
+      {/* Left nav */}
+      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-4 space-y-1">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Scores & Fixtures</h3>
+        {[
+          { label: 'Live Scores', href: '/live' },
+          { label: "Today's Fixtures", href: '/fixtures' },
+          { label: 'Results', href: '/fixtures?tab=results' },
+          { label: 'Match Reports', href: '/match-reports' },
+        ].map(item => (
+          <Link key={item.href} href={item.href} onClick={onClose} className="block rounded px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            {item.label}
+          </Link>
+        ))}
       </div>
-      <div className="p-5">
-        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Quick Links by Competition</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {COMPETITIONS.slice(0, 8).map(comp => (
-            <Link
-              key={comp.slug}
-              href={`/fixtures?competition=${comp.slug}`}
-              onClick={onClose}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              <CompLogo src={comp.logo} name={comp.name} />
-              <span className="text-sm text-zinc-700 dark:text-zinc-300">{comp.name}</span>
+
+      {/* Center: fixture cards */}
+      <div className="p-4 border-r border-zinc-200 dark:border-zinc-700/50">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Today</h3>
+        <div className="space-y-1">
+          {data?.matches.slice(0, 6).map(m => {
+            const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status);
+            const isFt = m.status === 'finished';
+            return (
+              <Link key={m.id} href={`/matches/${m.id}`} onClick={onClose} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                {m.homeLogo && <Logo src={m.homeLogo} name={m.homeName} size={18} />}
+                <span className="text-xs text-zinc-600 dark:text-zinc-400 w-16 truncate text-right">{m.homeName.split(' ').pop()}</span>
+                <span className={cn('text-xs font-bold tabular-nums min-w-[28px] text-center', isLive ? 'text-emerald-500' : isFt ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-400')}>
+                  {isLive || isFt ? `${m.homeScore ?? 0}-${m.awayScore ?? 0}` : new Date(m.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-xs text-zinc-600 dark:text-zinc-400 w-16 truncate">{m.awayName.split(' ').pop()}</span>
+                {m.awayLogo && <Logo src={m.awayLogo} name={m.awayName} size={18} />}
+                {isLive && <span className="text-[9px] font-bold text-emerald-500 ml-auto">{m.status === 'halftime' ? 'HT' : `${m.minute}'`}</span>}
+                {isFt && <span className="text-[9px] text-zinc-400 ml-auto">FT</span>}
+              </Link>
+            );
+          }) || <p className="text-xs text-zinc-400">Loading...</p>}
+        </div>
+      </div>
+
+      {/* Right: news snippets */}
+      <div className="p-4">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Latest</h3>
+        <div className="space-y-2">
+          {data?.news.slice(0, 3).map(article => (
+            <Link key={article.slug} href={`/news/${article.slug}`} onClick={onClose} className="flex gap-2 rounded p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
+              {article.imageUrl && (
+                <img src={article.imageUrl} alt="" className="w-16 h-10 rounded object-cover shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{article.title}</p>
+                <p className="text-[9px] text-zinc-400 mt-0.5">{article.source} · {formatAgo(article.ago)}</p>
+              </div>
             </Link>
-          ))}
+          )) || <p className="text-xs text-zinc-400">Loading...</p>}
         </div>
       </div>
     </div>
@@ -113,24 +152,17 @@ function ScoresPanel({ onClose }: { onClose: () => void }) {
 function CompetitionsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="p-5">
-      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Competitions</h3>
-      <div className="grid grid-cols-4 gap-x-4 gap-y-1">
-        {COMPETITIONS.map(comp => (
-          <Link
-            key={comp.slug}
-            href={`/tables?competition=${comp.slug}`}
-            onClick={onClose}
-            className="flex items-center gap-2.5 rounded-md px-2 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <CompLogo src={comp.logo} name={comp.name} />
-            <span className="text-sm text-zinc-700 dark:text-zinc-300">{comp.name}</span>
+      <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-3">Competitions</h3>
+      <div className="grid grid-cols-4 gap-x-4 gap-y-0.5">
+        {COMPETITIONS.map(c => (
+          <Link key={c.slug} href={`/tables?competition=${c.slug}`} onClick={onClose} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <Logo src={c.logo} name={c.name} />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">{c.name}</span>
           </Link>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700">
-        <Link href="/tables" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors">
-          All Competitions →
-        </Link>
+      <div className="mt-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/50">
+        <Link href="/tables" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">All Competitions →</Link>
       </div>
     </div>
   );
@@ -139,86 +171,81 @@ function CompetitionsPanel({ onClose }: { onClose: () => void }) {
 function TeamsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="p-5">
-      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Popular Teams</h3>
-      <div className="grid grid-cols-4 gap-x-4 gap-y-1">
-        {POPULAR_TEAMS.map(team => (
-          <Link
-            key={team.slug}
-            href={`/teams/${team.slug}`}
-            onClick={onClose}
-            className="flex items-center gap-2.5 rounded-md px-2 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <CompLogo src={team.logo} name={team.name} />
-            <span className="text-sm text-zinc-700 dark:text-zinc-300">{team.name}</span>
+      <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-3">Popular Teams</h3>
+      <div className="grid grid-cols-4 gap-x-4 gap-y-0.5">
+        {POPULAR_TEAMS.map(t => (
+          <Link key={t.slug} href={`/teams/${t.slug}`} onClick={onClose} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <Logo src={t.logo} name={t.name} />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">{t.name}</span>
           </Link>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700">
-        <Link href="/teams" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors">
-          All Teams →
-        </Link>
+      <div className="mt-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/50">
+        <Link href="/teams" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">All Teams →</Link>
       </div>
     </div>
   );
 }
 
-function NewsPanel({ onClose }: { onClose: () => void }) {
+function NewsPanel({ onClose, data }: { onClose: () => void; data: MenuData | null }) {
   return (
-    <div className="grid grid-cols-4 gap-4 p-5">
-      {[
-        { label: 'Latest News', href: '/news', desc: 'Breaking stories from 12+ verified sources', icon: '📰' },
-        { label: 'Match Reports', href: '/match-reports', desc: 'AI-powered post-match analysis & reports', icon: '📝' },
-        { label: 'Transfers', href: '/transfers', desc: 'Latest transfer news, rumours & confirmed deals', icon: '🔄' },
-        { label: 'Videos', href: '/videos', desc: 'Match highlights & analysis clips', icon: '🎬' },
-      ].map(item => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={onClose}
-          className="flex flex-col rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group"
-        >
-          <span className="text-2xl mb-2">{item.icon}</span>
-          <span className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.label}</span>
-          <span className="text-xs text-zinc-500 mt-1 leading-relaxed">{item.desc}</span>
-        </Link>
-      ))}
+    <div className="grid grid-cols-[180px_1fr]">
+      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-4 space-y-1">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Sections</h3>
+        {[
+          { label: 'Latest News', href: '/news' },
+          { label: 'Match Reports', href: '/match-reports' },
+          { label: 'Transfers', href: '/transfers' },
+          { label: 'Videos', href: '/videos' },
+          { label: 'Predictions', href: '/predictions' },
+        ].map(item => (
+          <Link key={item.href} href={item.href} onClick={onClose} className="block rounded px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            {item.label}
+          </Link>
+        ))}
+      </div>
+      <div className="p-4">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Latest News</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {data?.news.slice(0, 4).map(article => (
+            <Link key={article.slug} href={`/news/${article.slug}`} onClick={onClose} className="group rounded-lg overflow-hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+              {article.imageUrl && (
+                <img src={article.imageUrl} alt="" className="w-full h-24 object-cover rounded-t-lg" />
+              )}
+              <div className="p-2">
+                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{article.title}</p>
+                <p className="text-[9px] text-zinc-400 mt-1">{article.source} · {formatAgo(article.ago)}</p>
+              </div>
+            </Link>
+          )) || <p className="text-xs text-zinc-400 col-span-2">Loading...</p>}
+        </div>
+      </div>
     </div>
   );
 }
 
 function MorePanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="grid grid-cols-4 gap-4 p-5">
+    <div className="grid grid-cols-4 gap-3 p-5">
       {[
-        { label: 'Predictions', href: '/predictions', desc: 'AI score forecasts, BTTS & over/under', icon: '🎯' },
-        { label: 'League Tables', href: '/tables', desc: 'Full standings for all competitions', icon: '🏆' },
-        { label: 'Rules', href: '/rules', desc: 'Laws of the game explained simply', icon: '📋' },
-        { label: 'Search', href: '/search', desc: 'Find anything on Footy Feed', icon: '🔍' },
+        { label: 'Predictions', href: '/predictions', desc: 'AI score forecasts, BTTS & O/U', icon: '🎯' },
+        { label: 'League Tables', href: '/tables', desc: 'Full standings', icon: '🏆' },
+        { label: 'Rules', href: '/rules', desc: 'Laws of the game', icon: '📋' },
+        { label: 'Search', href: '/search', desc: 'Find anything', icon: '🔍' },
       ].map(item => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={onClose}
-          className="flex flex-col rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group"
-        >
-          <span className="text-2xl mb-2">{item.icon}</span>
-          <span className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.label}</span>
-          <span className="text-xs text-zinc-500 mt-1 leading-relaxed">{item.desc}</span>
+        <Link key={item.href} href={item.href} onClick={onClose} className="flex flex-col rounded-lg bg-zinc-50 dark:bg-zinc-800/50 p-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
+          <span className="text-xl mb-1">{item.icon}</span>
+          <span className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{item.label}</span>
+          <span className="text-[10px] text-zinc-500 mt-0.5">{item.desc}</span>
         </Link>
       ))}
     </div>
   );
 }
 
-// ===== MENU CONFIG =====
+// ===== CONFIG =====
 
-interface MenuItemConfig {
-  label: string;
-  href?: string;
-  panel?: string;
-}
-
-const MENU_ITEMS: MenuItemConfig[] = [
+const MENU_ITEMS: Array<{ label: string; href?: string; panel?: string }> = [
   { label: 'Home', href: '/' },
   { label: 'Scores', panel: 'scores' },
   { label: 'Competitions', panel: 'competitions' },
@@ -227,70 +254,50 @@ const MENU_ITEMS: MenuItemConfig[] = [
   { label: 'More', panel: 'more' },
 ];
 
-// ===== MAIN COMPONENT =====
+// ===== MAIN =====
 
-interface MegaMenuProps {
-  vertical?: boolean;
-  onItemClick?: () => void;
-}
-
-export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
+export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean; onItemClick?: () => void }) {
   const pathname = usePathname();
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Fetch live data when any panel opens
+  const menuData = useMenuData(openPanel === 'scores' || openPanel === 'news');
+
   useEffect(() => { setOpenPanel(null); }, [pathname]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenPanel(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenPanel(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  function handleMouseEnter(panel: string) {
+  const enter = useCallback((p: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setOpenPanel(panel);
-  }
+    setOpenPanel(p);
+  }, []);
 
-  function handleMouseLeave() {
+  const leave = useCallback(() => {
     timeoutRef.current = setTimeout(() => setOpenPanel(null), 250);
-  }
+  }, []);
 
-  function handleClose() {
-    setOpenPanel(null);
-    onItemClick?.();
-  }
+  const close = useCallback(() => { setOpenPanel(null); onItemClick?.(); }, [onItemClick]);
 
   if (vertical) {
     return (
       <nav className="flex flex-col gap-1">
         {[
-          { href: '/', label: 'Home' },
-          { href: '/live', label: 'Live Scores' },
-          { href: '/news', label: 'News' },
-          { href: '/fixtures', label: 'Fixtures' },
-          { href: '/tables', label: 'Tables' },
-          { href: '/transfers', label: 'Transfers' },
-          { href: '/match-reports', label: 'Reports' },
-          { href: '/predictions', label: 'Predictions' },
-          { href: '/videos', label: 'Videos' },
-          { href: '/rules', label: 'Rules' },
-          { href: '/search', label: 'Search' },
+          { href: '/', label: 'Home' }, { href: '/live', label: 'Live Scores' },
+          { href: '/news', label: 'News' }, { href: '/fixtures', label: 'Fixtures' },
+          { href: '/tables', label: 'Tables' }, { href: '/transfers', label: 'Transfers' },
+          { href: '/match-reports', label: 'Reports' }, { href: '/predictions', label: 'Predictions' },
+          { href: '/videos', label: 'Videos' }, { href: '/rules', label: 'Rules' },
         ].map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onItemClick}
-            className={cn(
-              'px-3 py-2 text-sm font-medium transition-colors rounded-md',
-              pathname === item.href ? 'text-emerald-400 bg-zinc-800' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/50'
-            )}
-          >
+          <Link key={item.href} href={item.href} onClick={onItemClick}
+            className={cn('px-3 py-2 text-sm font-medium rounded-md', pathname === item.href ? 'text-emerald-400 bg-zinc-800' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/50')}>
             {item.label}
           </Link>
         ))}
@@ -299,84 +306,54 @@ export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
   }
 
   const panels: Record<string, React.ReactNode> = {
-    scores: <ScoresPanel onClose={handleClose} />,
-    competitions: <CompetitionsPanel onClose={handleClose} />,
-    teams: <TeamsPanel onClose={handleClose} />,
-    news: <NewsPanel onClose={handleClose} />,
-    more: <MorePanel onClose={handleClose} />,
+    scores: <ScoresPanel onClose={close} data={menuData} />,
+    competitions: <CompetitionsPanel onClose={close} />,
+    teams: <TeamsPanel onClose={close} />,
+    news: <NewsPanel onClose={close} data={menuData} />,
+    more: <MorePanel onClose={close} />,
   };
 
   return (
     <div ref={menuRef} className="relative flex items-center">
-      <nav className="flex items-center gap-0.5">
-        {MENU_ITEMS.map((item) => {
+      <nav className="flex items-center">
+        {MENU_ITEMS.map(item => {
           const isOpen = openPanel === item.panel;
-          const isActive = item.href
-            ? pathname === item.href
+          const isActive = item.href ? pathname === item.href
             : item.panel === 'scores' ? ['/live', '/fixtures', '/match-reports'].some(p => pathname.startsWith(p))
             : item.panel === 'news' ? ['/news', '/transfers', '/videos'].some(p => pathname.startsWith(p))
             : item.panel === 'competitions' ? pathname.startsWith('/tables')
             : item.panel === 'teams' ? pathname.startsWith('/teams')
-            : item.panel === 'more' ? ['/predictions', '/rules', '/search'].some(p => pathname.startsWith(p))
             : false;
 
           if (item.href) {
             return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onMouseEnter={() => setOpenPanel(null)}
-                className={cn(
-                  'px-3 py-2.5 text-sm font-semibold transition-colors',
-                  isActive
-                    ? 'text-emerald-500 dark:text-emerald-400 border-b-2 border-emerald-500'
-                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border-b-2 border-transparent'
-                )}
-              >
+              <Link key={item.label} href={item.href} onMouseEnter={() => setOpenPanel(null)}
+                className={cn('px-3 py-2.5 text-sm font-semibold transition-colors', isActive ? 'text-emerald-400' : 'text-zinc-300 hover:text-white')}>
                 {item.label}
               </Link>
             );
           }
 
           return (
-            <div
-              key={item.label}
-              onMouseEnter={() => handleMouseEnter(item.panel!)}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                className={cn(
-                  'flex items-center gap-0.5 px-3 py-2.5 text-sm font-semibold transition-colors border-b-2',
-                  isOpen || isActive
-                    ? 'text-emerald-500 dark:text-emerald-400 border-emerald-500'
-                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border-transparent'
-                )}
-              >
+            <div key={item.label} onMouseEnter={() => enter(item.panel!)} onMouseLeave={leave}>
+              <button className={cn('flex items-center gap-0.5 px-3 py-2.5 text-sm font-semibold transition-colors',
+                isOpen || isActive ? 'text-emerald-400' : 'text-zinc-300 hover:text-white')}>
                 {item.label}
-                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform ml-0.5', isOpen ? 'rotate-180' : '')} />
+                <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
               </button>
             </div>
           );
         })}
-
-        <Link
-          href="/search"
-          className={cn(
-            'px-3 py-2.5 transition-colors',
-            pathname === '/search' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'
-          )}
-          aria-label="Search"
-        >
+        <Link href="/search" className="px-3 py-2.5 text-zinc-400 hover:text-white transition-colors" aria-label="Search">
           <Search className="h-4 w-4" />
         </Link>
       </nav>
 
-      {/* Dropdown panel — full width, appears below nav */}
       {openPanel && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 w-[960px] max-w-[calc(100vw-2rem)] mt-0 rounded-b-xl bg-white dark:bg-zinc-900 border border-t-0 border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/10 dark:shadow-black/40 z-50"
+          className="absolute top-full left-1/2 -translate-x-1/2 w-[960px] max-w-[calc(100vw-2rem)] rounded-b-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50"
           onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }}
-          onMouseLeave={handleMouseLeave}
+          onMouseLeave={leave}
         >
           {panels[openPanel]}
         </div>
