@@ -15,6 +15,7 @@ const navItems = [
   { href: '/match-reports', label: 'Reports' },
   { href: '/videos', label: 'Videos' },
   { href: '/predictions', label: 'Predictions' },
+  { href: '/stats', label: 'Stats' },
   { href: '/rules', label: 'Rules' },
 ];
 

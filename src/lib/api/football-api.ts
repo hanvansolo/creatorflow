@@ -406,8 +406,8 @@ export async function getTeamInjuries(teamId: number, season: number) {
 
 // ===== COACHES =====
 
-/** Get coach info by team */
-export async function getCoach(teamId: number) {
+/** Get coach info by id, team, or search */
+export async function getCoach(params: { id?: number; team?: number; search?: string }) {
   return apiFetch<Array<{
     id: number;
     name: string;
@@ -420,8 +420,12 @@ export async function getCoach(teamId: number) {
     weight: string | null;
     photo: string;
     team: { id: number; name: string; logo: string };
-    career: Array<{ team: { id: number; name: string; logo: string }; start: string; end: string | null }>;
-  }>>('/coachs', { team: teamId });
+    career: Array<{
+      team: { id: number; name: string; logo: string };
+      start: string;
+      end: string | null;
+    }>;
+  }>>('/coachs', params as Record<string, string | number>);
 }
 
 // ===== TROPHIES =====
@@ -538,4 +542,53 @@ export function mapEventType(type: string, detail: string): string {
   if (type === 'subst') return 'substitution';
   if (type === 'Var') return 'var_decision';
   return type.toLowerCase();
+}
+
+// ===== TEAM STATISTICS =====
+
+/** Get full team statistics for a league + season */
+export async function getTeamStatistics(teamId: number, season: number, leagueId: number) {
+  return apiFetch<{
+    league: { id: number; name: string; country: string; logo: string; season: number };
+    team: { id: number; name: string; logo: string };
+    form: string; // e.g. "WWDLW"
+    fixtures: {
+      played: { home: number; away: number; total: number };
+      wins: { home: number; away: number; total: number };
+      draws: { home: number; away: number; total: number };
+      loses: { home: number; away: number; total: number };
+    };
+    goals: {
+      for: { total: { home: number; away: number; total: number }; average: { home: string; away: string; total: string }; minute: Record<string, { total: number | null; percentage: string | null }> };
+      against: { total: { home: number; away: number; total: number }; average: { home: string; away: string; total: string }; minute: Record<string, { total: number | null; percentage: string | null }> };
+    };
+    biggest: {
+      streak: { wins: number; draws: number; loses: number };
+      wins: { home: string | null; away: string | null };
+      loses: { home: string | null; away: string | null };
+      goals: { for: { home: number; away: number }; against: { home: number; away: number } };
+    };
+    clean_sheet: { home: number; away: number; total: number };
+    failed_to_score: { home: number; away: number; total: number };
+    penalty: { scored: { total: number; percentage: string }; missed: { total: number; percentage: string }; total: number };
+    lineups: Array<{ formation: string; played: number }>;
+    cards: {
+      yellow: Record<string, { total: number | null; percentage: string | null }>;
+      red: Record<string, { total: number | null; percentage: string | null }>;
+    };
+  }>('/teams/statistics', { team: teamId, season, league: leagueId });
+}
+
+// ===== PLAYER SEASONS =====
+
+/** Get available seasons for a player */
+export async function getPlayerSeasons(playerId: number) {
+  return apiFetch<number[]>('/players/seasons', { player: playerId });
+}
+
+// ===== TEAM SEASONS =====
+
+/** Get available seasons for a team */
+export async function getTeamSeasons(teamId: number) {
+  return apiFetch<number[]>('/teams/seasons', { team: teamId });
 }

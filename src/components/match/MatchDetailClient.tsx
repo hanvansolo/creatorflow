@@ -282,6 +282,7 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
                 latestAnalysis={latestAnalysis}
                 injuries={data.injuries}
                 predictions={data.predictions}
+                playerRatings={data.playerRatings}
               />
               {/* Timeline on Summary tab */}
               {events.length > 0 && (

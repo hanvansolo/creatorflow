@@ -3,6 +3,8 @@
 
 import { useMemo } from 'react';
 import PitchShotMap from '../PitchShotMap';
+import PlayerPerformanceGrid from '../PlayerPerformanceGrid';
+import MomentumTimeline from '../MomentumTimeline';
 import {
   AlertTriangle,
   TrendingUp,
@@ -22,6 +24,7 @@ import type {
   MatchAnalysisRow,
   InjuryData,
   PredictionData,
+  PlayerRating,
 } from '@/components/match/types';
 
 /* ---------- BBC-style center-out StatBar ---------- */
@@ -87,6 +90,7 @@ interface SummaryTabProps {
   latestAnalysis: MatchAnalysisRow | null;
   injuries: InjuryData[];
   predictions: PredictionData | null;
+  playerRatings: PlayerRating[];
 }
 
 export default function SummaryTab({
@@ -97,6 +101,7 @@ export default function SummaryTab({
   latestAnalysis,
   injuries,
   predictions,
+  playerRatings,
 }: SummaryTabProps) {
   const homeInjuries = useMemo(
     () => injuries.filter((i) => i.team.id === match.home_api_id),
@@ -247,9 +252,24 @@ export default function SummaryTab({
         </section>
       )}
 
+      {/* ---- Match Event Timeline ---- */}
+      {events.length > 0 && (isLive || isFinished) && (
+        <MomentumTimeline
+          match={match}
+          events={events}
+          homeStats={homeStats}
+          awayStats={awayStats}
+        />
+      )}
+
       {/* ---- Shot Analysis Pitch ---- */}
       {(homeStats || awayStats) && (isLive || isFinished) && (
         <PitchShotMap match={match} events={events} homeStats={homeStats} awayStats={awayStats} />
+      )}
+
+      {/* ---- Player Performance ---- */}
+      {playerRatings.length > 0 && (
+        <PlayerPerformanceGrid match={match} playerRatings={playerRatings} />
       )}
 
       {/* ---- Quick Stats ---- */}
