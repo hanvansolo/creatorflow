@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import PitchShotMap from '../PitchShotMap';
 import PlayerPerformanceGrid from '../PlayerPerformanceGrid';
 import MomentumTimeline from '../MomentumTimeline';
+import FormGuide from '../FormGuide';
 import {
   AlertTriangle,
   TrendingUp,
@@ -288,6 +289,29 @@ export default function SummaryTab({
                 isPercentage={s.pct}
               />
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* ---- Form Guide ---- */}
+      {predictions?.teams && (
+        <section className="rounded-lg bg-zinc-800 p-4">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-yellow-400">
+            Form Guide
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormGuide
+              teamName={match.home_name}
+              form={predictions.teams.home?.last_5?.form ?? ''}
+              goalsFor={predictions.teams.home?.last_5?.goals?.for?.average ?? null}
+              goalsAgainst={predictions.teams.home?.last_5?.goals?.against?.average ?? null}
+            />
+            <FormGuide
+              teamName={match.away_name}
+              form={predictions.teams.away?.last_5?.form ?? ''}
+              goalsFor={predictions.teams.away?.last_5?.goals?.for?.average ?? null}
+              goalsAgainst={predictions.teams.away?.last_5?.goals?.against?.average ?? null}
+            />
           </div>
         </section>
       )}

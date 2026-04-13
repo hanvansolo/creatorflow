@@ -2,10 +2,11 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Shield, MapPin, Calendar, Users, ArrowRight, Newspaper, GitCompareArrows, Trophy, Shirt, Swords } from 'lucide-react';
-import { db, clubs, venues, newsArticles, players, leagueStandings, competitionSeasons, competitions, matches } from '@/lib/db';
+import { ArrowLeft, Shield, MapPin, Calendar, Users, ArrowRight, Newspaper, GitCompareArrows, Trophy, Shirt, Swords, BarChart3, Target, TrendingUp } from 'lucide-react';
+import { db, clubs, venues, newsArticles, players, leagueStandings, competitionSeasons, competitions, matches, seasons } from '@/lib/db';
 import { eq, ilike, or, desc, sql, and, asc } from 'drizzle-orm';
 import { getOrLoadSquad } from '@/lib/api/player-loader';
+import { getTeamStatistics } from '@/lib/api/football-api';
 import { createPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -142,6 +143,38 @@ export default async function TeamDetailPage({ params }: PageProps) {
     )
     .orderBy(desc(newsArticles.publishedAt))
     .limit(3);
+
+  // Fetch team statistics from API-Football
+  let teamStats: any = null;
+  if (club.apiFootballId && standings.length > 0) {
+    try {
+      // Get the league's apiFootballId and season from the first standing's competition
+      const compSeasonInfo = await db
+        .select({
+          leagueApiId: competitions.apiFootballId,
+          seasonYear: competitionSeasons.apiFootballSeason,
+        })
+        .from(leagueStandings)
+        .innerJoin(competitionSeasons, eq(leagueStandings.competitionSeasonId, competitionSeasons.id))
+        .innerJoin(competitions, eq(competitionSeasons.competitionId, competitions.id))
+        .where(eq(leagueStandings.clubId, club.id))
+        .limit(1);
+
+      if (compSeasonInfo.length > 0 && compSeasonInfo[0].leagueApiId && compSeasonInfo[0].seasonYear) {
+        const statsResult = await getTeamStatistics(
+          club.apiFootballId,
+          compSeasonInfo[0].seasonYear,
+          compSeasonInfo[0].leagueApiId
+        );
+        if (statsResult && statsResult.length > 0) {
+          teamStats = statsResult[0];
+        }
+      }
+    } catch (e) {
+      // Silently fail — stats sections just won't render
+      console.error('Failed to fetch team statistics:', e);
+    }
+  }
 
   const primaryColor = club.primaryColor || '#059669';
   const secondaryColor = club.secondaryColor || '#10b981';
@@ -306,6 +339,354 @@ export default async function TeamDetailPage({ params }: PageProps) {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Season Overview Cards */}
+        {teamStats && teamStats.fixtures && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Season Statistics</h2>
+            </div>
+
+            {/* Key stats grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Played</p>
+                <p className="text-2xl font-bold text-white">{teamStats.fixtures.played.total}</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Won</p>
+                <p className="text-2xl font-bold text-emerald-400">{teamStats.fixtures.wins.total}</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Drew</p>
+                <p className="text-2xl font-bold text-zinc-300">{teamStats.fixtures.draws.total}</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Lost</p>
+                <p className="text-2xl font-bold text-red-400">{teamStats.fixtures.loses.total}</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Win %</p>
+                <p className="text-2xl font-bold text-white">
+                  {teamStats.fixtures.played.total > 0
+                    ? Math.round((teamStats.fixtures.wins.total / teamStats.fixtures.played.total) * 100)
+                    : 0}%
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Goals For</p>
+                <p className="text-2xl font-bold text-emerald-400">{teamStats.goals.for.total.total}</p>
+                <p className="text-xs text-zinc-500">avg {teamStats.goals.for.average.total}/game</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Goals Against</p>
+                <p className="text-2xl font-bold text-red-400">{teamStats.goals.against.total.total}</p>
+                <p className="text-xs text-zinc-500">avg {teamStats.goals.against.average.total}/game</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Goal Diff</p>
+                {(() => {
+                  const gd = teamStats.goals.for.total.total - teamStats.goals.against.total.total;
+                  return (
+                    <p className={`text-2xl font-bold ${gd > 0 ? 'text-emerald-400' : gd < 0 ? 'text-red-400' : 'text-zinc-300'}`}>
+                      {gd > 0 ? '+' : ''}{gd}
+                    </p>
+                  );
+                })()}
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Clean Sheets</p>
+                <p className="text-2xl font-bold text-white">{teamStats.clean_sheet.total}</p>
+                <p className="text-xs text-zinc-500">{teamStats.failed_to_score.total} failed to score</p>
+              </div>
+            </div>
+
+            {/* Form badges */}
+            {teamStats.form && (
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 mb-4">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Season Form</p>
+                <div className="flex flex-wrap gap-1">
+                  {teamStats.form.split('').map((r: string, i: number) => (
+                    <span
+                      key={i}
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold text-white ${
+                        r === 'W' ? 'bg-emerald-500' : r === 'D' ? 'bg-zinc-500' : 'bg-red-500'
+                      }`}
+                    >
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Win % Home vs Away */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Home Win %</p>
+                <p className="text-xl font-bold text-emerald-400">
+                  {teamStats.fixtures.played.home > 0
+                    ? Math.round((teamStats.fixtures.wins.home / teamStats.fixtures.played.home) * 100)
+                    : 0}%
+                </p>
+                <p className="text-xs text-zinc-500">{teamStats.fixtures.wins.home}W from {teamStats.fixtures.played.home} games</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Away Win %</p>
+                <p className="text-xl font-bold text-blue-400">
+                  {teamStats.fixtures.played.away > 0
+                    ? Math.round((teamStats.fixtures.wins.away / teamStats.fixtures.played.away) * 100)
+                    : 0}%
+                </p>
+                <p className="text-xs text-zinc-500">{teamStats.fixtures.wins.away}W from {teamStats.fixtures.played.away} games</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Goals by Time Period */}
+        {teamStats && teamStats.goals && teamStats.goals.for.minute && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Goals by Time Period</h2>
+            </div>
+            <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 p-4">
+              <div className="space-y-3">
+                {['0-15', '16-30', '31-45', '46-60', '61-75', '76-90'].map((period) => {
+                  const scored = teamStats.goals.for.minute[period]?.total ?? 0;
+                  const conceded = teamStats.goals.against.minute[period]?.total ?? 0;
+                  const maxGoals = Math.max(
+                    ...['0-15', '16-30', '31-45', '46-60', '61-75', '76-90'].flatMap((p) => [
+                      teamStats.goals.for.minute[p]?.total ?? 0,
+                      teamStats.goals.against.minute[p]?.total ?? 0,
+                    ])
+                  );
+                  const maxBarWidth = maxGoals > 0 ? maxGoals : 1;
+                  return (
+                    <div key={period} className="flex items-center gap-3">
+                      <span className="text-xs text-zinc-400 w-12 text-right font-mono">{period}'</span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-4 rounded-sm bg-emerald-500/80"
+                            style={{ width: `${(scored / maxBarWidth) * 100}%`, minWidth: scored > 0 ? '8px' : '0' }}
+                          />
+                          <span className="text-xs text-emerald-400 font-medium w-5">{scored}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-4 rounded-sm bg-red-500/60"
+                            style={{ width: `${(conceded / maxBarWidth) * 100}%`, minWidth: conceded > 0 ? '8px' : '0' }}
+                          />
+                          <span className="text-xs text-red-400 font-medium w-5">{conceded}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-zinc-700/40">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-sm bg-emerald-500/80" />
+                  <span className="text-[10px] text-zinc-400">Scored</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-sm bg-red-500/60" />
+                  <span className="text-[10px] text-zinc-400">Conceded</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Home vs Away Split */}
+        {teamStats && teamStats.fixtures && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Home vs Away</h2>
+            </div>
+            <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[10px] uppercase tracking-wider text-zinc-500 border-b border-zinc-700/40">
+                    <th className="py-2.5 px-4 text-left"></th>
+                    <th className="py-2.5 px-3 text-center">P</th>
+                    <th className="py-2.5 px-3 text-center">W</th>
+                    <th className="py-2.5 px-3 text-center">D</th>
+                    <th className="py-2.5 px-3 text-center">L</th>
+                    <th className="py-2.5 px-3 text-center">GF</th>
+                    <th className="py-2.5 px-3 text-center">GA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-zinc-800/50">
+                    <td className="py-2.5 px-4 font-medium text-emerald-400">Home</td>
+                    <td className="py-2.5 px-3 text-center text-white">{teamStats.fixtures.played.home}</td>
+                    <td className="py-2.5 px-3 text-center text-emerald-400">{teamStats.fixtures.wins.home}</td>
+                    <td className="py-2.5 px-3 text-center text-zinc-300">{teamStats.fixtures.draws.home}</td>
+                    <td className="py-2.5 px-3 text-center text-red-400">{teamStats.fixtures.loses.home}</td>
+                    <td className="py-2.5 px-3 text-center text-white">{teamStats.goals.for.total.home}</td>
+                    <td className="py-2.5 px-3 text-center text-zinc-300">{teamStats.goals.against.total.home}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-4 font-medium text-blue-400">Away</td>
+                    <td className="py-2.5 px-3 text-center text-white">{teamStats.fixtures.played.away}</td>
+                    <td className="py-2.5 px-3 text-center text-emerald-400">{teamStats.fixtures.wins.away}</td>
+                    <td className="py-2.5 px-3 text-center text-zinc-300">{teamStats.fixtures.draws.away}</td>
+                    <td className="py-2.5 px-3 text-center text-red-400">{teamStats.fixtures.loses.away}</td>
+                    <td className="py-2.5 px-3 text-center text-white">{teamStats.goals.for.total.away}</td>
+                    <td className="py-2.5 px-3 text-center text-zinc-300">{teamStats.goals.against.total.away}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Biggest Results */}
+        {teamStats && teamStats.biggest && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Biggest Results</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {teamStats.biggest.wins.home && (
+                <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Biggest Home Win</p>
+                  <p className="text-lg font-bold text-emerald-400">{teamStats.biggest.wins.home}</p>
+                </div>
+              )}
+              {teamStats.biggest.wins.away && (
+                <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Biggest Away Win</p>
+                  <p className="text-lg font-bold text-emerald-400">{teamStats.biggest.wins.away}</p>
+                </div>
+              )}
+              {teamStats.biggest.loses.home && (
+                <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Biggest Home Loss</p>
+                  <p className="text-lg font-bold text-red-400">{teamStats.biggest.loses.home}</p>
+                </div>
+              )}
+              {teamStats.biggest.loses.away && (
+                <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Biggest Away Loss</p>
+                  <p className="text-lg font-bold text-red-400">{teamStats.biggest.loses.away}</p>
+                </div>
+              )}
+              {teamStats.biggest.streak.wins > 0 && (
+                <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Longest Win Streak</p>
+                  <p className="text-lg font-bold text-emerald-400">{teamStats.biggest.streak.wins} games</p>
+                </div>
+              )}
+              {(teamStats.biggest.streak.wins + teamStats.biggest.streak.draws) > 0 && (
+                <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Longest Unbeaten</p>
+                  <p className="text-lg font-bold text-blue-400">
+                    {(() => {
+                      // The API gives streak.wins and streak.draws separately
+                      // For longest unbeaten, we show the form string length minus losses
+                      const form = teamStats.form || '';
+                      let maxUnbeaten = 0;
+                      let current = 0;
+                      for (const c of form) {
+                        if (c !== 'L') { current++; maxUnbeaten = Math.max(maxUnbeaten, current); }
+                        else { current = 0; }
+                      }
+                      return maxUnbeaten > 0 ? `${maxUnbeaten} games` : '-';
+                    })()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Most Used Formations */}
+        {teamStats && teamStats.lineups && teamStats.lineups.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Most Used Formations</h2>
+            </div>
+            <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 p-4 space-y-3">
+              {(() => {
+                const totalPlayed = teamStats.lineups.reduce((sum: number, l: any) => sum + l.played, 0);
+                return teamStats.lineups.map((lineup: any, i: number) => {
+                  const pct = totalPlayed > 0 ? Math.round((lineup.played / totalPlayed) * 100) : 0;
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-sm font-mono font-bold text-white w-16">{lineup.formation}</span>
+                      <div className="flex-1 h-6 bg-zinc-700/30 rounded-sm overflow-hidden relative">
+                        <div
+                          className="h-full bg-emerald-500/40 rounded-sm"
+                          style={{ width: `${pct}%` }}
+                        />
+                        <span className="absolute inset-0 flex items-center px-2 text-xs text-zinc-300 font-medium">
+                          {lineup.played} games ({pct}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Penalty Record */}
+        {teamStats && teamStats.penalty && teamStats.penalty.total > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">Penalty Record</h2>
+            </div>
+            <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/40 p-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Scored</p>
+                  <p className="text-2xl font-bold text-emerald-400">{teamStats.penalty.scored.total}</p>
+                  <p className="text-xs text-zinc-500">{teamStats.penalty.scored.percentage}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Missed</p>
+                  <p className="text-2xl font-bold text-red-400">{teamStats.penalty.missed.total}</p>
+                  <p className="text-xs text-zinc-500">{teamStats.penalty.missed.percentage}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Total</p>
+                  <p className="text-2xl font-bold text-white">{teamStats.penalty.total}</p>
+                  <p className="text-xs text-zinc-500">
+                    {teamStats.penalty.total > 0
+                      ? `${Math.round((teamStats.penalty.scored.total / teamStats.penalty.total) * 100)}% accuracy`
+                      : '-'}
+                  </p>
+                </div>
+              </div>
+              {/* Visual accuracy bar */}
+              <div className="mt-4">
+                <div className="h-3 bg-zinc-700/30 rounded-full overflow-hidden flex">
+                  <div
+                    className="h-full bg-emerald-500"
+                    style={{ width: `${teamStats.penalty.total > 0 ? (teamStats.penalty.scored.total / teamStats.penalty.total) * 100 : 0}%` }}
+                  />
+                  <div
+                    className="h-full bg-red-500"
+                    style={{ width: `${teamStats.penalty.total > 0 ? (teamStats.penalty.missed.total / teamStats.penalty.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
