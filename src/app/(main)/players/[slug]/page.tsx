@@ -611,34 +611,38 @@ export default async function PlayerDetailPage({ params }: PageProps) {
               )}
             </div>
           </div>
-        ) : agg.appearances > 0 ? (
-            <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800/60 p-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-yellow-400 mb-4">Season Statistics (via API)</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                <StatCard label="Appearances" value={agg.appearances} subValue={`${agg.minutesPlayed} mins`} />
-                <StatCard label="Goals" value={agg.goals} accent={agg.goals > 0} />
-                <StatCard label="Assists" value={agg.assists} accent={agg.assists > 0} />
-                {agg.averageRating && <StatCard label="Avg Rating" value={agg.averageRating} accent />}
-                {agg.shotsTotal ? <StatCard label="Shots" value={`${agg.shotsOnTarget}/${agg.shotsTotal}`} subValue="on target" /> : agg.shotsOnTarget > 0 && <StatCard label="Shots on Target" value={agg.shotsOnTarget} />}
-                {agg.passAccuracy && <StatCard label="Pass Accuracy" value={`${agg.passAccuracy}%`} />}
-                {agg.keyPasses ? <StatCard label="Key Passes" value={agg.keyPasses} /> : null}
-                <StatCard label="Tackles" value={agg.tackles} />
-                {agg.interceptions > 0 && <StatCard label="Interceptions" value={agg.interceptions} />}
-                {agg.blocks ? <StatCard label="Blocks" value={agg.blocks} /> : null}
-                {agg.dribbleAttempts ? <StatCard label="Dribbles" value={`${agg.dribbleSuccess}/${agg.dribbleAttempts}`} subValue="success" /> : null}
-                {agg.yellowCards > 0 && <StatCard label="Yellow Cards" value={agg.yellowCards} warn />}
-                {agg.redCards > 0 && <StatCard label="Red Cards" value={agg.redCards} warn />}
-                {agg.saves > 0 && <StatCard label="Saves" value={agg.saves} accent />}
-                {agg.penaltiesScored > 0 && <StatCard label="Penalties" value={`${agg.penaltiesScored}/${agg.penaltiesScored + agg.penaltiesMissed}`} subValue="scored" />}
-                {agg.foulsDrawn ? <StatCard label="Fouls Drawn" value={agg.foulsDrawn} /> : null}
+        ) : (
+          <>
+            {agg.appearances > 0 ? (
+              <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800/60 p-6">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-yellow-400 mb-4">Season Statistics (via API)</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  <StatCard label="Appearances" value={agg.appearances} subValue={`${agg.minutesPlayed} mins`} />
+                  <StatCard label="Goals" value={agg.goals} accent={agg.goals > 0} />
+                  <StatCard label="Assists" value={agg.assists} accent={agg.assists > 0} />
+                  {agg.averageRating && <StatCard label="Avg Rating" value={agg.averageRating} accent />}
+                  {agg.shotsTotal ? <StatCard label="Shots" value={`${agg.shotsOnTarget}/${agg.shotsTotal}`} subValue="on target" /> : agg.shotsOnTarget > 0 && <StatCard label="Shots on Target" value={agg.shotsOnTarget} />}
+                  {agg.passAccuracy && <StatCard label="Pass Accuracy" value={`${agg.passAccuracy}%`} />}
+                  {agg.keyPasses ? <StatCard label="Key Passes" value={agg.keyPasses} /> : null}
+                  <StatCard label="Tackles" value={agg.tackles} />
+                  {agg.interceptions > 0 && <StatCard label="Interceptions" value={agg.interceptions} />}
+                  {agg.blocks ? <StatCard label="Blocks" value={agg.blocks} /> : null}
+                  {agg.dribbleAttempts ? <StatCard label="Dribbles" value={`${agg.dribbleSuccess}/${agg.dribbleAttempts}`} subValue="success" /> : null}
+                  {agg.yellowCards > 0 && <StatCard label="Yellow Cards" value={agg.yellowCards} warn />}
+                  {agg.redCards > 0 && <StatCard label="Red Cards" value={agg.redCards} warn />}
+                  {agg.saves > 0 && <StatCard label="Saves" value={agg.saves} accent />}
+                  {agg.penaltiesScored > 0 && <StatCard label="Penalties" value={`${agg.penaltiesScored}/${agg.penaltiesScored + agg.penaltiesMissed}`} subValue="scored" />}
+                  {agg.foulsDrawn ? <StatCard label="Fouls Drawn" value={agg.foulsDrawn} /> : null}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800 p-12 text-center">
-              <BarChart3 className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-              <p className="text-zinc-400">Season statistics are being synced. Check back soon.</p>
-            </div>
-        )
+            ) : (
+              <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800 p-12 text-center">
+                <BarChart3 className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                <p className="text-zinc-400">Season statistics are being synced. Check back soon.</p>
+              </div>
+            )}
+          </>
+        )}
 
         {/* ===== PER-COMPETITION BREAKDOWN ===== */}
         {currentSeasonStats.length > 1 && (
