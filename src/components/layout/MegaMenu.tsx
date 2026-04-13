@@ -2,77 +2,80 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Search, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ===== MENU DATA =====
+// ===== COMPETITION DATA WITH API-FOOTBALL LOGO URLs =====
 
 const COMPETITIONS = [
-  { name: 'Premier League', slug: 'premier-league', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { name: 'La Liga', slug: 'la-liga', country: '🇪🇸' },
-  { name: 'Serie A', slug: 'serie-a', country: '🇮🇹' },
-  { name: 'Bundesliga', slug: 'bundesliga', country: '🇩🇪' },
-  { name: 'Ligue 1', slug: 'ligue-1', country: '🇫🇷' },
-  { name: 'Champions League', slug: 'champions-league', country: '🇪🇺' },
-  { name: 'Europa League', slug: 'europa-league', country: '🇪🇺' },
-  { name: 'Conference League', slug: 'conference-league', country: '🇪🇺' },
-  { name: 'Championship', slug: 'championship', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { name: 'Scottish Premiership', slug: 'scottish-premiership', country: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
-  { name: 'FA Cup', slug: 'fa-cup', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { name: 'EFL Cup', slug: 'efl-cup', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { name: 'MLS', slug: 'mls', country: '🇺🇸' },
-  { name: 'Liga MX', slug: 'liga-mx', country: '🇲🇽' },
-  { name: 'Brasileirão', slug: 'brasileirao', country: '🇧🇷' },
-  { name: 'Eredivisie', slug: 'eredivisie', country: '🇳🇱' },
-  { name: 'Primeira Liga', slug: 'primeira-liga', country: '🇵🇹' },
-  { name: 'Saudi Pro League', slug: 'saudi-pro-league', country: '🇸🇦' },
-  { name: 'Nations League', slug: 'nations-league', country: '🌍' },
-  { name: 'World Cup', slug: 'world-cup', country: '🌍' },
+  { name: 'Premier League', slug: 'premier-league', logo: 'https://media.api-sports.io/football/leagues/39.png' },
+  { name: 'La Liga', slug: 'la-liga', logo: 'https://media.api-sports.io/football/leagues/140.png' },
+  { name: 'Serie A', slug: 'serie-a', logo: 'https://media.api-sports.io/football/leagues/135.png' },
+  { name: 'Bundesliga', slug: 'bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png' },
+  { name: 'Ligue 1', slug: 'ligue-1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
+  { name: 'Champions League', slug: 'champions-league', logo: 'https://media.api-sports.io/football/leagues/2.png' },
+  { name: 'Europa League', slug: 'europa-league', logo: 'https://media.api-sports.io/football/leagues/3.png' },
+  { name: 'Conference League', slug: 'conference-league', logo: 'https://media.api-sports.io/football/leagues/848.png' },
+  { name: 'Championship', slug: 'championship', logo: 'https://media.api-sports.io/football/leagues/40.png' },
+  { name: 'League One', slug: 'league-one', logo: 'https://media.api-sports.io/football/leagues/41.png' },
+  { name: 'Scottish Premiership', slug: 'scottish-premiership', logo: 'https://media.api-sports.io/football/leagues/179.png' },
+  { name: 'FA Cup', slug: 'fa-cup', logo: 'https://media.api-sports.io/football/leagues/45.png' },
+  { name: 'EFL Cup', slug: 'efl-cup', logo: 'https://media.api-sports.io/football/leagues/46.png' },
+  { name: 'Eredivisie', slug: 'eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
+  { name: 'Primeira Liga', slug: 'primeira-liga', logo: 'https://media.api-sports.io/football/leagues/94.png' },
+  { name: 'MLS', slug: 'mls', logo: 'https://media.api-sports.io/football/leagues/253.png' },
+  { name: 'Copa Libertadores', slug: 'copa-libertadores', logo: 'https://media.api-sports.io/football/leagues/13.png' },
+  { name: 'Saudi Pro League', slug: 'saudi-pro-league', logo: 'https://media.api-sports.io/football/leagues/307.png' },
+  { name: 'Nations League', slug: 'nations-league', logo: 'https://media.api-sports.io/football/leagues/5.png' },
+  { name: 'World Cup', slug: 'world-cup', logo: 'https://media.api-sports.io/football/leagues/1.png' },
 ];
 
 const POPULAR_TEAMS = [
-  { name: 'Arsenal', slug: 'arsenal' },
-  { name: 'Manchester City', slug: 'manchester-city' },
-  { name: 'Liverpool', slug: 'liverpool' },
-  { name: 'Manchester Utd', slug: 'manchester-united' },
-  { name: 'Chelsea', slug: 'chelsea' },
-  { name: 'Tottenham', slug: 'tottenham-hotspur' },
-  { name: 'Newcastle', slug: 'newcastle-united' },
-  { name: 'Aston Villa', slug: 'aston-villa' },
-  { name: 'Real Madrid', slug: 'real-madrid' },
-  { name: 'Barcelona', slug: 'barcelona' },
-  { name: 'Bayern Munich', slug: 'bayern-munich' },
-  { name: 'PSG', slug: 'paris-saint-germain' },
-  { name: 'Juventus', slug: 'juventus' },
-  { name: 'Inter Milan', slug: 'inter-milan' },
-  { name: 'AC Milan', slug: 'ac-milan' },
-  { name: 'Dortmund', slug: 'borussia-dortmund' },
+  { name: 'Arsenal', slug: 'arsenal', logo: 'https://media.api-sports.io/football/teams/42.png' },
+  { name: 'Manchester City', slug: 'manchester-city', logo: 'https://media.api-sports.io/football/teams/50.png' },
+  { name: 'Liverpool', slug: 'liverpool', logo: 'https://media.api-sports.io/football/teams/40.png' },
+  { name: 'Man United', slug: 'manchester-united', logo: 'https://media.api-sports.io/football/teams/33.png' },
+  { name: 'Chelsea', slug: 'chelsea', logo: 'https://media.api-sports.io/football/teams/49.png' },
+  { name: 'Tottenham', slug: 'tottenham-hotspur', logo: 'https://media.api-sports.io/football/teams/47.png' },
+  { name: 'Newcastle', slug: 'newcastle-united', logo: 'https://media.api-sports.io/football/teams/34.png' },
+  { name: 'Aston Villa', slug: 'aston-villa', logo: 'https://media.api-sports.io/football/teams/66.png' },
+  { name: 'Real Madrid', slug: 'real-madrid', logo: 'https://media.api-sports.io/football/teams/541.png' },
+  { name: 'Barcelona', slug: 'barcelona', logo: 'https://media.api-sports.io/football/teams/529.png' },
+  { name: 'Bayern Munich', slug: 'bayern-munich', logo: 'https://media.api-sports.io/football/teams/157.png' },
+  { name: 'PSG', slug: 'paris-saint-germain', logo: 'https://media.api-sports.io/football/teams/85.png' },
+  { name: 'Juventus', slug: 'juventus', logo: 'https://media.api-sports.io/football/teams/496.png' },
+  { name: 'Inter Milan', slug: 'inter-milan', logo: 'https://media.api-sports.io/football/teams/505.png' },
+  { name: 'AC Milan', slug: 'ac-milan', logo: 'https://media.api-sports.io/football/teams/489.png' },
+  { name: 'Dortmund', slug: 'borussia-dortmund', logo: 'https://media.api-sports.io/football/teams/165.png' },
+  { name: 'West Ham', slug: 'west-ham-united', logo: 'https://media.api-sports.io/football/teams/48.png' },
+  { name: 'Brighton', slug: 'brighton-and-hove-albion', logo: 'https://media.api-sports.io/football/teams/51.png' },
+  { name: 'Everton', slug: 'everton', logo: 'https://media.api-sports.io/football/teams/45.png' },
+  { name: 'Atletico Madrid', slug: 'atletico-madrid', logo: 'https://media.api-sports.io/football/teams/530.png' },
 ];
 
-interface MenuItemConfig {
-  label: string;
-  href?: string;
-  panel?: 'scores' | 'competitions' | 'teams' | 'news' | 'more';
+function CompLogo({ src, name }: { src: string; name: string }) {
+  return (
+    <Image
+      src={src}
+      alt={name}
+      width={24}
+      height={24}
+      className="h-6 w-6 object-contain"
+      unoptimized
+    />
+  );
 }
 
-const MENU_ITEMS: MenuItemConfig[] = [
-  { label: 'Home', href: '/' },
-  { label: 'Scores', panel: 'scores' },
-  { label: 'Competitions', panel: 'competitions' },
-  { label: 'Teams', panel: 'teams' },
-  { label: 'News', panel: 'news' },
-  { label: 'More', panel: 'more' },
-];
-
-// ===== MEGA MENU PANELS =====
+// ===== PANEL COMPONENTS =====
 
 function ScoresPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="grid grid-cols-4 gap-6 p-6">
-      <div>
+    <div className="grid grid-cols-[200px_1fr] min-h-[280px]">
+      <div className="border-r border-zinc-200 dark:border-zinc-700 p-5">
         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Scores & Fixtures</h3>
-        <ul className="space-y-2">
+        <ul className="space-y-1">
           {[
             { label: 'Live Scores', href: '/live' },
             { label: 'Today\'s Fixtures', href: '/fixtures' },
@@ -80,31 +83,25 @@ function ScoresPanel({ onClose }: { onClose: () => void }) {
             { label: 'Match Reports', href: '/match-reports' },
           ].map(item => (
             <li key={item.href}>
-              <Link href={item.href} onClick={onClose} className="text-sm text-zinc-300 hover:text-white transition-colors">
+              <Link href={item.href} onClick={onClose} className="block rounded-md px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                 {item.label}
               </Link>
             </li>
           ))}
         </ul>
       </div>
-      <div className="col-span-3">
-        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Quick Links</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', href: '/fixtures?competition=premier-league' },
-            { label: '🇪🇺 Champions League', href: '/fixtures?competition=champions-league' },
-            { label: '🇪🇸 La Liga', href: '/fixtures?competition=la-liga' },
-            { label: '🇮🇹 Serie A', href: '/fixtures?competition=serie-a' },
-            { label: '🇩🇪 Bundesliga', href: '/fixtures?competition=bundesliga' },
-            { label: '🇫🇷 Ligue 1', href: '/fixtures?competition=ligue-1' },
-          ].map(item => (
+      <div className="p-5">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Quick Links by Competition</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {COMPETITIONS.slice(0, 8).map(comp => (
             <Link
-              key={item.href}
-              href={item.href}
+              key={comp.slug}
+              href={`/fixtures?competition=${comp.slug}`}
               onClick={onClose}
-              className="flex items-center gap-2 rounded-lg bg-zinc-800/50 px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700/50 hover:text-white transition-colors"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             >
-              {item.label}
+              <CompLogo src={comp.logo} name={comp.name} />
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">{comp.name}</span>
             </Link>
           ))}
         </div>
@@ -115,23 +112,23 @@ function ScoresPanel({ onClose }: { onClose: () => void }) {
 
 function CompetitionsPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="p-6">
+    <div className="p-5">
       <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Competitions</h3>
-      <div className="grid grid-cols-4 gap-x-6 gap-y-2">
+      <div className="grid grid-cols-4 gap-x-4 gap-y-1">
         {COMPETITIONS.map(comp => (
           <Link
             key={comp.slug}
             href={`/tables?competition=${comp.slug}`}
             onClick={onClose}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800/50 hover:text-white transition-colors"
+            className="flex items-center gap-2.5 rounded-md px-2 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
-            <span className="text-base">{comp.country}</span>
-            {comp.name}
+            <CompLogo src={comp.logo} name={comp.name} />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">{comp.name}</span>
           </Link>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-zinc-800">
-        <Link href="/tables" onClick={onClose} className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors">
+      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700">
+        <Link href="/tables" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors">
           All Competitions →
         </Link>
       </div>
@@ -141,22 +138,23 @@ function CompetitionsPanel({ onClose }: { onClose: () => void }) {
 
 function TeamsPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="p-6">
+    <div className="p-5">
       <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Popular Teams</h3>
-      <div className="grid grid-cols-4 gap-x-6 gap-y-2">
+      <div className="grid grid-cols-4 gap-x-4 gap-y-1">
         {POPULAR_TEAMS.map(team => (
           <Link
             key={team.slug}
             href={`/teams/${team.slug}`}
             onClick={onClose}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800/50 hover:text-white transition-colors"
+            className="flex items-center gap-2.5 rounded-md px-2 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
-            {team.name}
+            <CompLogo src={team.logo} name={team.name} />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">{team.name}</span>
           </Link>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-zinc-800">
-        <Link href="/teams" onClick={onClose} className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors">
+      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700">
+        <Link href="/teams" onClick={onClose} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors">
           All Teams →
         </Link>
       </div>
@@ -166,21 +164,22 @@ function TeamsPanel({ onClose }: { onClose: () => void }) {
 
 function NewsPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="grid grid-cols-4 gap-6 p-6">
+    <div className="grid grid-cols-4 gap-4 p-5">
       {[
-        { label: 'Latest News', href: '/news', desc: 'Breaking stories from 12+ sources' },
-        { label: 'Match Reports', href: '/match-reports', desc: 'AI-powered post-match analysis' },
-        { label: 'Transfers', href: '/transfers', desc: 'Latest transfer news & rumours' },
-        { label: 'Videos', href: '/videos', desc: 'Highlights & analysis clips' },
+        { label: 'Latest News', href: '/news', desc: 'Breaking stories from 12+ verified sources', icon: '📰' },
+        { label: 'Match Reports', href: '/match-reports', desc: 'AI-powered post-match analysis & reports', icon: '📝' },
+        { label: 'Transfers', href: '/transfers', desc: 'Latest transfer news, rumours & confirmed deals', icon: '🔄' },
+        { label: 'Videos', href: '/videos', desc: 'Match highlights & analysis clips', icon: '🎬' },
       ].map(item => (
         <Link
           key={item.href}
           href={item.href}
           onClick={onClose}
-          className="flex flex-col rounded-lg bg-zinc-800/50 p-4 hover:bg-zinc-700/50 transition-colors group"
+          className="flex flex-col rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group"
         >
-          <span className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors">{item.label}</span>
-          <span className="text-xs text-zinc-500 mt-1">{item.desc}</span>
+          <span className="text-2xl mb-2">{item.icon}</span>
+          <span className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.label}</span>
+          <span className="text-xs text-zinc-500 mt-1 leading-relaxed">{item.desc}</span>
         </Link>
       ))}
     </div>
@@ -189,26 +188,44 @@ function NewsPanel({ onClose }: { onClose: () => void }) {
 
 function MorePanel({ onClose }: { onClose: () => void }) {
   return (
-    <div className="grid grid-cols-4 gap-6 p-6">
+    <div className="grid grid-cols-4 gap-4 p-5">
       {[
-        { label: 'Predictions', href: '/predictions', desc: 'AI score forecasts & BTTS' },
-        { label: 'League Tables', href: '/tables', desc: 'Standings for all leagues' },
-        { label: 'Rules', href: '/rules', desc: 'Laws of the game explained' },
-        { label: 'Search', href: '/search', desc: 'Find anything on Footy Feed' },
+        { label: 'Predictions', href: '/predictions', desc: 'AI score forecasts, BTTS & over/under', icon: '🎯' },
+        { label: 'League Tables', href: '/tables', desc: 'Full standings for all competitions', icon: '🏆' },
+        { label: 'Rules', href: '/rules', desc: 'Laws of the game explained simply', icon: '📋' },
+        { label: 'Search', href: '/search', desc: 'Find anything on Footy Feed', icon: '🔍' },
       ].map(item => (
         <Link
           key={item.href}
           href={item.href}
           onClick={onClose}
-          className="flex flex-col rounded-lg bg-zinc-800/50 p-4 hover:bg-zinc-700/50 transition-colors group"
+          className="flex flex-col rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group"
         >
-          <span className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors">{item.label}</span>
-          <span className="text-xs text-zinc-500 mt-1">{item.desc}</span>
+          <span className="text-2xl mb-2">{item.icon}</span>
+          <span className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.label}</span>
+          <span className="text-xs text-zinc-500 mt-1 leading-relaxed">{item.desc}</span>
         </Link>
       ))}
     </div>
   );
 }
+
+// ===== MENU CONFIG =====
+
+interface MenuItemConfig {
+  label: string;
+  href?: string;
+  panel?: string;
+}
+
+const MENU_ITEMS: MenuItemConfig[] = [
+  { label: 'Home', href: '/' },
+  { label: 'Scores', panel: 'scores' },
+  { label: 'Competitions', panel: 'competitions' },
+  { label: 'Teams', panel: 'teams' },
+  { label: 'News', panel: 'news' },
+  { label: 'More', panel: 'more' },
+];
 
 // ===== MAIN COMPONENT =====
 
@@ -223,12 +240,8 @@ export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on route change
-  useEffect(() => {
-    setOpenPanel(null);
-  }, [pathname]);
+  useEffect(() => { setOpenPanel(null); }, [pathname]);
 
-  // Close on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -245,7 +258,7 @@ export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
   }
 
   function handleMouseLeave() {
-    timeoutRef.current = setTimeout(() => setOpenPanel(null), 200);
+    timeoutRef.current = setTimeout(() => setOpenPanel(null), 250);
   }
 
   function handleClose() {
@@ -254,7 +267,6 @@ export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
   }
 
   if (vertical) {
-    // Mobile: simple list with all links
     return (
       <nav className="flex flex-col gap-1">
         {[
@@ -276,9 +288,7 @@ export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
             onClick={onItemClick}
             className={cn(
               'px-3 py-2 text-sm font-medium transition-colors rounded-md',
-              pathname === item.href
-                ? 'text-emerald-400 bg-zinc-800'
-                : 'text-zinc-300 hover:text-white hover:bg-zinc-800/50'
+              pathname === item.href ? 'text-emerald-400 bg-zinc-800' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/50'
             )}
           >
             {item.label}
@@ -297,73 +307,74 @@ export function MegaMenu({ vertical = false, onItemClick }: MegaMenuProps) {
   };
 
   return (
-    <div ref={menuRef} className="flex items-center gap-0.5 relative">
-      {MENU_ITEMS.map((item) => {
-        const isActive = item.href
-          ? pathname === item.href
-          : item.panel === 'scores' ? ['/live', '/fixtures', '/match-reports'].some(p => pathname.startsWith(p))
-          : item.panel === 'news' ? ['/news', '/transfers', '/videos'].some(p => pathname.startsWith(p))
-          : item.panel === 'competitions' ? pathname.startsWith('/tables')
-          : item.panel === 'teams' ? pathname.startsWith('/teams')
-          : item.panel === 'more' ? ['/predictions', '/rules', '/search'].some(p => pathname.startsWith(p))
-          : false;
+    <div ref={menuRef} className="relative flex items-center">
+      <nav className="flex items-center gap-0.5">
+        {MENU_ITEMS.map((item) => {
+          const isOpen = openPanel === item.panel;
+          const isActive = item.href
+            ? pathname === item.href
+            : item.panel === 'scores' ? ['/live', '/fixtures', '/match-reports'].some(p => pathname.startsWith(p))
+            : item.panel === 'news' ? ['/news', '/transfers', '/videos'].some(p => pathname.startsWith(p))
+            : item.panel === 'competitions' ? pathname.startsWith('/tables')
+            : item.panel === 'teams' ? pathname.startsWith('/teams')
+            : item.panel === 'more' ? ['/predictions', '/rules', '/search'].some(p => pathname.startsWith(p))
+            : false;
 
-        if (item.href) {
+          if (item.href) {
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onMouseEnter={() => setOpenPanel(null)}
+                className={cn(
+                  'px-3 py-2.5 text-sm font-semibold transition-colors',
+                  isActive
+                    ? 'text-emerald-500 dark:text-emerald-400 border-b-2 border-emerald-500'
+                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border-b-2 border-transparent'
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          }
+
           return (
-            <Link
+            <div
               key={item.label}
-              href={item.href}
-              onMouseEnter={() => setOpenPanel(null)}
-              className={cn(
-                'px-3 py-2 text-sm font-medium transition-colors',
-                isActive ? 'text-emerald-400' : 'text-zinc-300 hover:text-white'
-              )}
+              onMouseEnter={() => handleMouseEnter(item.panel!)}
+              onMouseLeave={handleMouseLeave}
             >
-              {item.label}
-            </Link>
+              <button
+                className={cn(
+                  'flex items-center gap-0.5 px-3 py-2.5 text-sm font-semibold transition-colors border-b-2',
+                  isOpen || isActive
+                    ? 'text-emerald-500 dark:text-emerald-400 border-emerald-500'
+                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border-transparent'
+                )}
+              >
+                {item.label}
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform ml-0.5', isOpen ? 'rotate-180' : '')} />
+              </button>
+            </div>
           );
-        }
+        })}
 
-        return (
-          <div
-            key={item.label}
-            onMouseEnter={() => handleMouseEnter(item.panel!)}
-            onMouseLeave={handleMouseLeave}
-          >
-            <button
-              className={cn(
-                'flex items-center gap-0.5 px-3 py-2 text-sm font-medium transition-colors',
-                openPanel === item.panel || isActive
-                  ? 'text-emerald-400'
-                  : 'text-zinc-300 hover:text-white'
-              )}
-            >
-              {item.label}
-              <ChevronDown className={cn(
-                'h-3.5 w-3.5 transition-transform',
-                openPanel === item.panel ? 'rotate-180' : ''
-              )} />
-            </button>
-          </div>
-        );
-      })}
+        <Link
+          href="/search"
+          className={cn(
+            'px-3 py-2.5 transition-colors',
+            pathname === '/search' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'
+          )}
+          aria-label="Search"
+        >
+          <Search className="h-4 w-4" />
+        </Link>
+      </nav>
 
-      {/* Search icon */}
-      <Link
-        href="/search"
-        className={cn(
-          'px-3 py-2 text-sm transition-colors',
-          pathname === '/search' ? 'text-emerald-400' : 'text-zinc-300 hover:text-white'
-        )}
-        aria-label="Search"
-      >
-        <Search className="h-4 w-4" />
-      </Link>
-
-      {/* Mega menu panel — full width dropdown */}
+      {/* Dropdown panel — full width, appears below nav */}
       {openPanel && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 w-[900px] max-w-[calc(100vw-2rem)] mt-1 rounded-xl bg-zinc-900 border border-zinc-800 shadow-2xl shadow-black/50 z-50"
+          className="absolute top-full left-1/2 -translate-x-1/2 w-[960px] max-w-[calc(100vw-2rem)] mt-0 rounded-b-xl bg-white dark:bg-zinc-900 border border-t-0 border-zinc-200 dark:border-zinc-800 shadow-xl shadow-black/10 dark:shadow-black/40 z-50"
           onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }}
           onMouseLeave={handleMouseLeave}
         >
