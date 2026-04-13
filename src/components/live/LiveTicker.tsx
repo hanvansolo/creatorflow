@@ -87,16 +87,16 @@ function TeamLogo({ logo, name, color }: { logo: string | null; name: string; co
       <Image
         src={logo}
         alt={name}
-        width={20}
-        height={20}
-        className="h-5 w-5 object-contain"
+        width={24}
+        height={24}
+        className="h-6 w-6 object-contain"
         unoptimized
       />
     );
   }
   return (
     <div
-      className="h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+      className="h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
       style={{ backgroundColor: color || '#52525b' }}
     >
       {name?.slice(0, 2).toUpperCase()}
@@ -122,10 +122,10 @@ export async function LiveTicker() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
               </span>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-red-400">Live</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-400">Live</span>
             </>
           ) : (
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">Scores</span>
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-400">Scores</span>
           )}
         </div>
 
@@ -141,12 +141,12 @@ export async function LiveTicker() {
                 href={`/matches/${match.id}`}
                 className="shrink-0 mx-1 my-1.5"
               >
-                <div className={`flex flex-col items-center justify-center rounded-lg px-3 py-1.5 w-[110px] h-[56px] transition-colors hover:bg-zinc-700/50 ${
+                <div className={`flex flex-col items-center justify-center rounded-lg px-4 py-2 w-[130px] h-[68px] transition-colors hover:bg-zinc-700/50 ${
                   isLive ? 'bg-zinc-800/40 ring-1 ring-emerald-500/30' : 'bg-zinc-800/30'
                 }`}>
                   {/* Competition tag */}
                   {match.competition_short && (
-                    <span className="text-[7px] font-medium text-zinc-500 uppercase tracking-wider truncate max-w-[100px]">
+                    <span className="text-[9px] font-medium text-zinc-500 uppercase tracking-wider truncate max-w-[120px]">
                       {match.competition_short}
                     </span>
                   )}
@@ -157,11 +157,11 @@ export async function LiveTicker() {
 
                     <div className="flex flex-col items-center min-w-[32px]">
                       {isLive || isFinished ? (
-                        <span className={`text-xs font-bold tabular-nums ${isLive ? 'text-emerald-400' : 'text-white'}`}>
+                        <span className={`text-sm font-bold tabular-nums ${isLive ? 'text-emerald-400' : 'text-white'}`}>
                           {match.home_score ?? 0} - {match.away_score ?? 0}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-zinc-400 font-medium">
+                        <span className="text-xs text-zinc-400 font-medium">
                           {formatTime(match.kickoff)}
                         </span>
                       )}
@@ -172,15 +172,15 @@ export async function LiveTicker() {
 
                   {/* Status */}
                   {isLive && (
-                    <span className="text-[8px] font-bold text-emerald-400 mt-0.5">
+                    <span className="text-[10px] font-bold text-emerald-400 mt-0.5">
                       {match.status === 'halftime' ? 'HT' : `${match.minute}'`}
                     </span>
                   )}
                   {isFinished && (
-                    <span className="text-[8px] font-medium text-zinc-500 mt-0.5">FT</span>
+                    <span className="text-[10px] font-medium text-zinc-500 mt-0.5">FT</span>
                   )}
                   {!isLive && !isFinished && (
-                    <span className="text-[8px] font-medium text-zinc-600 mt-0.5">&nbsp;</span>
+                    <span className="text-[10px] font-medium text-zinc-600 mt-0.5">&nbsp;</span>
                   )}
                 </div>
               </Link>
@@ -191,7 +191,7 @@ export async function LiveTicker() {
         {/* View all */}
         <Link
           href={hasLive ? '/live' : '/fixtures'}
-          className="flex items-center px-3 sm:px-4 py-2.5 shrink-0 text-[10px] sm:text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors whitespace-nowrap"
+          className="flex items-center px-4 sm:px-5 py-3 shrink-0 text-xs sm:text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors whitespace-nowrap"
         >
           All →
         </Link>

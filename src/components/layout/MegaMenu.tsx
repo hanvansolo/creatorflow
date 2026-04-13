@@ -328,7 +328,7 @@ export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean
           if (item.href) {
             return (
               <Link key={item.label} href={item.href} onMouseEnter={() => setOpenPanel(null)}
-                className={cn('px-3 py-2.5 text-sm font-semibold transition-colors', isActive ? 'text-emerald-400' : 'text-zinc-300 hover:text-white')}>
+                className={cn('px-4 py-3 text-base font-semibold transition-colors', isActive ? 'text-emerald-400' : 'text-zinc-300 hover:text-white')}>
                 {item.label}
               </Link>
             );
@@ -336,7 +336,7 @@ export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean
 
           return (
             <div key={item.label} onMouseEnter={() => enter(item.panel!)} onMouseLeave={leave}>
-              <button className={cn('flex items-center gap-0.5 px-3 py-2.5 text-sm font-semibold transition-colors',
+              <button className={cn('flex items-center gap-0.5 px-4 py-3 text-base font-semibold transition-colors',
                 isOpen || isActive ? 'text-emerald-400' : 'text-zinc-300 hover:text-white')}>
                 {item.label}
                 <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />

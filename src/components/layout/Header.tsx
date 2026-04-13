@@ -15,14 +15,14 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl dark:bg-zinc-900/95">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center">
+        <div className="flex h-16 items-center">
           {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0 mr-6">
+          <Link href="/" className="flex items-center shrink-0 mr-8">
             <Image
               src={logo}
               alt="Footy Feed"
-              height={44}
-              className="h-11 w-auto"
+              height={52}
+              className="h-13 w-auto"
               priority
             />
           </Link>
