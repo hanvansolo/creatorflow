@@ -90,7 +90,7 @@ function ScoresPanel({ onClose, data }: { onClose: () => void; data: MenuData | 
   return (
     <div className="grid grid-cols-[200px_1fr_320px]">
       {/* Left nav */}
-      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-5 space-y-1">
+      <div className=" p-5 space-y-1">
         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Scores & Fixtures</h3>
         {[
           { label: 'Live Scores', href: '/live' },
@@ -105,7 +105,7 @@ function ScoresPanel({ onClose, data }: { onClose: () => void; data: MenuData | 
       </div>
 
       {/* Center: fixture cards */}
-      <div className="p-5 border-r border-zinc-200 dark:border-zinc-700/50">
+      <div className="p-5 ">
         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Today</h3>
         <div className="space-y-1">
           {data?.matches.slice(0, 6).map(m => {
@@ -161,7 +161,7 @@ function CompetitionsPanel({ onClose }: { onClose: () => void }) {
           </Link>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700/50">
+      <div className="mt-4 pt-3 ">
         <Link href="/tables" onClick={onClose} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">All Competitions →</Link>
       </div>
     </div>
@@ -180,7 +180,7 @@ function TeamsPanel({ onClose }: { onClose: () => void }) {
           </Link>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700/50">
+      <div className="mt-4 pt-3 ">
         <Link href="/teams" onClick={onClose} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">All Teams →</Link>
       </div>
     </div>
@@ -190,7 +190,7 @@ function TeamsPanel({ onClose }: { onClose: () => void }) {
 function NewsPanel({ onClose, data }: { onClose: () => void; data: MenuData | null }) {
   return (
     <div className="grid grid-cols-[200px_1fr]">
-      <div className="border-r border-zinc-200 dark:border-zinc-700/50 p-5 space-y-1">
+      <div className=" p-5 space-y-1">
         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Sections</h3>
         {[
           { label: 'Latest News', href: '/news' },
@@ -351,7 +351,7 @@ export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean
 
       {openPanel && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 w-[960px] max-w-[calc(100vw-2rem)] rounded-b-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50"
+          className="absolute top-full left-1/2 -translate-x-1/2 w-[960px] max-w-[calc(100vw-2rem)] rounded-b-xl bg-white dark:bg-zinc-900 shadow-2xl z-50"
           onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }}
           onMouseLeave={leave}
         >
