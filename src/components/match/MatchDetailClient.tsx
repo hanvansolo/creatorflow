@@ -117,9 +117,24 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
 
   return (
     <div className="min-h-screen bg-zinc-900">
-      {/* Match Header — BBC style */}
-      <div className="bg-zinc-800/60 border-b border-zinc-700/50">
-        <div className="mx-auto max-w-5xl px-4 py-6">
+      {/* Match Header — team colours gradient background */}
+      <div className="relative overflow-hidden border-b border-zinc-700/50">
+        {/* Gradient background using team colours */}
+        <div className="absolute inset-0">
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              background: `linear-gradient(135deg, ${match.home_color || '#3b82f6'} 0%, transparent 50%, ${match.away_color || '#ef4444'} 100%)`,
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/40 via-zinc-900/80 to-zinc-900" />
+          {/* Subtle pattern overlay */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+            backgroundSize: '24px 24px',
+          }} />
+        </div>
+        <div className="relative mx-auto max-w-5xl px-4 py-8">
           {/* Date + Competition */}
           <div className="text-center mb-5 text-sm text-zinc-400">
             <span>{new Date(match.kickoff).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -136,15 +151,17 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
           {/* Teams + Score row */}
           <div className="flex items-center justify-center gap-3 sm:gap-6">
             {/* Home team */}
-            <Link href={`/teams/${match.home_slug}`} className="group flex items-center gap-2 sm:gap-3 flex-1 justify-end min-w-0">
-              <span className="text-base sm:text-xl font-bold text-white text-right truncate group-hover:text-yellow-400 transition-colors">
+            <Link href={`/teams/${match.home_slug}`} className="group flex items-center gap-3 sm:gap-4 flex-1 justify-end min-w-0">
+              <span className="text-lg sm:text-2xl font-bold text-white text-right truncate group-hover:text-yellow-400 transition-colors">
                 {match.home_name}
               </span>
-              {match.home_logo ? (
-                <Image src={match.home_logo} alt="" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0" />
-              ) : (
-                <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: match.home_color || '#52525b' }} />
-              )}
+              <div className="shrink-0 relative">
+                {match.home_logo ? (
+                  <Image src={match.home_logo} alt="" width={64} height={64} className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-lg" />
+                ) : (
+                  <div className="h-14 w-14 rounded-full" style={{ backgroundColor: match.home_color || '#52525b' }} />
+                )}
+              </div>
             </Link>
 
             {/* Score */}
@@ -182,13 +199,15 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
             </div>
 
             {/* Away team */}
-            <Link href={`/teams/${match.away_slug}`} className="group flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              {match.away_logo ? (
-                <Image src={match.away_logo} alt="" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0" />
-              ) : (
-                <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: match.away_color || '#52525b' }} />
-              )}
-              <span className="text-base sm:text-xl font-bold text-white truncate group-hover:text-yellow-400 transition-colors">
+            <Link href={`/teams/${match.away_slug}`} className="group flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className="shrink-0 relative">
+                {match.away_logo ? (
+                  <Image src={match.away_logo} alt="" width={64} height={64} className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-lg" />
+                ) : (
+                  <div className="h-14 w-14 rounded-full" style={{ backgroundColor: match.away_color || '#52525b' }} />
+                )}
+              </div>
+              <span className="text-lg sm:text-2xl font-bold text-white truncate group-hover:text-yellow-400 transition-colors">
                 {match.away_name}
               </span>
             </Link>
