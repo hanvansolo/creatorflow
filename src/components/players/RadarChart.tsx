@@ -152,7 +152,7 @@ export default function RadarChart({
               key={i}
               x={pos.x}
               y={pos.y}
-              textAnchor={pos.anchor}
+              textAnchor={pos.anchor as 'start' | 'middle' | 'end'}
               dominantBaseline="central"
               fill="#a1a1aa"
               fontSize="12"
