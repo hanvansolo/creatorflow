@@ -249,7 +249,7 @@ export default function SummaryTab({
 
       {/* ---- Shot Analysis Pitch ---- */}
       {(homeStats || awayStats) && (isLive || isFinished) && (
-        <PitchShotMap match={match} homeStats={homeStats} awayStats={awayStats} />
+        <PitchShotMap match={match} events={events} homeStats={homeStats} awayStats={awayStats} />
       )}
 
       {/* ---- Quick Stats ---- */}

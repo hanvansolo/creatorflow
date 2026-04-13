@@ -1,23 +1,16 @@
 'use client';
 
-import type { TeamStats, MatchDetail } from './types';
+import Image from 'next/image';
+import type { TeamStats, MatchDetail, MatchEvent } from './types';
 
 interface PitchShotMapProps {
   match: MatchDetail;
+  events: MatchEvent[];
   homeStats: TeamStats | null;
   awayStats: TeamStats | null;
 }
 
-function StatBadge({ value, label, color }: { value: number | string; label: string; color: string }) {
-  return (
-    <div className={`flex flex-col items-center px-2 py-1.5 rounded-md ${color}`}>
-      <span className="text-lg sm:text-xl font-black leading-none">{value}</span>
-      <span className="text-[9px] sm:text-[10px] font-medium uppercase tracking-wider mt-0.5 opacity-80">{label}</span>
-    </div>
-  );
-}
-
-export default function PitchShotMap({ match, homeStats, awayStats }: PitchShotMapProps) {
+export default function PitchShotMap({ match, events, homeStats, awayStats }: PitchShotMapProps) {
   if (!homeStats && !awayStats) return null;
 
   const homeGoals = match.home_score ?? 0;
@@ -26,129 +19,195 @@ export default function PitchShotMap({ match, homeStats, awayStats }: PitchShotM
   const awayShotsTotal = awayStats?.shots_total ?? 0;
   const homeShotsOn = homeStats?.shots_on_target ?? 0;
   const awayShotsOn = awayStats?.shots_on_target ?? 0;
-  const homeShotsOff = (homeStats?.shots_off_target ?? 0) || Math.max(0, homeShotsTotal - homeShotsOn);
-  const awayShotsOff = (awayStats?.shots_off_target ?? 0) || Math.max(0, awayShotsTotal - awayShotsOn);
-  const homeSaves = awayStats?.saves ?? 0; // Away keeper saves = home shots saved
-  const awaySaves = homeStats?.saves ?? 0; // Home keeper saves = away shots saved
+  const homeShotsOff = Math.max(0, homeShotsTotal - homeShotsOn);
+  const awayShotsOff = Math.max(0, awayShotsTotal - awayShotsOn);
   const homeXg = homeStats?.expected_goals;
   const awayXg = awayStats?.expected_goals;
+  const homeSaves = awayStats?.saves ?? 0;
+  const awaySaves = homeStats?.saves ?? 0;
 
-  // Shot accuracy percentages for bar widths
+  // Extract goal events with player names
+  const homeGoalEvents = events.filter(e =>
+    ['goal', 'own_goal', 'penalty_scored'].includes(e.event_type) &&
+    (e.club_name === match.home_name || e.is_home === true)
+  );
+  const awayGoalEvents = events.filter(e =>
+    ['goal', 'own_goal', 'penalty_scored'].includes(e.event_type) &&
+    (e.club_name === match.away_name || e.is_home === false)
+  );
+
   const homeAccuracy = homeShotsTotal > 0 ? Math.round((homeShotsOn / homeShotsTotal) * 100) : 0;
   const awayAccuracy = awayShotsTotal > 0 ? Math.round((awayShotsOn / awayShotsTotal) * 100) : 0;
 
   return (
-    <div className="rounded-lg bg-zinc-800 overflow-hidden">
-      <h3 className="px-4 pt-3 pb-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
+    <div className="rounded-xl bg-zinc-800 overflow-hidden">
+      <h3 className="px-5 pt-4 pb-2 text-sm font-bold uppercase tracking-wider text-yellow-400">
         Shot Analysis
       </h3>
 
-      {/* Pitch graphic */}
-      <div className="relative mx-3 mb-3 rounded-lg overflow-hidden" style={{ aspectRatio: '2.2/1' }}>
-        {/* Pitch background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-800 to-emerald-900">
-          {/* Pitch markings */}
-          <svg viewBox="0 0 440 200" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-            {/* Outer boundary */}
-            <rect x="5" y="5" width="430" height="190" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            {/* Center line */}
-            <line x1="220" y1="5" x2="220" y2="195" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            {/* Center circle */}
-            <circle cx="220" cy="100" r="30" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            <circle cx="220" cy="100" r="2" fill="rgba(255,255,255,0.3)" />
-            {/* Left penalty area */}
-            <rect x="5" y="45" width="55" height="110" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            <rect x="5" y="70" width="20" height="60" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            {/* Left goal */}
-            <rect x="0" y="82" width="5" height="36" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-            {/* Right penalty area */}
-            <rect x="380" y="45" width="55" height="110" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            <rect x="415" y="70" width="20" height="60" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            {/* Right goal */}
-            <rect x="435" y="82" width="5" height="36" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-            {/* Penalty spots */}
-            <circle cx="42" cy="100" r="2" fill="rgba(255,255,255,0.3)" />
-            <circle cx="398" cy="100" r="2" fill="rgba(255,255,255,0.3)" />
-          </svg>
+      {/* Pitch */}
+      <div className="relative mx-4 mb-2 rounded-xl overflow-hidden" style={{ aspectRatio: '2/1' }}>
+        {/* Grass background with gradient halves */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 left-0 right-1/2 bg-gradient-to-br from-emerald-700 to-emerald-800" />
+          <div className="absolute inset-0 left-1/2 right-0 bg-gradient-to-bl from-emerald-600 to-emerald-700" />
+        </div>
 
-          {/* Home attack zone (left half, right side = attacking towards right goal) */}
-          <div className="absolute left-[52%] top-[10%] right-[5%] bottom-[10%] bg-yellow-400/10 rounded-sm border border-yellow-400/20" />
-          {/* Away attack zone */}
-          <div className="absolute left-[5%] top-[10%] right-[52%] bottom-[10%] bg-blue-400/10 rounded-sm border border-blue-400/20" />
+        {/* Pitch lines SVG */}
+        <svg viewBox="0 0 500 250" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+          {/* Outer boundary */}
+          <rect x="10" y="10" width="480" height="230" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" rx="2" />
+          {/* Centre line */}
+          <line x1="250" y1="10" x2="250" y2="240" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+          {/* Centre circle */}
+          <circle cx="250" cy="125" r="40" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+          <circle cx="250" cy="125" r="3" fill="rgba(255,255,255,0.3)" />
+          {/* Left penalty area */}
+          <rect x="10" y="55" width="70" height="140" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+          <rect x="10" y="85" width="25" height="80" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+          {/* Left goal */}
+          <rect x="2" y="100" width="8" height="50" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" rx="1" />
+          {/* Right penalty area */}
+          <rect x="420" y="55" width="70" height="140" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+          <rect x="465" y="85" width="25" height="80" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+          {/* Right goal */}
+          <rect x="490" y="100" width="8" height="50" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" rx="1" />
+          {/* Penalty spots */}
+          <circle cx="55" cy="125" r="2.5" fill="rgba(255,255,255,0.3)" />
+          <circle cx="445" cy="125" r="2.5" fill="rgba(255,255,255,0.3)" />
+          {/* Penalty arcs */}
+          <path d="M 80 95 A 40 40 0 0 1 80 155" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
+          <path d="M 420 95 A 40 40 0 0 0 420 155" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
+        </svg>
 
-          {/* Home stats overlay — right side (attacking right) */}
-          <div className="absolute right-[8%] top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
-            <StatBadge value={homeGoals} label="Goals" color="bg-yellow-500/90 text-black" />
-            <StatBadge value={homeShotsOn} label="On Target" color="bg-yellow-400/20 text-yellow-300" />
+        {/* Home attack zone overlay — attacking right */}
+        <div className="absolute top-[8%] bottom-[8%] left-[52%] right-[4%] bg-yellow-400/8 rounded border border-yellow-400/15" />
+        {/* Away attack zone overlay — attacking left */}
+        <div className="absolute top-[8%] bottom-[8%] left-[4%] right-[52%] bg-blue-400/8 rounded border border-blue-400/15" />
+
+        {/* Home stats — right side */}
+        <div className="absolute right-[8%] top-[18%] flex flex-col items-center gap-2">
+          <div className="bg-yellow-500 text-black rounded-lg px-3 py-1.5 text-center shadow-lg">
+            <div className="text-xl font-black leading-none">{homeGoals}</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Goals</div>
           </div>
-
-          {/* Away stats overlay — left side (attacking left) */}
-          <div className="absolute left-[8%] top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
-            <StatBadge value={awayGoals} label="Goals" color="bg-blue-500/90 text-white" />
-            <StatBadge value={awayShotsOn} label="On Target" color="bg-blue-400/20 text-blue-300" />
+          <div className="bg-yellow-400/25 text-yellow-300 rounded-lg px-3 py-1.5 text-center">
+            <div className="text-lg font-bold leading-none">{homeShotsOn}</div>
+            <div className="text-[8px] font-bold uppercase tracking-wider mt-0.5">On Target</div>
           </div>
+        </div>
 
-          {/* Center stats */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
-            <div className="flex items-center gap-3 bg-black/60 rounded-full px-3 py-1">
-              <span className="text-xs font-bold text-yellow-400">{homeShotsTotal}</span>
-              <span className="text-[9px] text-zinc-400 uppercase tracking-wider">Shots</span>
-              <span className="text-xs font-bold text-blue-400">{awayShotsTotal}</span>
+        {/* Away stats — left side */}
+        <div className="absolute left-[8%] top-[18%] flex flex-col items-center gap-2">
+          <div className="bg-blue-500 text-white rounded-lg px-3 py-1.5 text-center shadow-lg">
+            <div className="text-xl font-black leading-none">{awayGoals}</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Goals</div>
+          </div>
+          <div className="bg-blue-400/25 text-blue-300 rounded-lg px-3 py-1.5 text-center">
+            <div className="text-lg font-bold leading-none">{awayShotsOn}</div>
+            <div className="text-[8px] font-bold uppercase tracking-wider mt-0.5">On Target</div>
+          </div>
+        </div>
+
+        {/* Centre stats pill */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
+          <div className="flex items-center gap-3 bg-black/70 backdrop-blur-sm rounded-full px-4 py-1.5 shadow-lg">
+            <span className="text-sm font-bold text-yellow-400 tabular-nums">{homeShotsTotal}</span>
+            <span className="text-[10px] text-zinc-300 uppercase tracking-wider font-medium">Shots</span>
+            <span className="text-sm font-bold text-blue-400 tabular-nums">{awayShotsTotal}</span>
+          </div>
+          {homeXg != null && awayXg != null && (
+            <div className="flex items-center gap-3 bg-black/70 backdrop-blur-sm rounded-full px-4 py-1.5 shadow-lg">
+              <span className="text-sm font-bold text-yellow-400 tabular-nums">{Number(homeXg).toFixed(1)}</span>
+              <span className="text-[10px] text-zinc-300 uppercase tracking-wider font-medium">xG</span>
+              <span className="text-sm font-bold text-blue-400 tabular-nums">{Number(awayXg).toFixed(1)}</span>
             </div>
-            {homeXg != null && awayXg != null && (
-              <div className="flex items-center gap-3 bg-black/60 rounded-full px-3 py-1">
-                <span className="text-xs font-bold text-yellow-400">{Number(homeXg).toFixed(1)}</span>
-                <span className="text-[9px] text-zinc-400 uppercase tracking-wider">xG</span>
-                <span className="text-xs font-bold text-blue-400">{Number(awayXg).toFixed(1)}</span>
-              </div>
-            )}
-          </div>
+          )}
+        </div>
 
-          {/* Team names at edges */}
-          <div className="absolute right-2 bottom-1 text-[9px] font-bold text-yellow-400/60 uppercase">
-            {match.home_name}
+        {/* Goal scorer names — home (right half, bottom) */}
+        {homeGoalEvents.length > 0 && (
+          <div className="absolute right-[6%] bottom-[10%] flex flex-col items-end gap-0.5">
+            {homeGoalEvents.slice(0, 3).map((g, i) => (
+              <span key={i} className="text-[10px] font-semibold text-yellow-300 bg-black/50 backdrop-blur-sm rounded px-1.5 py-0.5">
+                ⚽ {g.player_known_as || 'Goal'} {g.minute}'
+                {g.event_type === 'penalty_scored' && ' (P)'}
+                {g.event_type === 'own_goal' && ' (OG)'}
+              </span>
+            ))}
           </div>
-          <div className="absolute left-2 bottom-1 text-[9px] font-bold text-blue-400/60 uppercase">
-            {match.away_name}
+        )}
+
+        {/* Goal scorer names — away (left half, bottom) */}
+        {awayGoalEvents.length > 0 && (
+          <div className="absolute left-[6%] bottom-[10%] flex flex-col items-start gap-0.5">
+            {awayGoalEvents.slice(0, 3).map((g, i) => (
+              <span key={i} className="text-[10px] font-semibold text-blue-300 bg-black/50 backdrop-blur-sm rounded px-1.5 py-0.5">
+                ⚽ {g.player_known_as || 'Goal'} {g.minute}'
+                {g.event_type === 'penalty_scored' && ' (P)'}
+                {g.event_type === 'own_goal' && ' (OG)'}
+              </span>
+            ))}
           </div>
+        )}
+
+        {/* Team names */}
+        <div className="absolute right-3 bottom-1.5 text-[10px] font-bold text-yellow-400/50 uppercase tracking-wider">
+          {match.home_name}
+        </div>
+        <div className="absolute left-3 bottom-1.5 text-[10px] font-bold text-blue-400/50 uppercase tracking-wider">
+          {match.away_name}
         </div>
       </div>
 
-      {/* Shot accuracy bars */}
-      <div className="px-4 pb-3 space-y-2">
-        {/* Home accuracy */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-400 w-16 text-right shrink-0">{match.home_name}</span>
-          <div className="flex-1 h-2 bg-zinc-700 rounded-full overflow-hidden">
+      {/* Shot accuracy + details below pitch */}
+      <div className="px-5 pb-4 pt-2">
+        {/* Accuracy bars */}
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xs text-zinc-400 w-14 text-right shrink-0 truncate">{match.home_name.split(' ').pop()}</span>
+          <div className="flex-1 h-2.5 bg-zinc-700 rounded-full overflow-hidden">
             <div className="h-full bg-yellow-400 rounded-full transition-all duration-700" style={{ width: `${homeAccuracy}%` }} />
           </div>
-          <span className="text-[10px] font-bold text-yellow-400 w-8">{homeAccuracy}%</span>
+          <span className="text-xs font-bold text-yellow-400 w-10">{homeAccuracy}%</span>
         </div>
-        <div className="text-center text-[9px] text-zinc-500 uppercase tracking-wider">Shot Accuracy</div>
-        {/* Away accuracy */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-400 w-16 text-right shrink-0">{match.away_name}</span>
-          <div className="flex-1 h-2 bg-zinc-700 rounded-full overflow-hidden">
+        <div className="text-center text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-2">Shot Accuracy</div>
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-xs text-zinc-400 w-14 text-right shrink-0 truncate">{match.away_name.split(' ').pop()}</span>
+          <div className="flex-1 h-2.5 bg-zinc-700 rounded-full overflow-hidden">
             <div className="h-full bg-blue-400 rounded-full transition-all duration-700" style={{ width: `${awayAccuracy}%` }} />
           </div>
-          <span className="text-[10px] font-bold text-blue-400 w-8">{awayAccuracy}%</span>
+          <span className="text-xs font-bold text-blue-400 w-10">{awayAccuracy}%</span>
         </div>
 
-        {/* Saves row */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-700/50">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-zinc-500">Saves</span>
-            <span className="text-xs font-bold text-yellow-400">{awaySaves}</span>
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="bg-zinc-700/50 rounded-lg py-2 px-1">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-bold text-yellow-400">{homeShotsOff}</span>
+              <span className="text-sm font-bold text-blue-400">{awayShotsOff}</span>
+            </div>
+            <div className="text-[9px] text-zinc-500 uppercase tracking-wider mt-0.5">Off Target</div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-zinc-500">Off Target</span>
-            <span className="text-xs font-bold text-yellow-400">{homeShotsOff}</span>
-            <span className="text-[10px] text-zinc-600 mx-1">|</span>
-            <span className="text-xs font-bold text-blue-400">{awayShotsOff}</span>
+          <div className="bg-zinc-700/50 rounded-lg py-2 px-1">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-bold text-yellow-400">{awaySaves}</span>
+              <span className="text-sm font-bold text-blue-400">{homeSaves}</span>
+            </div>
+            <div className="text-[9px] text-zinc-500 uppercase tracking-wider mt-0.5">Saves</div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-blue-400">{homeSaves}</span>
-            <span className="text-[10px] text-zinc-500">Saves</span>
+          <div className="bg-zinc-700/50 rounded-lg py-2 px-1">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-bold text-yellow-400">{homeStats?.corners ?? 0}</span>
+              <span className="text-sm font-bold text-blue-400">{awayStats?.corners ?? 0}</span>
+            </div>
+            <div className="text-[9px] text-zinc-500 uppercase tracking-wider mt-0.5">Corners</div>
+          </div>
+          <div className="bg-zinc-700/50 rounded-lg py-2 px-1">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-bold text-yellow-400">{homeStats?.fouls ?? 0}</span>
+              <span className="text-sm font-bold text-blue-400">{awayStats?.fouls ?? 0}</span>
+            </div>
+            <div className="text-[9px] text-zinc-500 uppercase tracking-wider mt-0.5">Fouls</div>
           </div>
         </div>
       </div>
