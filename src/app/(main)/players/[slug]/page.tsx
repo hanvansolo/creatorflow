@@ -611,8 +611,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
               )}
             </div>
           </div>
-        ) : (
-          {agg.appearances > 0 ? (
+        ) : agg.appearances > 0 ? (
             <div className="mb-8 rounded-xl border border-zinc-700/50 bg-zinc-800/60 p-6">
               <h2 className="text-sm font-bold uppercase tracking-wider text-yellow-400 mb-4">Season Statistics (via API)</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -639,8 +638,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
               <BarChart3 className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
               <p className="text-zinc-400">Season statistics are being synced. Check back soon.</p>
             </div>
-          )}
-        )}
+        )
 
         {/* ===== PER-COMPETITION BREAKDOWN ===== */}
         {currentSeasonStats.length > 1 && (
