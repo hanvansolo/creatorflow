@@ -84,10 +84,19 @@ function StatCard({
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const player = await db.query.players.findFirst({
+  let player = await db.query.players.findFirst({
     where: eq(players.slug, slug),
     with: { currentClub: true },
   });
+  if (!player) {
+    const apiId = parseInt(slug);
+    if (!isNaN(apiId)) {
+      player = await db.query.players.findFirst({
+        where: eq(players.apiFootballId, apiId),
+        with: { currentClub: true },
+      });
+    }
+  }
 
   if (!player) return { title: 'Player Not Found | Footy Feed' };
 
@@ -104,10 +113,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PlayerDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
-  const player = await db.query.players.findFirst({
+  // Try by slug first, then by API-Football ID, then by name-based slug match
+  let player = await db.query.players.findFirst({
     where: eq(players.slug, slug),
     with: { currentClub: true },
   });
+
+  if (!player) {
+    // Try as API-Football ID (numeric)
+    const apiId = parseInt(slug);
+    if (!isNaN(apiId)) {
+      player = await db.query.players.findFirst({
+        where: eq(players.apiFootballId, apiId),
+        with: { currentClub: true },
+      });
+    }
+  }
+
+  if (!player) {
+    // Try fuzzy match — the slug from API names might differ from DB slugs
+    // e.g. "yulian-gomez" vs "y-gomez" or "yulián-gómez"
+    const nameParts = slug.split('-').filter(p => p.length > 2);
+    if (nameParts.length >= 2) {
+      const lastName = nameParts[nameParts.length - 1];
+      player = await db.query.players.findFirst({
+        where: ilike(players.slug, `%${lastName}%`),
+        with: { currentClub: true },
+      });
+    }
+  }
 
   if (!player) notFound();
 

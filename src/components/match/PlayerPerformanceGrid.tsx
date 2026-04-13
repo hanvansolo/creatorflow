@@ -50,7 +50,12 @@ function PlayerCard({
   if (player.passes) stats.push({ emoji: '\u2705', value: player.passes });
   if (player.tackles) stats.push({ emoji: '\uD83D\uDEE1\uFE0F', value: player.tackles });
 
-  const playerUrl = player.slug ? `/players/${player.slug}` : null;
+  // Prefer API ID link (reliable), fallback to name-based slug
+  const playerUrl = player.playerId
+    ? `/players/${player.playerId}`
+    : player.slug
+    ? `/players/${player.slug}`
+    : null;
 
   const cardContent = (
     <>
