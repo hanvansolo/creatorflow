@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import type { MatchDetail, PlayerRating } from './types';
 
 interface PlayerPerformanceGridProps {
@@ -49,12 +50,10 @@ function PlayerCard({
   if (player.passes) stats.push({ emoji: '\u2705', value: player.passes });
   if (player.tackles) stats.push({ emoji: '\uD83D\uDEE1\uFE0F', value: player.tackles });
 
-  return (
-    <div
-      className={`rounded-lg bg-zinc-800 p-3 flex items-start gap-3 ${
-        isMvp ? 'ring-2 ring-yellow-400' : ''
-      }`}
-    >
+  const playerUrl = player.slug ? `/players/${player.slug}` : null;
+
+  const cardContent = (
+    <>
       {/* Photo */}
       <div className="shrink-0">
         {player.photo ? (
@@ -74,7 +73,7 @@ function PlayerCard({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-white truncate">
+          <span className="text-sm font-bold text-white truncate group-hover:text-yellow-400 transition-colors">
             {player.name}
           </span>
           <span
@@ -107,8 +106,17 @@ function PlayerCard({
           {player.rating ? parseFloat(player.rating).toFixed(1) : '-'}
         </span>
       </div>
-    </div>
+    </>
   );
+
+  const className = `rounded-lg bg-zinc-800 p-3 flex items-start gap-3 group transition-colors hover:bg-zinc-700/50 ${
+    isMvp ? 'ring-2 ring-yellow-400' : ''
+  }`;
+
+  if (playerUrl) {
+    return <Link href={playerUrl} className={className}>{cardContent}</Link>;
+  }
+  return <div className={className}>{cardContent}</div>;
 }
 
 export default function PlayerPerformanceGrid({

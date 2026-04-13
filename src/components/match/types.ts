@@ -111,6 +111,8 @@ export interface PlayerRating {
   tackles: number | null;
   teamName: string;
   teamId: number;
+  playerId?: number; // API-Football player ID
+  slug?: string; // player slug for profile link
 }
 
 export interface PredictionData {

@@ -244,6 +244,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           tackles: p.statistics?.[0]?.tackles?.total || null,
           teamName: team.team.name,
           teamId: team.team.id,
+          playerId: p.player.id,
+          slug: p.player.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
         }))
       );
     }
