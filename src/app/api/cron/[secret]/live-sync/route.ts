@@ -533,8 +533,42 @@ export async function GET(
         });
         const ogImageUrl = `https://www.footy-feed.com/api/og/match?${ogParams.toString()}`;
 
-        // Vary tweet/FB text — avoids spam detection from identical posts
-        const TWEET_TEMPLATES = [
+        // Detect BIG MATCHES for hyped-up templates
+        const BIG_COMPS = new Set([
+          'Champions League', 'Europa League', 'Conference League',
+          'World Cup', 'European Championship', 'Copa America',
+          'Nations League', 'FA Cup', 'Copa del Rey', 'Coppa Italia',
+          'DFB-Pokal', 'Coupe de France', 'Club World Cup',
+        ]);
+        const BIG_CLUBS = new Set([
+          'Arsenal', 'Manchester City', 'Liverpool', 'Manchester United', 'Chelsea', 'Tottenham',
+          'Real Madrid', 'Barcelona', 'Atletico Madrid', 'Bayern Munich', 'Borussia Dortmund',
+          'PSG', 'Juventus', 'Inter Milan', 'AC Milan', 'Napoli',
+        ]);
+        const isBigMatch = BIG_COMPS.has(comp)
+          || (BIG_CLUBS.has(kick.home) && BIG_CLUBS.has(kick.away))
+          || comp.includes('Final') || comp.includes('Semi') || comp.includes('Quarter');
+
+        // BIG MATCH templates — maximum hype
+        const BIG_TWEET_TEMPLATES = [
+          (h: string, a: string, c: string, url: string, tags: string) => `🔥🔥🔥 THE STAGE IS SET!\n\n${h} 🆚 ${a}\n${c}\n\nThis is going to be MASSIVE. Every touch, every tackle, every moment — LIVE 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `⚡ BUCKLE UP! ${h} vs ${a} is LIVE!\n\n${c} football at its finest. You won't want to miss this one 🍿\n\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🚨 IT'S ON! ${h} vs ${a}\n\n${c} — the atmosphere is ELECTRIC ⚡\n\nLive scores, stats & minute-by-minute updates 👇\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🏟️ WHAT A NIGHT FOR FOOTBALL!\n\n${h} 🆚 ${a} — ${c}\n\nKick-off confirmed. Game on! 🎬\n\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `💥 ${h} vs ${a} — LIVE NOW!\n\nThe ${c} delivers again. This one has blockbuster written all over it 🎯\n\n${url}\n\n${tags}`,
+          (h: string, a: string, c: string, url: string, tags: string) => `🌟 THE BIG ONE IS UNDERWAY!\n\n${h} 🆚 ${a}\n${c}\n\nWho's taking the glory tonight? Follow LIVE 👇\n${url}\n\n${tags}`,
+        ];
+        const BIG_FB_TEMPLATES = [
+          (h: string, a: string, c: string, tags: string) => `🔥🔥🔥 THE STAGE IS SET!\n\n${h} 🆚 ${a}\n${c}\n\nThis is going to be MASSIVE. Every touch, every tackle, every moment — follow it all LIVE on Footy Feed!\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `⚡ BUCKLE UP! ${h} vs ${a} is LIVE!\n\n${c} football at its finest. You won't want to miss this one 🍿\n\nFull match centre with live stats, commentary & predictions 👇\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🚨 IT'S ON! ${h} vs ${a}\n\n${c} — the atmosphere is ELECTRIC ⚡\n\nLive scores, stats, player ratings & minute-by-minute updates on Footy Feed!\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🏟️ WHAT A NIGHT FOR FOOTBALL!\n\n${h} 🆚 ${a} — ${c}\n\nKick-off confirmed. Who's winning this one? Follow every moment LIVE!\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `💥 ${h} vs ${a} — LIVE NOW!\n\nThe ${c} delivers again. This one has blockbuster written all over it 🎯\n\nLive coverage at footy-feed.com!\n\n${tags}`,
+          (h: string, a: string, c: string, tags: string) => `🌟 THE BIG ONE IS UNDERWAY!\n\n${h} 🆚 ${a}\n${c}\n\nWho's taking the glory tonight? Live scores, AI predictions & full match centre 👇\n\n${tags}`,
+        ];
+
+        // Standard templates for regular matches
+        const STD_TWEET_TEMPLATES = [
           (h: string, a: string, c: string, url: string, tags: string) => `⚽ KICK OFF! ${h} vs ${a} is underway!\n\nLive scores, stats & match feed 👇\n${url}\n\n${tags}`,
           (h: string, a: string, c: string, url: string, tags: string) => `🔴 LIVE: ${h} take on ${a} in the ${c}!\n\nFollow every kick 👇\n${url}\n\n${tags}`,
           (h: string, a: string, c: string, url: string, tags: string) => `🚨 We're underway at ${h} vs ${a}!\n\nLive coverage, stats & commentary 👇\n${url}\n\n${tags}`,
@@ -544,7 +578,7 @@ export async function GET(
           (h: string, a: string, c: string, url: string, tags: string) => `🏟️ ${h} host ${a} — and we're off!\n\nMatch centre 👇\n${url}\n\n${tags}`,
           (h: string, a: string, c: string, url: string, tags: string) => `⏱️ Underway! ${h} 0-0 ${a}\n\nLive blog 👇\n${url}\n\n${tags}`,
         ];
-        const FB_TEMPLATES = [
+        const STD_FB_TEMPLATES = [
           (h: string, a: string, c: string, tags: string) => `⚽ KICK OFF! ${h} vs ${a} is underway!\n\nLive scores, stats & match feed 👇\n\n${tags}`,
           (h: string, a: string, c: string, tags: string) => `🔴 LIVE: ${h} take on ${a} in the ${c}!\n\nFollow every kick at footy-feed.com 👇\n\n${tags}`,
           (h: string, a: string, c: string, tags: string) => `🚨 We're underway at ${h} vs ${a}!\n\nFull live coverage, stats & commentary 👇\n\n${tags}`,
@@ -555,6 +589,10 @@ export async function GET(
           (h: string, a: string, c: string, tags: string) => `⏱️ Underway! ${h} 0-0 ${a}\n\nLive updates as they happen 👇\n\n${tags}`,
         ];
 
+        // Pick template set based on match importance
+        const TWEET_TEMPLATES = isBigMatch ? BIG_TWEET_TEMPLATES : STD_TWEET_TEMPLATES;
+        const FB_TEMPLATES = isBigMatch ? BIG_FB_TEMPLATES : STD_FB_TEMPLATES;
+
         // Pick a template based on match ID hash — deterministic so retries don't change text
         const seed = kick.matchId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
         const tweetTemplate = TWEET_TEMPLATES[seed % TWEET_TEMPLATES.length];
@@ -563,6 +601,8 @@ export async function GET(
         const tags = `#${homeTag} #${awayTag} #${compTag} #Football`;
         const tweetText = tweetTemplate(kick.home, kick.away, kick.competition, matchUrl, tags);
         const fbText = fbTemplate(kick.home, kick.away, kick.competition, tags);
+
+        if (isBigMatch) console.log(`[live-sync] BIG MATCH detected: ${kick.home} vs ${kick.away} (${comp})`);
 
         // Post to X (only top leagues) and Facebook (broader) in parallel
         const promises: Promise<any>[] = [];
