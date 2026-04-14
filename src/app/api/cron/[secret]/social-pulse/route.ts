@@ -40,13 +40,18 @@ export const maxDuration = 30;
 
 const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
-// Rate limits per platform
+// Rate limits per platform — conservative to avoid spam blocks
+// Facebook: 25 posts/day recommended, min 1h gap
+// Instagram: 25 posts/day hard limit, min 1h gap
+// Twitter/X: 50 tweets/day (free tier ~17), min 15min gap
+// Threads: 250 posts/day limit, but conservative to avoid blocks
+// Bluesky: no hard limit, keep reasonable
 const PLATFORM_LIMITS: Record<string, { minGapMs: number; maxPerDay: number }> = {
-  fb:      { minGapMs: 30 * 60 * 1000, maxPerDay: 999 },  // 30 min gap, no daily cap
+  fb:      { minGapMs: 60 * 60 * 1000, maxPerDay: 20 },   // 1 hour gap, 20/day
   tw:      { minGapMs: 30 * 60 * 1000, maxPerDay: 15 },   // 30 min gap, 15/day
-  ig:      { minGapMs: 60 * 60 * 1000, maxPerDay: 25 },   // 1 hour gap, 25/day (IG limit)
-  threads: { minGapMs: 30 * 60 * 1000, maxPerDay: 50 },   // 30 min gap, 50/day
-  bsky:    { minGapMs: 20 * 60 * 1000, maxPerDay: 50 },   // 20 min gap, 50/day
+  ig:      { minGapMs: 2 * 60 * 60 * 1000, maxPerDay: 10 }, // 2 hour gap, 10/day (strict)
+  threads: { minGapMs: 60 * 60 * 1000, maxPerDay: 20 },   // 1 hour gap, 20/day
+  bsky:    { minGapMs: 30 * 60 * 1000, maxPerDay: 30 },   // 30 min gap, 30/day
 };
 
 // Dead hours (UTC) — skip posting

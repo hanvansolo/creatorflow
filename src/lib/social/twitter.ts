@@ -486,7 +486,10 @@ export async function postCustomTweet(
   if (TWITTER_PAUSED) return { success: false, error: 'Twitter posting paused' };
   const token = await getAccessToken();
   if (!token) {
-    return { success: false, error: 'Twitter credentials not configured' };
+    // More specific error — check what's missing
+    const hasClientId = !!process.env.TWITTER_CLIENT_ID;
+    const hasRefreshInDb = await (async () => { try { const { db, siteSettings } = await import('@/lib/db'); const { eq } = await import('drizzle-orm'); const [r] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'twitter_refresh_token')).limit(1); return !!r?.value; } catch { return false; } })();
+    return { success: false, error: `Twitter auth failed — clientId: ${hasClientId}, dbRefreshToken: ${hasRefreshInDb}. Re-authorize at /api/auth/twitter` };
   }
 
   try {

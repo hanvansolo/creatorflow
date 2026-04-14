@@ -604,46 +604,50 @@ export async function GET(
 
         if (isBigMatch) console.log(`[live-sync] BIG MATCH detected: ${kick.home} vs ${kick.away} (${comp})`);
 
-        // Post to X (only top leagues) and Facebook (broader) in parallel
-        const promises: Promise<any>[] = [];
+        // Rate limit: max 3 kickoff posts per live-sync run to avoid platform spam blocks
+        // Big matches always get posted, others are first-come-first-served
+        const MAX_POSTS_PER_RUN = 3;
+        if (tweetsSent + fbSent >= MAX_POSTS_PER_RUN * 2 && !isBigMatch) {
+          console.log(`[live-sync] Skipping ${kick.home} vs ${kick.away} — post limit reached (${MAX_POSTS_PER_RUN}/run)`);
+          continue;
+        }
+
+        // Delay between posts to avoid rate limits (5 seconds between each)
+        if (tweetsSent > 0 || fbSent > 0) {
+          await new Promise(r => setTimeout(r, 5000));
+        }
+
+        // Post to platforms
+        const results: Record<string, any> = {};
 
         if (isTwitterWorthy) {
-          promises.push(postCustomTweet(tweetText, ogImageUrl));
-        } else {
-          promises.push(Promise.resolve({ success: false, skipped: true }));
+          const twRes = await postCustomTweet(tweetText, ogImageUrl);
+          if (twRes.success) {
+            tweetsSent++;
+            console.log(`[live-sync] Tweet sent: ${kick.home} vs ${kick.away} (${comp})`);
+          } else {
+            console.error(`[live-sync] Twitter failed: ${twRes.error}`);
+          }
         }
 
         if (isFbWorthy) {
-          promises.push(postCustomFacebook(fbText, matchUrl, ogImageUrl));
-        } else {
-          promises.push(Promise.resolve({ success: false, skipped: true }));
+          const fbRes = await postCustomFacebook(fbText, matchUrl, ogImageUrl);
+          if (fbRes.success) {
+            fbSent++;
+            console.log(`[live-sync] FB post sent: ${kick.home} vs ${kick.away}`);
+          } else {
+            console.error(`[live-sync] Facebook FAILED: ${fbRes.error}`);
+          }
         }
 
-        const [tweetResult, fbResult] = await Promise.allSettled(promises);
-
-        const tweetOk = tweetResult.status === 'fulfilled' && tweetResult.value?.success;
-        const fbOk = fbResult.status === 'fulfilled' && fbResult.value?.success;
-
-        if (tweetOk) {
-          tweetsSent++;
-          console.log(`[live-sync] Kickoff tweet sent: ${kick.home} vs ${kick.away} (${comp})`);
-        } else if (isTwitterWorthy) {
-          const tweetErr = tweetResult.status === 'rejected' ? tweetResult.reason?.message : tweetResult.value?.error;
-          if (tweetErr) console.error(`[live-sync] Twitter failed: ${tweetErr}`);
+        // Instagram — only for big matches or first 2 posts (IG is strictest)
+        if (isBigMatch || tweetsSent <= 2) {
+          const igCaption = `${fbText}\n\n${matchUrl}`;
+          try {
+            const igRes = await postCustomInstagram(igCaption, ogImageUrl);
+            if (igRes.success) console.log(`[live-sync] Instagram posted: ${kick.home} vs ${kick.away}`);
+          } catch {}
         }
-        if (fbOk) {
-          fbSent++;
-          console.log(`[live-sync] Kickoff FB post sent: ${kick.home} vs ${kick.away}`);
-        } else if (isFbWorthy) {
-          const fbErr = fbResult.status === 'rejected' ? fbResult.reason?.message : fbResult.value?.error;
-          console.error(`[live-sync] Facebook FAILED for ${kick.home} vs ${kick.away}: ${fbErr || 'unknown'}`);
-        }
-
-        // Instagram — post with match image (non-blocking, don't hold up the loop)
-        const igCaption = `${fbText}\n\n${matchUrl}`;
-        postCustomInstagram(igCaption, ogImageUrl)
-          .then(r => r.success ? console.log(`[live-sync] Instagram posted: ${kick.home} vs ${kick.away}`) : null)
-          .catch(() => {});
       } catch (err) {
         console.error(`[live-sync] Kickoff post error:`, err);
       }
