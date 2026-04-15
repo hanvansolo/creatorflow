@@ -5,6 +5,9 @@ import { ArrowLeft, TrendingUp, Target, Calendar, CheckCircle, XCircle, MinusCir
 import { db, matches, matchPredictions, clubs, competitions, competitionSeasons } from '@/lib/db';
 import { desc, eq, gte, and, isNotNull } from 'drizzle-orm';
 import { createPageMetadata } from '@/lib/seo';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,11 +108,11 @@ function formatKickoff(date: Date): string {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-function getOutcomeLabel(outcome: string): string {
+function getOutcomeLabel(outcome: string, t: Dictionary): string {
   switch (outcome) {
-    case 'home': return 'Home Win';
-    case 'away': return 'Away Win';
-    case 'draw': return 'Draw';
+    case 'home': return t.predictions.homeWin;
+    case 'away': return t.predictions.awayWin;
+    case 'draw': return t.predictions.draw;
     default: return outcome;
   }
 }
@@ -122,7 +125,9 @@ function getConfidenceColor(confidence: number | null): string {
 }
 
 export default async function PredictionsPage() {
-  const predictions = await getUpcomingPredictions();
+  const [predictions, locale] = await Promise.all([getUpcomingPredictions(), getLocale()]);
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
 
   return (
     <div className="min-h-screen">
@@ -140,10 +145,8 @@ export default async function PredictionsPage() {
               <Target className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Match Predictions</h1>
-              <p className="mt-1 text-zinc-400">
-                AI-powered predictions with score forecasts and BTTS analysis
-              </p>
+              <h1 className="text-3xl font-bold text-white">{t.predictions.heading}</h1>
+              <p className="mt-1 text-zinc-400">{t.predictions.subheading}</p>
             </div>
           </div>
         </div>
@@ -154,11 +157,8 @@ export default async function PredictionsPage() {
         {predictions.length === 0 ? (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-12 text-center">
             <Target className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No Predictions Available</h3>
-            <p className="text-zinc-400 max-w-md mx-auto">
-              AI predictions will appear here once upcoming matches are scheduled and analysed.
-              Check back closer to match day.
-            </p>
+            <h3 className="text-lg font-medium text-white mb-2">{t.predictions.none}</h3>
+            <p className="text-zinc-400 max-w-md mx-auto">{t.predictions.blurb}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -186,13 +186,13 @@ export default async function PredictionsPage() {
                           <XCircle className="h-4 w-4 text-red-400" />
                         )}
                         <span className={`text-xs font-medium ${outcomeCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {outcomeCorrect ? 'Correct' : 'Incorrect'}
+                          {outcomeCorrect ? t.predictions.correct : t.predictions.incorrect}
                         </span>
                       </div>
                     )}
                     {!isFinished && (
                       <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-300">
-                        {pred.status === 'live' ? 'LIVE' : 'Upcoming'}
+                        {pred.status === 'live' ? t.common.live : t.predictions.upcoming}
                       </span>
                     )}
                   </div>
@@ -225,23 +225,23 @@ export default async function PredictionsPage() {
                   {/* Prediction Details */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-lg bg-zinc-800/50 p-3">
                     <div className="text-center">
-                      <div className="text-xs text-zinc-500 mb-1">Prediction</div>
-                      <div className="text-sm font-medium text-white">{getOutcomeLabel(pred.predictedOutcome)}</div>
+                      <div className="text-xs text-zinc-500 mb-1">{t.predictions.prediction}</div>
+                      <div className="text-sm font-medium text-white">{getOutcomeLabel(pred.predictedOutcome, t)}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-zinc-500 mb-1">Score</div>
+                      <div className="text-xs text-zinc-500 mb-1">{t.predictions.score}</div>
                       <div className="text-sm font-medium text-white">
                         {pred.predictedHomeScore ?? '?'} - {pred.predictedAwayScore ?? '?'}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-zinc-500 mb-1">Confidence</div>
+                      <div className="text-xs text-zinc-500 mb-1">{t.predictions.confidence}</div>
                       <div className={`text-sm font-medium ${getConfidenceColor(pred.confidence)}`}>
                         {pred.confidence ? `${pred.confidence}%` : '-'}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-zinc-500 mb-1">BTTS</div>
+                      <div className="text-xs text-zinc-500 mb-1">{t.predictions.btts}</div>
                       <div className="text-sm font-medium text-white">
                         {pred.btts === true ? 'Yes' : pred.btts === false ? 'No' : '-'}
                       </div>

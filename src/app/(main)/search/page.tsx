@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { Search, Clock, ArrowLeft } from 'lucide-react';
 import { db, newsArticles, newsSources } from '@/lib/db';
 import { desc, eq, or, ilike } from 'drizzle-orm';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { translateBatch } from '@/lib/i18n/translate';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,7 +74,15 @@ export default async function SearchPage({
   searchParams: { q?: string };
 }) {
   const query = searchParams.q || '';
-  const results = await searchArticles(query);
+  const [rawResults, locale] = await Promise.all([searchArticles(query), getLocale()]);
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
+  const results = await translateBatch(
+    rawResults,
+    'news_article',
+    [{ key: 'title', field: 'title' }, { key: 'summary', field: 'summary' }],
+    locale,
+  );
 
   return (
     <div className="min-h-screen">
@@ -84,17 +96,17 @@ export default async function SearchPage({
             </Link>
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-6">Search</h1>
+          <h1 className="text-2xl font-bold text-white mb-6">{t.search.heading}</h1>
 
           {/* Search Input */}
-          <form action="/search" method="GET">
+          <form action={`${p}/search`} method="GET">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
               <input
                 type="text"
                 name="q"
                 defaultValue={query}
-                placeholder="Search football news..."
+                placeholder={t.search.placeholder}
                 autoFocus
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 py-3 pl-12 pr-4 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
@@ -108,27 +120,25 @@ export default async function SearchPage({
         {query && (
           <p className="text-sm text-zinc-400 mb-6">
             {results.length > 0
-              ? `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`
-              : `No results found for "${query}"`}
+              ? `${results.length} ${t.search.resultsCount} — ${t.search.resultsFor} "${query}"`
+              : `${t.search.noResultsFor} "${query}"`}
           </p>
         )}
 
         {!query && (
           <div className="text-center py-12">
             <Search className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">Search Football News</h3>
-            <p className="text-zinc-400 max-w-md mx-auto">
-              Enter a search term to find articles by title, content, or summary.
-            </p>
+            <h3 className="text-lg font-medium text-white mb-2">{t.search.enterQuery}</h3>
+            <p className="text-zinc-400 max-w-md mx-auto">{t.search.enterQueryBlurb}</p>
           </div>
         )}
 
         {query && results.length === 0 && (
           <div className="text-center py-12">
             <Search className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No Results Found</h3>
+            <h3 className="text-lg font-medium text-white mb-2">{t.search.noResults}</h3>
             <p className="text-zinc-400 max-w-md mx-auto">
-              No articles found for &ldquo;{query}&rdquo;. Try a different search term.
+              {t.search.noResultsFor} &ldquo;{query}&rdquo;.
             </p>
           </div>
         )}

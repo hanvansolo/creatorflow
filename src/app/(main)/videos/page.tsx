@@ -5,6 +5,8 @@ import { PlayCircle, Clock, Eye, ArrowRight } from 'lucide-react';
 import { db, youtubeVideos } from '@/lib/db';
 import { desc } from 'drizzle-orm';
 import { createPageMetadata } from '@/lib/seo';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 // Low priority channels that shouldn't appear in hero/featured sections
 const LOW_PRIORITY_CHANNELS = ['Driver61'];
@@ -120,6 +122,8 @@ function VideoCard({ video, showChannel = true }: { video: VideoType; showChanne
 }
 
 export default async function VideosPage() {
+  const locale = await getLocale();
+  const t = getDictionary(locale);
   // Get all videos, sorted by featured status then date
   const featuredVideos = await db
     .select()
@@ -155,14 +159,12 @@ export default async function VideosPage() {
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Football Videos</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">{t.videos.heading}</h1>
         {featuredVideos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <PlayCircle className="h-16 w-16 text-zinc-600 mb-4" />
-            <p className="text-zinc-400 text-lg">No videos available yet</p>
-            <p className="text-sm text-zinc-500 mt-1">
-              Check back later for the latest F1 content
-            </p>
+            <p className="text-zinc-400 text-lg">{t.videos.noVideos}</p>
+            <p className="text-sm text-zinc-500 mt-1">{t.videos.checkBack}</p>
           </div>
         ) : (
           <>
@@ -291,7 +293,7 @@ export default async function VideosPage() {
             {/* Latest Videos Section */}
             <section className="mt-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Latest Videos</h2>
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{t.videos.latest}</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {latestVideos.slice(0, 8).map((video) => (

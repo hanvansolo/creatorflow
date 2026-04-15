@@ -4,6 +4,8 @@ import { MessageCircleQuestion, TrendingUp, Clock, Sparkles } from 'lucide-react
 import { getPopularScenarios, getRecentScenarios } from '@/lib/api/what-if';
 import { WhatIfSearch, ScenarioCard, SuggestedQuestions } from '@/components/what-if';
 import { createPageMetadata } from '@/lib/seo';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
 
 export const metadata: Metadata = createPageMetadata(
   'Football What If Simulator - Explore Hypothetical Scenarios',
@@ -15,10 +17,12 @@ export const metadata: Metadata = createPageMetadata(
 export const dynamic = 'force-dynamic';
 
 export default async function WhatIfPage() {
-  const [popularScenarios, recentScenarios] = await Promise.all([
+  const [popularScenarios, recentScenarios, locale] = await Promise.all([
     getPopularScenarios(6),
     getRecentScenarios(6),
+    getLocale(),
   ]);
+  const t = getDictionary(locale);
 
   const suggestedQuestions = [
     "What if Mbappe had joined Real Madrid in 2022 instead of 2024?",
@@ -37,16 +41,12 @@ export default async function WhatIfPage() {
               <Sparkles className="h-6 w-6 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white sm:text-3xl">What If Simulator</h1>
-              <p className="text-sm text-zinc-400">Explore alternate football realities</p>
+              <h1 className="text-2xl font-bold text-white sm:text-3xl">{t.whatIf.heading}</h1>
+              <p className="text-sm text-zinc-400">{t.whatIf.subheading}</p>
             </div>
           </div>
 
-          <p className="text-zinc-300 max-w-2xl mb-8">
-            Ever wondered what could have been? Ask any hypothetical football question and our AI
-            will analyse the scenario, considering team dynamics, player strengths, tactical setups,
-            and historical precedents.
-          </p>
+          <p className="text-zinc-300 max-w-2xl mb-8">{t.whatIf.intro}</p>
 
           <WhatIfSearch />
 
@@ -60,7 +60,7 @@ export default async function WhatIfPage() {
           <section className="mb-10">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-purple-500" />
-              <h2 className="text-lg font-semibold text-white">Popular Scenarios</h2>
+              <h2 className="text-lg font-semibold text-white">{t.whatIf.popular}</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {popularScenarios.map((scenario) => (
@@ -75,7 +75,7 @@ export default async function WhatIfPage() {
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Clock className="h-5 w-5 text-zinc-500" />
-              <h2 className="text-lg font-semibold text-white">Recent Scenarios</h2>
+              <h2 className="text-lg font-semibold text-white">{t.whatIf.recent}</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {recentScenarios.map((scenario) => (
@@ -88,11 +88,8 @@ export default async function WhatIfPage() {
         {popularScenarios.length === 0 && recentScenarios.length === 0 && (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-12 text-center">
             <MessageCircleQuestion className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No Scenarios Yet</h3>
-            <p className="text-zinc-400 max-w-md mx-auto">
-              Be the first to ask a What If question! Our AI will analyse your hypothetical
-              scenario and provide detailed insights about how it could change football.
-            </p>
+            <h3 className="text-lg font-medium text-white mb-2">{t.whatIf.none}</h3>
+            <p className="text-zinc-400 max-w-md mx-auto">{t.whatIf.beFirst}</p>
           </div>
         )}
       </div>
