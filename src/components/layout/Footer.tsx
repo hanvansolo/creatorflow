@@ -114,7 +114,7 @@ export function Footer() {
                 aria-label="GambleAware"
               >
                 <Image
-                  src="/safer-gambling/gambleaware.png"
+                  src="/safer-gambling/gambleaware.svg"
                   alt="GambleAware"
                   width={140}
                   height={28}
@@ -122,7 +122,7 @@ export function Footer() {
                 />
               </a>
               <Image
-                src="/safer-gambling/18plus.png"
+                src="/safer-gambling/18plus.svg"
                 alt="18+ only"
                 width={32}
                 height={32}
