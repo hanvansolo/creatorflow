@@ -172,7 +172,7 @@ export async function GET(
               referee: fixture.fixture.referee,
               slug,
               round: fixture.league.round,
-              socialPosted: true, // Mark as posted immediately since we queue below
+              socialPosted: false, // Will be set to true only after successful social post
             }).returning({ id: matches.id });
 
             matchId = inserted.id;
@@ -617,13 +617,14 @@ export async function GET(
           await new Promise(r => setTimeout(r, 5000));
         }
 
-        // Post to platforms
-        const results: Record<string, any> = {};
+        // Post to platforms — track if ANY platform succeeded
+        let anySuccess = false;
 
         if (isTwitterWorthy) {
           const twRes = await postCustomTweet(tweetText, ogImageUrl);
           if (twRes.success) {
             tweetsSent++;
+            anySuccess = true;
             console.log(`[live-sync] Tweet sent: ${kick.home} vs ${kick.away} (${comp})`);
           } else {
             console.error(`[live-sync] Twitter failed: ${twRes.error}`);
@@ -634,6 +635,7 @@ export async function GET(
           const fbRes = await postCustomFacebook(fbText, matchUrl, ogImageUrl);
           if (fbRes.success) {
             fbSent++;
+            anySuccess = true;
             console.log(`[live-sync] FB post sent: ${kick.home} vs ${kick.away}`);
           } else {
             console.error(`[live-sync] Facebook FAILED: ${fbRes.error}`);
@@ -645,8 +647,32 @@ export async function GET(
           const igCaption = `${fbText}\n\n${matchUrl}`;
           try {
             const igRes = await postCustomInstagram(igCaption, ogImageUrl);
-            if (igRes.success) console.log(`[live-sync] Instagram posted: ${kick.home} vs ${kick.away}`);
+            if (igRes.success) {
+              anySuccess = true;
+              console.log(`[live-sync] Instagram posted: ${kick.home} vs ${kick.away}`);
+            }
           } catch {}
+        }
+
+        // Threads + Bluesky (non-blocking)
+        try {
+          const { postToThreads } = await import('@/lib/social/threads');
+          const thRes = await postToThreads(fbText.slice(0, 400), matchUrl, ogImageUrl);
+          if (thRes.success) { anySuccess = true; console.log(`[live-sync] Threads posted: ${kick.home} vs ${kick.away}`); }
+        } catch {}
+
+        try {
+          const { postToBluesky } = await import('@/lib/social/bluesky');
+          const bsRes = await postToBluesky(tweetText.slice(0, 280), matchUrl, [], ogImageUrl);
+          if (bsRes.success) { anySuccess = true; console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`); }
+        } catch {}
+
+        // Only mark as posted if at least one platform succeeded
+        // If all failed (rate limits, token errors), it'll retry next cron run
+        if (anySuccess) {
+          await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid`);
+        } else {
+          console.error(`[live-sync] ALL platforms failed for ${kick.home} vs ${kick.away} — will retry next run`);
         }
       } catch (err) {
         console.error(`[live-sync] Kickoff post error:`, err);
