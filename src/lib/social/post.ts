@@ -52,9 +52,9 @@ export async function postToAllPlatforms(
   imageUrl?: string
 ): Promise<SocialPostResult> {
   const results = await Promise.allSettled([
-    (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) && checkTwitterRateLimit() ? postToTwitter(title, slug, tags, imageUrl, summary) : null,
-    checkFacebookRateLimit() ? postToFacebook(title, slug, summary, tags) : null, // Facebook reads page ID + token from DB
-    (process.env.INSTAGRAM_ACCOUNT_ID && imageUrl) ? postToInstagram(title, slug, imageUrl, tags) : null,
+    null, // Twitter paused
+    null, // Facebook suspended pending account review
+    null, // Instagram disabled while FB is out (shared auth)
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
     process.env.THREADS_USER_ID ? postToThreads(title, slug, imageUrl) : null,
   ]);

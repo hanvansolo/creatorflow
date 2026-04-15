@@ -366,9 +366,10 @@ export async function GET(
 
   // When testing a specific platform, skip rate limits
   const testMode = platformFilter !== 'all';
-  const canFb = testMode ? platformFilter === 'fb' : await canPost('fb');
-  const canTw = testMode ? platformFilter === 'tw' : await canPost('tw');
-  const canIg = testMode ? platformFilter === 'ig' : await canPost('ig');
+  // FB/Twitter/IG disabled while Facebook account is suspended (IG auth rides on FB token).
+  const canFb = false;
+  const canTw = false;
+  const canIg = false;
   const canThreads = testMode ? platformFilter === 'threads' : await canPost('threads');
   const canBsky = testMode ? platformFilter === 'bsky' : await canPost('bsky');
 

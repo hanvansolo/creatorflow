@@ -596,56 +596,36 @@ export async function GET(
         // Post to platforms — track if ANY platform succeeded
         let anySuccess = false;
 
-        try {
-          const twRes = await postCustomTweet(tweetText, ogImageUrl);
-          if (twRes.success) {
-            tweetsSent++;
-            anySuccess = true;
-            console.log(`[live-sync] Tweet sent: ${kick.home} vs ${kick.away} (${comp})`);
-          } else if (twRes.error) {
-            console.error(`[live-sync] Twitter skipped/failed: ${twRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Twitter threw:`, e);
-        }
+        // Twitter, Facebook, Instagram disabled — only Threads + Bluesky for now.
+        // Twitter: killed (TWITTER_PAUSED in twitter.ts).
+        // Facebook: temporarily suspended pending account review.
+        // Instagram: depends on FB access token, skip while FB is out.
 
-        try {
-          const fbRes = await postCustomFacebook(fbText, matchUrl, ogImageUrl);
-          if (fbRes.success) {
-            fbSent++;
-            anySuccess = true;
-            console.log(`[live-sync] FB post sent: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Facebook FAILED: ${fbRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Facebook threw:`, e);
-        }
-
-        // Instagram
-        {
-          const igCaption = `${fbText}\n\n${matchUrl}`;
-          try {
-            const igRes = await postCustomInstagram(igCaption, ogImageUrl);
-            if (igRes.success) {
-              anySuccess = true;
-              console.log(`[live-sync] Instagram posted: ${kick.home} vs ${kick.away}`);
-            }
-          } catch {}
-        }
-
-        // Threads + Bluesky (non-blocking)
         try {
           const { postToThreads } = await import('@/lib/social/threads');
           const thRes = await postToThreads(fbText.slice(0, 400), matchUrl, ogImageUrl);
-          if (thRes.success) { anySuccess = true; console.log(`[live-sync] Threads posted: ${kick.home} vs ${kick.away}`); }
-        } catch {}
+          if (thRes.success) {
+            anySuccess = true;
+            console.log(`[live-sync] Threads posted: ${kick.home} vs ${kick.away}`);
+          } else {
+            console.error(`[live-sync] Threads failed: ${thRes.error}`);
+          }
+        } catch (e) {
+          console.error(`[live-sync] Threads threw:`, e);
+        }
 
         try {
           const { postToBluesky } = await import('@/lib/social/bluesky');
           const bsRes = await postToBluesky(tweetText.slice(0, 280), matchUrl, [], ogImageUrl);
-          if (bsRes.success) { anySuccess = true; console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`); }
-        } catch {}
+          if (bsRes.success) {
+            anySuccess = true;
+            console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`);
+          } else {
+            console.error(`[live-sync] Bluesky failed: ${bsRes.error}`);
+          }
+        } catch (e) {
+          console.error(`[live-sync] Bluesky threw:`, e);
+        }
 
         // The atomic lock at line ~198 / new-insert flow already claimed this match
         // by setting social_posted=TRUE to prevent concurrent cron runs double-posting.
