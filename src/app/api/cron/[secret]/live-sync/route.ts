@@ -596,18 +596,20 @@ export async function GET(
         // Post to platforms — track if ANY platform succeeded
         let anySuccess = false;
 
-        if (isTwitterWorthy) {
+        try {
           const twRes = await postCustomTweet(tweetText, ogImageUrl);
           if (twRes.success) {
             tweetsSent++;
             anySuccess = true;
             console.log(`[live-sync] Tweet sent: ${kick.home} vs ${kick.away} (${comp})`);
-          } else {
-            console.error(`[live-sync] Twitter failed: ${twRes.error}`);
+          } else if (twRes.error) {
+            console.error(`[live-sync] Twitter skipped/failed: ${twRes.error}`);
           }
+        } catch (e) {
+          console.error(`[live-sync] Twitter threw:`, e);
         }
 
-        if (isFbWorthy) {
+        try {
           const fbRes = await postCustomFacebook(fbText, matchUrl, ogImageUrl);
           if (fbRes.success) {
             fbSent++;
@@ -616,6 +618,8 @@ export async function GET(
           } else {
             console.error(`[live-sync] Facebook FAILED: ${fbRes.error}`);
           }
+        } catch (e) {
+          console.error(`[live-sync] Facebook threw:`, e);
         }
 
         // Instagram
