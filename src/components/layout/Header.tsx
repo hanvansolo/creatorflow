@@ -6,10 +6,12 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { MegaMenu } from './MegaMenu';
 import { UserMenu } from './UserMenu';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { cn } from '@/lib/utils';
 import logo from '@/app/logo.png';
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config';
 
-export function Header() {
+export function Header({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -34,6 +36,7 @@ export function Header() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 ml-auto">
+            <LanguageSwitcher current={locale} />
             <UserMenu />
             <button
               type="button"

@@ -17,6 +17,9 @@ import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
 import { CookieConsent } from '@/components/layout/CookieConsent';
 import EzoicRouteHandler from '@/components/ads/EzoicRouteHandler';
 import Script from 'next/script';
+import { getLocale } from '@/lib/i18n/locale';
+import { LOCALES, LOCALE_BCP47, RTL_LOCALES, DEFAULT_LOCALE } from '@/lib/i18n/config';
+import { headers } from 'next/headers';
 import './globals.css';
 
 const geistSans = Geist({
@@ -46,17 +49,36 @@ export const viewport: Viewport = {
 
 const websiteStructuredData = jsonLd(generateWebSiteStructuredData());
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const h = await headers();
+  const pathname = h.get('x-invoke-path') || h.get('x-pathname') || '/';
+  const basePath = (() => {
+    // Strip any existing locale prefix so we can build hreflang alternates.
+    const segs = pathname.split('/').filter(Boolean);
+    if (segs.length > 0 && (LOCALES as readonly string[]).includes(segs[0])) segs.shift();
+    return '/' + segs.join('/');
+  })();
+  const isRTL = (RTL_LOCALES as readonly string[]).includes(locale);
+
   return (
-    <html lang="en" className="dark">
+    <html lang={LOCALE_BCP47[locale]} dir={isRTL ? 'rtl' : 'ltr'} className="dark">
       <head>
         <JsonLdScript data={websiteStructuredData} />
         <meta name="impact-site-verification" content="cfef735d-47e2-4c0b-8630-84ff2dc0ea39" />
         <meta name="google-site-verification" content="YwRng0DAkw2pSrZx-11wvohvBoRYFw9WBzp_JUGRlvU" />
+        {/* hreflang alternates for every supported locale */}
+        {LOCALES.map(loc => {
+          const href = loc === DEFAULT_LOCALE
+            ? `https://www.footy-feed.com${basePath === '/' ? '' : basePath}`
+            : `https://www.footy-feed.com/${loc}${basePath === '/' ? '' : basePath}`;
+          return <link key={loc} rel="alternate" hrefLang={LOCALE_BCP47[loc]} href={href} />;
+        })}
+        <link rel="alternate" hrefLang="x-default" href={`https://www.footy-feed.com${basePath === '/' ? '' : basePath}`} />
         <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
         {/* Ezoic privacy/consent scripts — must load first */}
         <Script
@@ -103,9 +125,9 @@ export default function RootLayout({
         </Suspense>
         <LocationProvider>
           <div className="flex min-h-screen flex-col">
-            <Header />
+            <Header locale={locale} />
             <main className="flex-1">{children}</main>
-            <Footer />
+            <Footer locale={locale} />
             <NewsletterPopup />
             <Suspense fallback={null}>
               <CookieConsent />

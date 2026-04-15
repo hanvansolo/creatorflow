@@ -11,6 +11,8 @@ import { createPageMetadata } from '@/lib/seo';
 import { getRelatedImageSync } from '@/lib/getFallbackImage';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { getLocale } from '@/lib/i18n/locale';
+import { translateBatch } from '@/lib/i18n/translate';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +99,13 @@ async function getSources(): Promise<string[]> {
 }
 
 export default async function NewsPage() {
-  const [news, sources] = await Promise.all([getNews(), getSources()]);
+  const [news, sources, locale] = await Promise.all([getNews(), getSources(), getLocale()]);
+  const localizedNews = await translateBatch(
+    news,
+    'news_article',
+    [{ key: 'title', field: 'title' }, { key: 'summary', field: 'summary' }],
+    locale,
+  );
 
   return (
     <div className="min-h-screen">
@@ -147,8 +155,8 @@ export default async function NewsPage() {
       {/* News Grid */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <NewsFeed
-          initialArticles={news}
-          initialCursor={news.length >= 30 ? news[news.length - 1].publishedAt : null}
+          initialArticles={localizedNews}
+          initialCursor={localizedNews.length >= 30 ? localizedNews[localizedNews.length - 1].publishedAt : null}
         />
 
         {/* Ad after article listing */}

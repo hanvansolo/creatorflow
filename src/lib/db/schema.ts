@@ -886,6 +886,23 @@ export const contactMessages = pgTable('contact_messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+// ===== TRANSLATIONS =====
+// Caches AI-translated strings per (contentType, contentId, locale, field).
+// e.g. contentType='news_article', contentId=<uuid>, field='title', locale='es'.
+export const translations = pgTable('translations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contentType: varchar('content_type', { length: 50 }).notNull(),
+  contentId: varchar('content_id', { length: 100 }).notNull(),
+  locale: varchar('locale', { length: 10 }).notNull(),
+  field: varchar('field', { length: 50 }).notNull(),
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => ({
+  uniq: uniqueIndex('translations_unique_idx').on(t.contentType, t.contentId, t.locale, t.field),
+  lookup: index('translations_lookup_idx').on(t.contentType, t.contentId, t.locale),
+}));
+
 // ===== RELATIONS =====
 
 export const competitionsRelations = relations(competitions, ({ many }) => ({

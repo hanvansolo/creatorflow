@@ -31,6 +31,9 @@ import {
   jsonLd,
   JsonLdScript,
 } from '@/lib/seo';
+import { getLocale } from '@/lib/i18n/locale';
+import { translateField } from '@/lib/i18n/translate';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -130,6 +133,19 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
   if (!article) {
     notFound();
+  }
+
+  // Localize article content on the fly (cached in DB per locale).
+  const locale = await getLocale();
+  if (locale !== DEFAULT_LOCALE) {
+    const [tTitle, tSummary, tContent] = await Promise.all([
+      translateField('news_article', article.id, 'title', article.title, locale),
+      article.summary ? translateField('news_article', article.id, 'summary', article.summary, locale) : Promise.resolve(article.summary),
+      article.content ? translateField('news_article', article.id, 'body', article.content, locale) : Promise.resolve(article.content),
+    ]);
+    article.title = tTitle;
+    if (article.summary) article.summary = tSummary;
+    if (article.content) article.content = tContent;
   }
 
   // Fetch trending articles, image pool, annotated content, comment count, and sidebar data
