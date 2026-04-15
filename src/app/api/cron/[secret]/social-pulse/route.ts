@@ -366,11 +366,15 @@ export async function GET(
 
   // When testing a specific platform, skip rate limits
   const testMode = platformFilter !== 'all';
-  // FB/Twitter/IG disabled while Facebook account is suspended (IG auth rides on FB token).
+  // FB/Twitter/IG/Threads all paused. Bluesky only for now.
+  // - FB: account suspended pending review
+  // - IG: depends on FB token
+  // - Twitter: killed via internal TWITTER_PAUSED flag
+  // - Threads: Meta action-block (subcode 2207051), waiting for flag to decay
   const canFb = false;
   const canTw = false;
   const canIg = false;
-  const canThreads = testMode ? platformFilter === 'threads' : await canPost('threads');
+  const canThreads = false;
   const canBsky = testMode ? platformFilter === 'bsky' : await canPost('bsky');
 
   if (!canFb && !canTw && !canIg && !canThreads && !canBsky) {

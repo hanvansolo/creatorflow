@@ -596,23 +596,11 @@ export async function GET(
         // Post to platforms — track if ANY platform succeeded
         let anySuccess = false;
 
-        // Twitter, Facebook, Instagram disabled — only Threads + Bluesky for now.
+        // Twitter, Facebook, Instagram, Threads all paused — Bluesky only for now.
         // Twitter: killed (TWITTER_PAUSED in twitter.ts).
-        // Facebook: temporarily suspended pending account review.
-        // Instagram: depends on FB access token, skip while FB is out.
-
-        try {
-          const { postToThreads } = await import('@/lib/social/threads');
-          const thRes = await postToThreads(fbText.slice(0, 400), matchUrl, ogImageUrl);
-          if (thRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Threads posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Threads failed: ${thRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Threads threw:`, e);
-        }
+        // Facebook: suspended pending account review.
+        // Instagram: depends on FB access token.
+        // Threads: Meta action-block (subcode 2207051), waiting for flag to decay.
 
         try {
           const { postToBluesky } = await import('@/lib/social/bluesky');

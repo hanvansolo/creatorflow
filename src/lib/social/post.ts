@@ -56,7 +56,7 @@ export async function postToAllPlatforms(
     null, // Facebook suspended pending account review
     null, // Instagram disabled while FB is out (shared auth)
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
-    process.env.THREADS_USER_ID ? postToThreads(title, slug, imageUrl) : null,
+    null, // Threads paused — Meta action-block (subcode 2207051)
   ]);
 
   const get = (i: number) => {
