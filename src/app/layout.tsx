@@ -56,6 +56,7 @@ export default function RootLayout({
       <head>
         <JsonLdScript data={websiteStructuredData} />
         <meta name="impact-site-verification" content="cfef735d-47e2-4c0b-8630-84ff2dc0ea39" />
+        <meta name="google-site-verification" content="YwRng0DAkw2pSrZx-11wvohvBoRYFw9WBzp_JUGRlvU" />
         <meta name="google-adsense-account" content="ca-pub-8717247095472771" />
         {/* Ezoic privacy/consent scripts — must load first */}
         <Script
