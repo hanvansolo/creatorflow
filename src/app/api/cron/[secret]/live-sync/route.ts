@@ -615,6 +615,22 @@ export async function GET(
           console.error(`[live-sync] Bluesky threw:`, e);
         }
 
+        try {
+          const { postToTelegram } = await import('@/lib/social/telegram');
+          const tgText = `${fbText}\n\n${matchUrl}`;
+          const tgRes = await postToTelegram(tgText, ogImageUrl);
+          if (tgRes.anySuccess) {
+            anySuccess = true;
+            console.log(`[live-sync] Telegram: ${tgRes.sent} sent, ${tgRes.failed} failed for ${kick.home} vs ${kick.away}`);
+          } else if (tgRes.sent === 0 && tgRes.failed === 0) {
+            // not configured — skip quietly
+          } else {
+            console.error(`[live-sync] Telegram all failed: ${tgRes.errors.join('; ')}`);
+          }
+        } catch (e) {
+          console.error(`[live-sync] Telegram threw:`, e);
+        }
+
         // The atomic lock at line ~198 / new-insert flow already claimed this match
         // by setting social_posted=TRUE to prevent concurrent cron runs double-posting.
         // If all platforms failed, release the claim so the next cron run retries.

@@ -459,6 +459,21 @@ export async function GET(
         }
       }
 
+      // Telegram multi-language — no rate-limit gate, bot accounts don't get flagged for this
+      if (platformFilter === 'all' || platformFilter === 'telegram') {
+        try {
+          const { postToTelegram } = await import('@/lib/social/telegram');
+          const tgText = `${content.text}\n\n${content.url}`;
+          const tgRes = await postToTelegram(tgText, content.image);
+          results.telegram = tgRes;
+          if (tgRes.anySuccess) {
+            console.log(`[social-pulse] Telegram: ${tgRes.sent} sent, ${tgRes.failed} failed (${gen.name})`);
+          }
+        } catch (e) {
+          console.error(`[social-pulse] Telegram threw:`, e);
+        }
+      }
+
       posted = true;
 
       return NextResponse.json({
