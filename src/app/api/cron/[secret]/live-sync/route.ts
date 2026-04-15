@@ -647,15 +647,19 @@ export async function GET(
           if (bsRes.success) { anySuccess = true; console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`); }
         } catch {}
 
-        // Only mark as posted if at least one platform succeeded
-        // If all failed (rate limits, token errors), it'll retry next cron run
-        if (anySuccess) {
-          await db.execute(sql`UPDATE matches SET social_posted = TRUE WHERE id = ${kick.matchId}::uuid`);
-        } else {
-          console.error(`[live-sync] ALL platforms failed for ${kick.home} vs ${kick.away} — will retry next run`);
+        // The atomic lock at line ~198 / new-insert flow already claimed this match
+        // by setting social_posted=TRUE to prevent concurrent cron runs double-posting.
+        // If all platforms failed, release the claim so the next cron run retries.
+        if (!anySuccess) {
+          console.error(`[live-sync] ALL platforms failed for ${kick.home} vs ${kick.away} — releasing lock for retry`);
+          await db.execute(sql`UPDATE matches SET social_posted = FALSE WHERE id = ${kick.matchId}::uuid`);
         }
       } catch (err) {
-        console.error(`[live-sync] Kickoff post error:`, err);
+        console.error(`[live-sync] Kickoff post error for ${kick.home} vs ${kick.away}:`, err);
+        // Release lock on unexpected error so retry can happen
+        try {
+          await db.execute(sql`UPDATE matches SET social_posted = FALSE WHERE id = ${kick.matchId}::uuid`);
+        } catch {}
       }
     }
 
