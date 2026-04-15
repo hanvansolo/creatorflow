@@ -17,6 +17,10 @@ import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
 import { LiveTicker } from '@/components/live/LiveTicker';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd, SidebarAd, NativeAd } from '@/components/ads/ProfitableAds';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { translateBatch } from '@/lib/i18n/translate';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 
 export const dynamic = 'force-dynamic';
@@ -251,11 +255,26 @@ async function getTrendingArticles() {
 }
 
 export default async function HomePage() {
-  const [news, standings, latestVideos, trending] = await Promise.all([
+  const [rawNews, standings, latestVideos, rawTrending, locale] = await Promise.all([
     getLatestNews(),
     getLeagueTable(),
     getLatestVideos(),
     getTrendingArticles(),
+    getLocale(),
+  ]);
+
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
+
+  // Translate all article titles/summaries for the current locale in one pass.
+  const [news, trending] = await Promise.all([
+    translateBatch(rawNews, 'news_article', [
+      { key: 'title', field: 'title' },
+      { key: 'summary', field: 'summary' },
+    ], locale),
+    translateBatch(rawTrending, 'news_article', [
+      { key: 'title', field: 'title' },
+    ], locale),
   ]);
 
   const mainNews = news.filter(a => a.credibilityRating !== 'opinion' && a.credibilityRating !== 'rumour');
@@ -331,7 +350,7 @@ export default async function HomePage() {
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10">
                     <MessageSquareQuote className="h-3.5 w-3.5 text-blue-400" />
                   </div>
-                  <h2 className="text-sm font-bold text-white tracking-tight">OPINIONS & ANALYSIS</h2>
+                  <h2 className="text-sm font-bold text-white tracking-tight">{t.home.opinions}</h2>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   {opinions.slice(0, 4).map((article) => (
@@ -368,7 +387,7 @@ export default async function HomePage() {
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10">
                     <CircleHelp className="h-3.5 w-3.5 text-amber-400" />
                   </div>
-                  <h2 className="text-sm font-bold text-white tracking-tight">TRANSFER RUMOURS</h2>
+                  <h2 className="text-sm font-bold text-white tracking-tight">{t.home.transferRumours}</h2>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   {rumours.slice(0, 4).map((article) => (
@@ -416,7 +435,7 @@ export default async function HomePage() {
               {latestArticles.length > 0 && (
                 <>
                   <div className="mb-4 flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">More News</h2>
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{t.home.moreNews}</h2>
                   </div>
                   <div className="space-y-3">
                     {latestArticles.slice(0, 15).map((article, i) => (
@@ -432,10 +451,10 @@ export default async function HomePage() {
 
               <div className="mt-4 text-center">
                 <Link
-                  href="/news"
+                  href={`${p}/news`}
                   className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
                 >
-                  View all news
+                  {t.home.viewAllNews}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -450,7 +469,7 @@ export default async function HomePage() {
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Zap className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-bold text-white tracking-tight">EXPLORE</span>
+                    <span className="text-sm font-bold text-white tracking-tight">{t.home.explore}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {[
@@ -481,7 +500,7 @@ export default async function HomePage() {
                   <div className="p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="h-4 w-4 text-amber-400" />
-                      <span className="text-sm font-bold text-white tracking-tight">TRENDING</span>
+                      <span className="text-sm font-bold text-white tracking-tight">{t.home.trending}</span>
                     </div>
                     <div className="space-y-3">
                       {trending.map((article, i) => (
@@ -514,20 +533,20 @@ export default async function HomePage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-emerald-400" />
-                        <span className="text-sm font-bold text-white tracking-tight">{(standings[0]?.competitionName || 'LEAGUE TABLE').toUpperCase()}</span>
+                        <span className="text-sm font-bold text-white tracking-tight">{(standings[0]?.competitionName || t.home.leagueTable).toUpperCase()}</span>
                       </div>
-                      <Link href="/tables" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
-                        Full table →
+                      <Link href={`${p}/tables`} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                        {t.home.fullTable} →
                       </Link>
                     </div>
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-zinc-500 border-b border-zinc-700/50">
                           <th className="py-1 text-left w-6">#</th>
-                          <th className="py-1 text-left">Club</th>
-                          <th className="py-1 text-center w-8">P</th>
-                          <th className="py-1 text-center w-8">GD</th>
-                          <th className="py-1 text-right w-8">Pts</th>
+                          <th className="py-1 text-left">{t.tables.club}</th>
+                          <th className="py-1 text-center w-8">{t.tables.played}</th>
+                          <th className="py-1 text-center w-8">{t.tables.gd}</th>
+                          <th className="py-1 text-right w-8">{t.tables.pts}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -559,11 +578,9 @@ export default async function HomePage() {
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-bold text-white tracking-tight">NEWSLETTER</span>
+                    <span className="text-sm font-bold text-white tracking-tight">{t.home.newsletter}</span>
                   </div>
-                  <p className="text-xs text-zinc-400 mb-3">
-                    Get the best football news delivered weekly. No spam, no waffle.
-                  </p>
+                  <p className="text-xs text-zinc-400 mb-3">{t.home.newsletterBlurb}</p>
                   <NewsletterCTA source="sidebar" variant="inline" />
                 </div>
               </div>
@@ -579,10 +596,10 @@ export default async function HomePage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Newspaper className="h-4 w-4 text-red-400" />
-                        <span className="text-sm font-bold text-white tracking-tight">LATEST VIDEOS</span>
+                        <span className="text-sm font-bold text-white tracking-tight">{t.home.latestVideos}</span>
                       </div>
-                      <Link href="/videos" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
-                        All videos →
+                      <Link href={`${p}/videos`} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                        {t.home.allVideos} →
                       </Link>
                     </div>
                     <div className="space-y-3">
