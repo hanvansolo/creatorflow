@@ -69,7 +69,9 @@ export async function postToThreads(title: string, slug: string, imageUrl?: stri
 
     const createData = await createRes.json();
     if (!createRes.ok || !createData.id) {
-      return { success: false, error: createData.error?.message || JSON.stringify(createData) };
+      const detail = JSON.stringify({ status: createRes.status, error: createData.error, body: createData }).slice(0, 500);
+      console.error(`[Threads] Create container failed: ${detail}`);
+      return { success: false, error: `create: ${detail}` };
     }
 
     // Wait for media processing (Threads requires a short delay for images)
