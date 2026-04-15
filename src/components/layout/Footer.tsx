@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Twitter } from 'lucide-react';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
@@ -104,7 +105,44 @@ export function Footer() {
         </div>
 
         <div className="mt-4 border-t border-zinc-700 pt-8">
-          <p className="text-center text-xs text-zinc-400">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4 rounded bg-white px-4 py-2">
+              <a
+                href="https://www.gambleaware.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GambleAware"
+              >
+                <Image
+                  src="/safer-gambling/gambleaware.png"
+                  alt="GambleAware"
+                  width={140}
+                  height={28}
+                  className="h-7 w-auto"
+                />
+              </a>
+              <Image
+                src="/safer-gambling/18plus.png"
+                alt="18+ only"
+                width={32}
+                height={32}
+                className="h-8 w-8"
+              />
+            </div>
+            <p className="text-center text-xs font-medium text-zinc-300">
+              Please Gamble Responsibly. For help and advice visit{' '}
+              <a
+                href="https://www.gambleaware.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-white"
+              >
+                www.gambleaware.org
+              </a>
+              .
+            </p>
+          </div>
+          <p className="mt-6 text-center text-xs text-zinc-400">
             &copy; {new Date().getFullYear()} Footy Feed. Not affiliated with FIFA, UEFA, or any football league.
             <br />
             All football-related content and trademarks are property of their respective owners.
