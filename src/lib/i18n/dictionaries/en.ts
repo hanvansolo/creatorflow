@@ -1,4 +1,60 @@
-export const en = {
+export type Dictionary = {
+  nav: {
+    news: string;
+    live: string;
+    fixtures: string;
+    tables: string;
+    matchReports: string;
+    transfers: string;
+    predictions: string;
+    videos: string;
+    whatIf: string;
+    rules: string;
+    about: string;
+    contact: string;
+    privacy: string;
+    terms: string;
+  };
+  common: {
+    readMore: string;
+    loading: string;
+    error: string;
+    search: string;
+    live: string;
+    final: string;
+    halfTime: string;
+    fullTime: string;
+    kickoff: string;
+    competition: string;
+    home: string;
+    away: string;
+    today: string;
+    tomorrow: string;
+    yesterday: string;
+    selectLanguage: string;
+  };
+  home: {
+    tagline: string;
+    latestNews: string;
+    liveNow: string;
+    todaysFixtures: string;
+    topScorers: string;
+    standings: string;
+  };
+  footer: {
+    tagline: string;
+    navigation: string;
+    resources: string;
+    company: string;
+    newsletterTitle: string;
+    newsletterSubtitle: string;
+    gambleResponsibly: string;
+    disclaimer: string;
+    trademarks: string;
+  };
+};
+
+export const en: Dictionary = {
   nav: {
     news: 'News',
     live: 'Live Scores',
@@ -52,6 +108,4 @@ export const en = {
     disclaimer: 'Not affiliated with FIFA, UEFA, or any football league.',
     trademarks: 'All football-related content and trademarks are property of their respective owners.',
   },
-} as const;
-
-export type Dictionary = typeof en;
+};
