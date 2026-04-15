@@ -448,73 +448,57 @@ export async function GET(
     //   }
     // }
 
-    // Send kickoff posts
-    // Twitter: ONLY top-traffic leagues (1,500 tweets/month free tier)
-    // Facebook: ALL leagues (no rate limit concerns)
+    // === AI-POWERED MATCH SELECTION ===
+    // Score each match by traffic potential, only post the best ones
+    // Max 3 posts per cron run to stay within rate limits
 
-    // Twitter-worthy leagues — high traffic, worth spending a tweet credit on
-    const TWITTER_LEAGUES = new Set([
-      'Premier League', 'Championship', 'FA Cup', 'EFL Cup',
-      'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
-      'Champions League', 'Europa League', 'Conference League',
-      'MLS', 'Liga MX', 'Brasileirão',
-      'Copa Libertadores',
-      'World Cup', 'European Championship', 'Copa America', 'Nations League',
-      'Scottish Premiership',
-      'Saudi Pro League',
-      'Club World Cup', 'UEFA Super Cup',
-    ]);
-    const TWITTER_PARTIAL = ['FA Cup', 'EFL'];
+    function scoreMatch(kick: typeof kickoffTweets[0]): number {
+      const comp = kick.competition;
+      let score = 0;
 
-    // Facebook-worthy leagues — much broader (no credit limit)
-    const FB_LEAGUES = new Set([
-      // === ALL GB FOOTBALL ===
-      'Premier League', 'Championship', 'League One', 'League Two',
-      'National League', 'National League North', 'National League South',
-      'Scottish Premiership', 'Scottish Championship', 'Scottish League One', 'Scottish League Two',
-      'FA Cup', 'EFL Cup', 'EFL Trophy', 'FA Trophy', 'FA Vase',
-      'FAW Championship', 'FAW Cup',
-      'League of Ireland Premier', 'NIFL Premiership',
-      "Women's Super League", "Women's Championship",
-      // === TOP EUROPEAN LEAGUES ===
-      'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
-      'Eredivisie', 'Primeira Liga', 'Super Lig',
-      // === EUROPEAN CUPS ===
-      'Champions League', 'Europa League', 'Conference League',
-      'Copa del Rey', 'Coppa Italia', 'DFB-Pokal', 'Coupe de France',
-      // === AMERICAS ===
-      'MLS', 'Liga MX', 'Brasileirão', 'Liga Profesional Argentina',
-      'Copa Libertadores', 'Copa Sudamericana',
-      // === INTERNATIONAL ===
-      'World Cup', 'European Championship', 'Copa America', 'Nations League',
-      'AFCON', 'Asian Cup', 'Gold Cup',
-      'WC Qualifiers - Europe', 'WC Qualifiers - South America',
-      'WC Qualifiers - North America', 'WC Qualifiers - Asia',
-      'WC Qualifiers - Africa', 'WC Qualifiers - Intercontinental',
-      'AFCON Qualifiers',
-      // === OTHER NOTABLE ===
-      'Saudi Pro League', 'J1 League', 'K League 1', 'A-League',
-      'Club World Cup', 'UEFA Super Cup',
-    ]);
-    const FB_PARTIAL = [
-      'EFL', 'FA Cup', 'FA Trophy', 'FA Vase',
-      'National League', 'Non League',
-      'Isthmian', 'Northern Premier', 'Southern League',
-    ];
+      // Tier 1: Massive global interest (10 points)
+      if (['Champions League', 'Europa League', 'World Cup', 'European Championship', 'Copa America'].some(c => comp.includes(c))) score += 10;
+
+      // Tier 2: Top domestic leagues (8 points)
+      if (['Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1'].includes(comp)) score += 8;
+
+      // Tier 3: Cup competitions & notable leagues (5 points)
+      if (['FA Cup', 'EFL Cup', 'Copa del Rey', 'Coppa Italia', 'DFB-Pokal', 'Conference League', 'Nations League'].some(c => comp.includes(c))) score += 5;
+      if (['Championship', 'MLS', 'Brasileirão', 'Eredivisie', 'Scottish Premiership'].includes(comp)) score += 5;
+
+      // Tier 4: Secondary leagues (2 points)
+      if (['Liga MX', 'Copa Libertadores', 'Saudi Pro League', 'League One', 'Super Lig', 'Primeira Liga'].some(c => comp.includes(c))) score += 2;
+
+      // Bonus: Big clubs (+3)
+      const BIG_CLUBS = ['Arsenal', 'Manchester City', 'Liverpool', 'Manchester United', 'Chelsea', 'Tottenham', 'Real Madrid', 'Barcelona', 'Bayern Munich', 'PSG', 'Juventus', 'Inter Milan', 'AC Milan', 'Napoli', 'Borussia Dortmund', 'Atletico Madrid'];
+      if (BIG_CLUBS.includes(kick.home)) score += 3;
+      if (BIG_CLUBS.includes(kick.away)) score += 3;
+
+      // Bonus: Finals/Semis/Quarters (+5)
+      if (comp.includes('Final') || comp.includes('Semi') || comp.includes('Quarter')) score += 5;
+
+      // Penalty: Youth/reserve (-100)
+      if (comp.includes('U19') || comp.includes('U20') || comp.includes('U21') || comp.includes('Reserve') || comp.includes('Primavera')) score -= 100;
+
+      return score;
+    }
+
+    // Score and sort — post all matches scoring 4+ (real traffic potential)
+    // During quiet periods (no high-value matches), post the best available
+    const scoredMatches = kickoffTweets
+      .map(kick => ({ ...kick, score: scoreMatch(kick) }))
+      .sort((a, b) => b.score - a.score);
+
+    const highValue = scoredMatches.filter(k => k.score >= 4);
+    const bestAvailable = highValue.length > 0 ? highValue : scoredMatches.slice(0, 2); // During quiet periods, post top 2
+    const toPost = bestAvailable.filter(k => k.score > 0);
+
+    console.log(`[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} selected for posting (scores: ${toPost.map(m => `${m.home} vs ${m.away}=${m.score}`).join(', ')})`);
 
     let tweetsSent = 0;
     let fbSent = 0;
-    for (const kick of kickoffTweets) {
+    for (const kick of toPost) {
       const comp = kick.competition;
-
-      // Always skip youth/reserve
-      const isYouthOrReserve = comp.includes('U19') || comp.includes('U20') || comp.includes('U21') || comp.includes('Reserve') || comp.includes('Primavera');
-      if (isYouthOrReserve) continue;
-
-      const isTwitterWorthy = TWITTER_LEAGUES.has(comp) || TWITTER_PARTIAL.some(p => comp.includes(p));
-      const isFbWorthy = FB_LEAGUES.has(comp) || FB_PARTIAL.some(p => comp.includes(p)) || !kickoffTweets.some(k => FB_LEAGUES.has(k.competition)); // Post minor leagues during quiet periods
-
-      if (!isTwitterWorthy && !isFbWorthy) continue;
 
       try {
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
@@ -604,17 +588,9 @@ export async function GET(
 
         if (isBigMatch) console.log(`[live-sync] BIG MATCH detected: ${kick.home} vs ${kick.away} (${comp})`);
 
-        // Rate limit: max 3 kickoff posts per live-sync run to avoid platform spam blocks
-        // Big matches always get posted, others are first-come-first-served
-        const MAX_POSTS_PER_RUN = 3;
-        if (tweetsSent + fbSent >= MAX_POSTS_PER_RUN * 2 && !isBigMatch) {
-          console.log(`[live-sync] Skipping ${kick.home} vs ${kick.away} — post limit reached (${MAX_POSTS_PER_RUN}/run)`);
-          continue;
-        }
-
-        // Delay between posts to avoid rate limits (5 seconds between each)
+        // Delay between posts to avoid rate limits (3 seconds between each)
         if (tweetsSent > 0 || fbSent > 0) {
-          await new Promise(r => setTimeout(r, 5000));
+          await new Promise(r => setTimeout(r, 3000));
         }
 
         // Post to platforms — track if ANY platform succeeded
@@ -642,8 +618,8 @@ export async function GET(
           }
         }
 
-        // Instagram — only for big matches or first 2 posts (IG is strictest)
-        if (isBigMatch || tweetsSent <= 2) {
+        // Instagram
+        {
           const igCaption = `${fbText}\n\n${matchUrl}`;
           try {
             const igRes = await postCustomInstagram(igCaption, ogImageUrl);
