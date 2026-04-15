@@ -10,6 +10,9 @@ import { Calendar, ChevronLeft, ChevronRight, Info, Clock } from 'lucide-react';
 import { CompetitionSelector } from '@/components/competitions';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -169,6 +172,9 @@ function StatusBadge({ status, minute }: { status: string; minute: number | null
 }
 
 export default async function FixturesPage({ searchParams }: PageProps) {
+  const locale = await getLocale();
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
   const { date, competition } = await searchParams;
 
   const today = getDateString(0);
@@ -240,8 +246,8 @@ export default async function FixturesPage({ searchParams }: PageProps) {
               <Calendar className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Fixtures & Results</h1>
-              <p className="text-zinc-400 text-sm">Live scores, today&apos;s matches, and recent results</p>
+              <h1 className="text-2xl font-bold text-white">{t.fixtures.heading}</h1>
+              <p className="text-zinc-400 text-sm">{t.fixtures.subheading}</p>
             </div>
           </div>
         </div>
@@ -249,43 +255,43 @@ export default async function FixturesPage({ searchParams }: PageProps) {
         {/* Quick date navigation */}
         <div className="mb-5 flex items-center gap-2">
           <Link
-            href={`/fixtures?date=${prevDate}${competition ? `&competition=${competition}` : ''}`}
+            href={`${p}/fixtures?date=${prevDate}${competition ? `&competition=${competition}` : ''}`}
             className="flex items-center gap-1 rounded-lg bg-zinc-800 border border-zinc-700/50 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </Link>
           <Link
-            href={`/fixtures?date=${yesterday}${competition ? `&competition=${competition}` : ''}`}
+            href={`${p}/fixtures?date=${yesterday}${competition ? `&competition=${competition}` : ''}`}
             className={`rounded-lg px-4 py-2 text-xs font-medium transition-all ${
               activeDate === yesterday
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white border border-zinc-700/50'
             }`}
           >
-            Yesterday
+            {t.common.yesterday}
           </Link>
           <Link
-            href={`/fixtures?date=${today}${competition ? `&competition=${competition}` : ''}`}
+            href={`${p}/fixtures?date=${today}${competition ? `&competition=${competition}` : ''}`}
             className={`rounded-lg px-4 py-2 text-xs font-medium transition-all ${
               activeDate === today
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white border border-zinc-700/50'
             }`}
           >
-            Today
+            {t.common.today}
           </Link>
           <Link
-            href={`/fixtures?date=${tomorrow}${competition ? `&competition=${competition}` : ''}`}
+            href={`${p}/fixtures?date=${tomorrow}${competition ? `&competition=${competition}` : ''}`}
             className={`rounded-lg px-4 py-2 text-xs font-medium transition-all ${
               activeDate === tomorrow
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white border border-zinc-700/50'
             }`}
           >
-            Tomorrow
+            {t.common.tomorrow}
           </Link>
           <Link
-            href={`/fixtures?date=${nextDate}${competition ? `&competition=${competition}` : ''}`}
+            href={`${p}/fixtures?date=${nextDate}${competition ? `&competition=${competition}` : ''}`}
             className="flex items-center gap-1 rounded-lg bg-zinc-800 border border-zinc-700/50 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
           >
             <ChevronRight className="h-3.5 w-3.5" />
@@ -430,8 +436,8 @@ export default async function FixturesPage({ searchParams }: PageProps) {
         ) : (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 px-6 py-16 text-center">
             <Calendar className="mx-auto h-10 w-10 text-zinc-600 mb-3" />
-            <p className="text-sm text-zinc-400">No matches scheduled for this date.</p>
-            <p className="text-xs text-zinc-500 mt-1">Try selecting a different date or competition.</p>
+            <p className="text-sm text-zinc-400">{t.fixtures.noMatches}</p>
+            <p className="text-xs text-zinc-500 mt-1">{t.fixtures.tryDifferent}</p>
           </div>
         )}
       </div>

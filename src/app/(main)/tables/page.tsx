@@ -10,6 +10,9 @@ import { Trophy, ArrowRight, LayoutGrid } from 'lucide-react';
 import { CompetitionSelector } from '@/components/competitions';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +105,9 @@ function FormBadge({ result }: { result: string }) {
 }
 
 export default async function TablesPage({ searchParams }: PageProps) {
+  const locale = await getLocale();
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
   const { competition } = await searchParams;
   const activeSlugs = await getActiveCompetitionSlugs();
 
@@ -124,8 +130,8 @@ export default async function TablesPage({ searchParams }: PageProps) {
               <Trophy className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">League Tables</h1>
-              <p className="text-zinc-400 text-sm">Live standings across all major competitions</p>
+              <h1 className="text-2xl font-bold text-white">{t.tables.heading}</h1>
+              <p className="text-zinc-400 text-sm">{t.tables.subheading}</p>
             </div>
           </div>
         </div>
@@ -154,16 +160,16 @@ export default async function TablesPage({ searchParams }: PageProps) {
                 <thead>
                   <tr className="bg-zinc-800/80 border-b border-zinc-700/50">
                     <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">#</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">Club</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">P</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">W</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">D</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">L</th>
-                    <th className="hidden sm:table-cell px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">GF</th>
-                    <th className="hidden sm:table-cell px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">GA</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">GD</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-12">Pts</th>
-                    <th className="hidden md:table-cell px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">Form</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">{t.tables.club}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.played}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.won}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.drawn}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.lost}</th>
+                    <th className="hidden sm:table-cell px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.gf}</th>
+                    <th className="hidden sm:table-cell px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.ga}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-10">{t.tables.gd}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400 w-12">{t.tables.pts}</th>
+                    <th className="hidden md:table-cell px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">{t.tables.form}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
@@ -227,8 +233,8 @@ export default async function TablesPage({ searchParams }: PageProps) {
         ) : (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 px-6 py-16 text-center">
             <Trophy className="mx-auto h-10 w-10 text-zinc-600 mb-3" />
-            <p className="text-sm text-zinc-400">No standings data available for this competition yet.</p>
-            <p className="text-xs text-zinc-500 mt-1">Standings are updated after each matchday.</p>
+            <p className="text-sm text-zinc-400">{t.tables.noData}</p>
+            <p className="text-xs text-zinc-500 mt-1">{t.tables.updatedAfter}</p>
           </div>
         )}
 
@@ -240,18 +246,18 @@ export default async function TablesPage({ searchParams }: PageProps) {
         {/* Legend — only show for league type */}
         {standings.length > 0 && selected.type === 'league' && (
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg bg-zinc-800/40 border border-zinc-700/30 px-4 py-3">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Key:</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{t.tables.key}</span>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-1 rounded-full bg-blue-500" />
-              <span className="text-xs text-zinc-400">Champions League</span>
+              <span className="text-xs text-zinc-400">{t.tables.champLeague}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-1 rounded-full bg-orange-500" />
-              <span className="text-xs text-zinc-400">Europa League</span>
+              <span className="text-xs text-zinc-400">{t.tables.europaLeague}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-1 rounded-full bg-red-500" />
-              <span className="text-xs text-zinc-400">Relegation</span>
+              <span className="text-xs text-zinc-400">{t.tables.relegation}</span>
             </div>
           </div>
         )}
@@ -259,20 +265,20 @@ export default async function TablesPage({ searchParams }: PageProps) {
         {/* Related links */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Link
-            href={`/fixtures?competition=${selected.slug}`}
+            href={`${p}/fixtures?competition=${selected.slug}`}
             className="group flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-5 py-4 hover:border-emerald-500/30 transition-colors"
           >
             <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-              View Fixtures
+              {t.tables.viewFixtures}
             </span>
             <ArrowRight className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
           </Link>
           <Link
-            href="/teams"
+            href={`${p}/teams`}
             className="group flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-5 py-4 hover:border-emerald-500/30 transition-colors"
           >
             <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-              View Teams
+              {t.tables.viewTeams}
             </span>
             <ArrowRight className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
           </Link>

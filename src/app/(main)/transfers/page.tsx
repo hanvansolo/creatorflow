@@ -7,6 +7,10 @@ import { db, newsArticles, newsSources } from '@/lib/db';
 import { desc, eq, or, ilike, sql } from 'drizzle-orm';
 import { createPageMetadata } from '@/lib/seo';
 import { getRelatedImageSync } from '@/lib/getFallbackImage';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { translateBatch } from '@/lib/i18n/translate';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +77,15 @@ function timeAgo(date: Date): string {
 }
 
 export default async function TransfersPage() {
-  const articles = await getTransferNews();
+  const [articles, locale] = await Promise.all([getTransferNews(), getLocale()]);
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
+  const localized = await translateBatch(
+    articles,
+    'news_article',
+    [{ key: 'title', field: 'title' }, { key: 'summary', field: 'summary' }],
+    locale,
+  );
 
   return (
     <div className="min-h-screen">
@@ -91,10 +103,8 @@ export default async function TransfersPage() {
               <ArrowRightLeft className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Transfer News</h1>
-              <p className="mt-1 text-zinc-400">
-                Latest rumours, confirmed deals, and transfer window updates
-              </p>
+              <h1 className="text-3xl font-bold text-white">{t.transfers.heading}</h1>
+              <p className="mt-1 text-zinc-400">{t.transfers.subheading}</p>
             </div>
           </div>
         </div>
@@ -102,20 +112,18 @@ export default async function TransfersPage() {
 
       {/* Articles Grid */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {articles.length === 0 ? (
+        {localized.length === 0 ? (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-12 text-center">
             <ArrowRightLeft className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No Transfer News Yet</h3>
-            <p className="text-zinc-400 max-w-md mx-auto">
-              Transfer news articles will appear here when available. Check back during transfer windows for the latest rumours and deals.
-            </p>
+            <h3 className="text-lg font-medium text-white mb-2">{t.transfers.none}</h3>
+            <p className="text-zinc-400 max-w-md mx-auto">{t.transfers.blurb}</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {articles.map((article) => (
+            {localized.map((article) => (
               <Link
                 key={article.id}
-                href={`/news/${article.slug}`}
+                href={`${p}/news/${article.slug}`}
                 className="group rounded-xl border border-zinc-800 bg-zinc-900/50 overflow-hidden hover:border-zinc-700 transition-colors"
               >
                 {/* Image */}
@@ -137,12 +145,12 @@ export default async function TransfersPage() {
                   <div className="absolute top-2 left-2 flex gap-2">
                     {article.credibilityRating === 'rumour' && (
                       <span className="rounded-full bg-amber-500/90 px-2.5 py-0.5 text-xs font-medium text-black">
-                        Rumour
+                        {t.transfers.rumour}
                       </span>
                     )}
                     {article.isBreaking && (
                       <span className="rounded-full bg-red-500/90 px-2.5 py-0.5 text-xs font-medium text-white">
-                        Breaking
+                        {t.transfers.breaking}
                       </span>
                     )}
                   </div>

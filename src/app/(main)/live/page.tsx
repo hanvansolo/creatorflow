@@ -11,6 +11,9 @@ import { CompetitionSelector } from '@/components/competitions';
 import { LiveMatchCard } from '@/components/live/LiveMatchCard';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 const ALL_COMPETITIONS = COMPETITIONS.map(c => ({
   name: c.name,
@@ -122,6 +125,9 @@ interface PageProps {
 }
 
 export default async function LiveScoresPage({ searchParams }: PageProps) {
+  const locale = await getLocale();
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
   const { competition } = await searchParams;
 
   // Count live matches from DB
@@ -191,16 +197,16 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl font-bold text-white">Live Scores</h1>
+                <h1 className="text-2xl font-bold text-white">{t.live.heading}</h1>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   </span>
-                  Live
+                  {t.common.live}
                 </span>
               </div>
-              <p className="text-zinc-400 text-sm">Real-time scores and match events across all leagues</p>
+              <p className="text-zinc-400 text-sm">{t.live.subheading}</p>
             </div>
           </div>
         </div>
@@ -212,21 +218,20 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
               <Zap className="h-5 w-5 text-emerald-400" />
               <div>
                 <p className="text-sm font-semibold text-white">
-                  {liveCount} match{liveCount !== 1 ? 'es' : ''} live right now
+                  {liveCount} {t.live.countLive}
                 </p>
-                {/* TODO: Add client-side polling for auto-refresh (e.g., revalidate every 30s or use SWR/React Query) */}
-                <p className="text-xs text-zinc-400">Refresh the page for the latest scores</p>
+                <p className="text-xs text-zinc-400">{t.live.refreshHint}</p>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-zinc-500" />
               <div>
-                <p className="text-sm font-medium text-zinc-300">No live matches right now</p>
+                <p className="text-sm font-medium text-zinc-300">{t.live.noneLive}</p>
                 <p className="text-xs text-zinc-400">
                   {timeUntilNext
-                    ? `Next match in ${timeUntilNext}`
-                    : 'Check the fixtures page for upcoming matches'}
+                    ? `${t.live.nextMatchIn} ${timeUntilNext}`
+                    : t.live.checkFixtures}
                 </p>
               </div>
             </div>
@@ -284,11 +289,11 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
         ) : liveCount === 0 ? (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 px-6 py-16 text-center">
             <Radio className="mx-auto h-10 w-10 text-zinc-600 mb-3" />
-            <p className="text-sm text-zinc-400">No matches are currently being played.</p>
+            <p className="text-sm text-zinc-400">{t.live.noneLive}</p>
             <p className="text-xs text-zinc-500 mt-1">
               {timeUntilNext
-                ? `The next match kicks off in ${timeUntilNext}.`
-                : 'Check the fixtures page for upcoming matches.'}
+                ? `${t.live.nextMatchIn} ${timeUntilNext}.`
+                : t.live.checkFixtures}
             </p>
           </div>
         ) : null}
@@ -296,25 +301,25 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
         {/* Quick links */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Link
-            href="/fixtures"
+            href={`${p}/fixtures`}
             className="group flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-5 py-4 hover:border-emerald-500/30 transition-colors"
           >
             <div className="flex items-center gap-2.5">
               <Calendar className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
               <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-                View full fixtures
+                {t.live.viewFixtures}
               </span>
             </div>
             <ArrowRight className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
           </Link>
           <Link
-            href="/tables"
+            href={`${p}/tables`}
             className="group flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-5 py-4 hover:border-emerald-500/30 transition-colors"
           >
             <div className="flex items-center gap-2.5">
               <Trophy className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
               <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-                League tables
+                {t.live.viewTables}
               </span>
             </div>
             <ArrowRight className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />

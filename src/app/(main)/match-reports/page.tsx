@@ -8,6 +8,10 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { createPageMetadata } from '@/lib/seo';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { getLocale } from '@/lib/i18n/locale';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { translateBatch } from '@/lib/i18n/translate';
+import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,7 +72,15 @@ function extractTeams(tags: string[] | null): { home: string; away: string } | n
 }
 
 export default async function MatchReportsPage() {
-  const reports = await getMatchReports();
+  const [rawReports, locale] = await Promise.all([getMatchReports(), getLocale()]);
+  const t = getDictionary(locale);
+  const p = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
+  const reports = await translateBatch(
+    rawReports,
+    'news_article',
+    [{ key: 'title', field: 'title' }, { key: 'summary', field: 'summary' }],
+    locale,
+  );
 
   return (
     <div className="min-h-screen">
@@ -88,10 +100,8 @@ export default async function MatchReportsPage() {
             <div className="flex items-center gap-3">
               <FileText className="h-8 w-8 text-emerald-500" />
               <div>
-                <h1 className="text-3xl font-bold text-white">Match Reports</h1>
-                <p className="mt-1 text-zinc-400">
-                  In-depth post-match analysis and reports from top football competitions
-                </p>
+                <h1 className="text-3xl font-bold text-white">{t.matchReports.heading}</h1>
+                <p className="mt-1 text-zinc-400">{t.matchReports.subheading}</p>
               </div>
             </div>
           </div>
@@ -103,10 +113,8 @@ export default async function MatchReportsPage() {
         {reports.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="mx-auto h-12 w-12 text-zinc-600" />
-            <h2 className="mt-4 text-lg font-medium text-zinc-300">No match reports yet</h2>
-            <p className="mt-2 text-sm text-zinc-500">
-              Match reports are generated automatically after games finish. Check back soon!
-            </p>
+            <h2 className="mt-4 text-lg font-medium text-zinc-300">{t.matchReports.none}</h2>
+            <p className="mt-2 text-sm text-zinc-500">{t.matchReports.generatedAfter}</p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -117,7 +125,7 @@ export default async function MatchReportsPage() {
               return (
                 <Link
                   key={report.id}
-                  href={`/news/${report.slug}`}
+                  href={`${p}/news/${report.slug}`}
                   className="group overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-all hover:border-emerald-500/50 hover:bg-zinc-900"
                 >
                   {/* Image */}
@@ -167,7 +175,7 @@ export default async function MatchReportsPage() {
                       <Calendar className="h-3.5 w-3.5" />
                       <span>{formatDate(report.publishedAt)}</span>
                       <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-emerald-400">
-                        Match Report
+                        {t.matchReports.label}
                       </span>
                     </div>
                   </div>
