@@ -122,11 +122,11 @@ export const es: Dictionary = {
   },
   about: {
     heading: 'Acerca de Footy Feed',
-    intro: 'Footy Feed es tu centro completo de fútbol — agrega noticias de fuentes confiables, marcadores en vivo, pronósticos con IA y análisis táctico en profundidad del fútbol mundial.',
+    intro: 'Footy Feed es tu centro completo de fútbol — noticias de última hora, marcadores en vivo, pronósticos con IA y análisis táctico en profundidad del fútbol mundial.',
     builtBy: 'Construido por aficionados, para aficionados. Eliminamos el ruido y te traemos solo lo que importa.',
     whatWeOffer: 'Lo Que Ofrecemos',
-    featNewsTitle: 'Agregador de Noticias',
-    featNewsDesc: 'Las últimas noticias de BBC Sport, Sky Sports, The Guardian, The Athletic y más, todo en un solo lugar.',
+    featNewsTitle: 'Noticias de Última Hora',
+    featNewsDesc: 'Las últimas noticias del fútbol escritas por nuestro equipo editorial, publicadas las 24 horas.',
     featLiveTitle: 'Marcadores en Vivo',
     featLiveDesc: 'Marcadores en tiempo real, actualizaciones minuto a minuto y eventos de todas las grandes ligas.',
     featAiTitle: 'Pronósticos con IA',
@@ -140,7 +140,7 @@ export const es: Dictionary = {
     sources: 'Nuestras Fuentes',
     sourcesBlurb: 'Agregamos contenido de publicaciones de fútbol confiables, incluyendo:',
     disclaimer: 'Aviso Legal',
-    disclaimerBody: 'Footy Feed es un agregador independiente de noticias de fútbol. No estamos afiliados a FIFA, UEFA, ninguna liga, club o jugador. Todas las marcas y contenidos pertenecen a sus respectivos dueños.',
+    disclaimerBody: 'Footy Feed es una publicación independiente de noticias de fútbol. No estamos afiliados a FIFA, UEFA, ninguna liga, club o jugador. Todas las marcas y contenidos pertenecen a sus respectivos dueños.',
   },
   contact: {
     heading: 'Contáctanos',

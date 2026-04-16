@@ -19,7 +19,7 @@ export default async function AboutPage() {
   const t = getDictionary(locale);
 
   const features = [
-    { icon: Newspaper, title: t.about.featNewsTitle, description: t.about.featNewsDesc },
+    { icon: Zap, title: t.about.featNewsTitle, description: t.about.featNewsDesc },
     { icon: Radio, title: t.about.featLiveTitle, description: t.about.featLiveDesc },
     { icon: Brain, title: t.about.featAiTitle, description: t.about.featAiDesc },
     { icon: BarChart3, title: t.about.featCompareTitle, description: t.about.featCompareDesc },

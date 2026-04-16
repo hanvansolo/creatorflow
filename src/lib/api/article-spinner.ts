@@ -39,13 +39,14 @@ CRITICAL ACCURACY RULES — NON-NEGOTIABLE:
 
 WRITING RULES:
 - Lead with the news. First sentence = the key development. No throat-clearing.
-- Cut all filler: "it remains to be seen", "time will tell", "as we know", "in other news". If a sentence adds no new information, delete it.
-- Keep direct quotes — these are gold. But trim the setup around them.
-- If the original is 800 words of padding around 200 words of actual news, write 200 words. Do NOT match the original length for the sake of it. Shorter and complete beats long and padded.
-- If the original IS genuinely information-dense (stats, multiple developments, quotes), match its length.
+- Cut filler phrases: "it remains to be seen", "time will tell", "as we know". If a sentence adds no new information, cut it.
+- Keep ALL direct quotes — these are gold and add length naturally.
+- MINIMUM 200 words for the article body. If the source material has quotes, context, stats, or multiple angles — USE THEM. A proper article has substance.
+- Expand where warranted: add context from facts in the original (e.g. "Beckham, who bought the club in 2014" if the original mentions it). Use subheadings to break up sections.
+- Target 300-600 words for a standard news piece. Only go below 200 if the source is genuinely a one-line announcement with zero additional detail.
 - Headline MUST be under 80 characters — be specific about what happened, not vague.
-- Summary: 1-2 sentences, conveys the core news so a reader doesn't need to click.
-- Use subheadings only if the article covers multiple distinct developments.
+- Summary: 2-3 sentences that convey the story so it works as a standalone blurb.
+- Use subheadings for articles over 250 words to break up the text.
 - NEVER reference the original source, author, or publication. Write as if you are the original reporter.
 - NEVER include "according to [source]" or "as reported by". Just state the facts.
 
@@ -150,9 +151,12 @@ ACCURACY — NON-NEGOTIABLE:
 
 WRITING STYLE:
 - Lead with the news — first sentence = what happened
-- Be SHORTER than the original if it's padded
+- Cut padding but KEEP substance. MINIMUM 200 words for the body.
+- Use ALL available quotes, stats, and context from the original — these add length naturally.
+- Target 300-600 words. Only go below 200 if the source is genuinely a one-sentence announcement.
+- Use subheadings for articles over 250 words.
 - Headline under 80 characters — specific about what happened
-- Summary: 1-2 sentences conveying the core news
+- Summary: 2-3 sentences conveying the core story
 - NEVER reference the original source or author
 
 Original Title: ${originalTitle}
