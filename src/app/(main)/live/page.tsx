@@ -71,7 +71,7 @@ async function getLiveMatches(): Promise<LiveMatch[]> {
   try {
     const rows = await db.execute(sql`
       SELECT
-        m.id, m.kickoff, m.status, m.minute, m.home_score, m.away_score,
+        m.id, m.slug, m.kickoff, m.status, m.minute, m.home_score, m.away_score,
         m.home_score_ht, m.away_score_ht,
         hc.name as home_name, hc.slug as home_slug, hc.code as home_code, hc.primary_color as home_color, hc.logo_url as home_logo,
         ac.name as away_name, ac.slug as away_slug, ac.code as away_code, ac.primary_color as away_color, ac.logo_url as away_logo,

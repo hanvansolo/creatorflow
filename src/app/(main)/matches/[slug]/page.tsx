@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { db, newsArticles, newsSources } from '@/lib/db';
 import { sql, desc, ilike, or } from 'drizzle-orm';
 import {
@@ -16,7 +16,10 @@ export const dynamic = 'force-dynamic';
 
 // ===== DATA FETCHING =====
 
-async function getMatch(id: string) {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getMatch(slugOrId: string) {
+  const isUuid = UUID_RE.test(slugOrId);
   const result = await db.execute(sql`
     SELECT
       m.*,
@@ -32,7 +35,7 @@ async function getMatch(id: string) {
     LEFT JOIN competition_seasons cs ON m.competition_season_id = cs.id
     LEFT JOIN competitions comp ON cs.competition_id = comp.id
     LEFT JOIN venues v ON m.venue_id = v.id
-    WHERE m.id = ${id}
+    WHERE ${isUuid ? sql`m.id = ${slugOrId}::uuid` : sql`m.slug = ${slugOrId}`}
   `);
   return (result as any[])[0] ?? null;
 }
@@ -96,9 +99,9 @@ async function getRelatedArticles(homeName: string, awayName: string) {
 
 // ===== METADATA =====
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const match = await getMatch(id);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const match = await getMatch(slug);
   if (!match) return { title: 'Match Not Found' };
 
   const score = match.home_score != null ? `${match.home_score}-${match.away_score}` : 'vs';
@@ -128,18 +131,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 // ===== PAGE COMPONENT =====
 
-export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const match = await getMatch(id);
+export default async function MatchDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const match = await getMatch(slug);
   if (!match) notFound();
+
+  // If the URL used the UUID and the match has a proper slug, 301 to the slug URL.
+  if (UUID_RE.test(slug) && match.slug && match.slug !== slug) {
+    redirect(`/matches/${match.slug}`);
+  }
 
   const isPlayed = ['live', 'halftime', 'extra_time', 'penalties', 'finished'].includes(match.status);
 
-  // Fetch DB data in parallel
+  // Fetch DB data in parallel — all DB queries still keyed by UUID internally
+  const matchUuid = match.id;
   let [events, stats, analyses] = await Promise.all([
-    getDBEvents(id),
-    getDBStats(id),
-    getDBAnalyses(id),
+    getDBEvents(matchUuid),
+    getDBStats(matchUuid),
+    getDBAnalyses(matchUuid),
   ]);
 
   // On-demand API fetches for missing data

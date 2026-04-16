@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
-import { db, newsArticles, clubs, competitions, whatIfScenarios } from '@/lib/db';
-import { desc, isNotNull } from 'drizzle-orm';
+import { db, newsArticles, clubs, competitions, whatIfScenarios, matches } from '@/lib/db';
+import { desc, isNotNull, and, gte, inArray, sql } from 'drizzle-orm';
 import { SITE_CONFIG } from '@/lib/seo';
 import { LOCALES, DEFAULT_LOCALE, LOCALE_BCP47, type Locale } from '@/lib/i18n/config';
 
@@ -58,12 +58,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const [articles, allClubs, allCompetitions, scenarios] = await Promise.all([
+  // Match window: from 14 days ago to 14 days ahead — covers recent finishes,
+  // live matches now, and upcoming fixtures crawlers should index asap.
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - 14);
+  const windowEnd = new Date();
+  windowEnd.setDate(windowEnd.getDate() + 14);
+
+  const [articles, allClubs, allCompetitions, scenarios, recentMatches] = await Promise.all([
     db.select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
       .from(newsArticles).orderBy(desc(newsArticles.publishedAt)).limit(2000),
     db.select({ slug: clubs.slug }).from(clubs).where(isNotNull(clubs.slug)).limit(5000),
     db.select({ slug: competitions.slug }).from(competitions).where(isNotNull(competitions.slug)),
     db.select({ slug: whatIfScenarios.slug, updatedAt: whatIfScenarios.updatedAt }).from(whatIfScenarios).limit(500),
+    db.select({
+      slug: matches.slug,
+      status: matches.status,
+      kickoff: matches.kickoff,
+      updatedAt: matches.updatedAt,
+    })
+      .from(matches)
+      .where(and(isNotNull(matches.slug), gte(matches.kickoff, windowStart), sql`${matches.kickoff} <= ${windowEnd}`))
+      .orderBy(desc(matches.kickoff))
+      .limit(3000),
   ]);
 
   const newsUrls: SitemapEntry[] = [];
@@ -115,9 +132,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
+  // Match detail URLs — live/upcoming get hourly crawl priority so crawlers
+  // catch them while games are in progress.
+  const matchUrls: SitemapEntry[] = recentMatches
+    .filter(m => m.slug)
+    .map((m) => {
+      const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status ?? '');
+      const kickoff = m.kickoff ? new Date(m.kickoff) : now;
+      const hoursUntil = (kickoff.getTime() - now.getTime()) / 3_600_000;
+      const isUpcomingSoon = hoursUntil > 0 && hoursUntil < 24;
+      const isFinished = m.status === 'finished';
+      return {
+        url: `${base}/matches/${m.slug}`,
+        lastModified: m.updatedAt ? new Date(m.updatedAt) : kickoff,
+        changeFrequency: (isLive ? 'always' : isUpcomingSoon ? 'hourly' : isFinished ? 'weekly' : 'daily') as SitemapEntry['changeFrequency'],
+        priority: isLive ? 0.95 : isUpcomingSoon ? 0.85 : isFinished ? 0.6 : 0.75,
+      };
+    });
+
   return [
     ...staticPages,
     ...newsUrls,
+    ...matchUrls,
     ...teamUrls,
     ...tableUrls,
     ...fixtureUrls,

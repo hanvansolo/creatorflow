@@ -239,7 +239,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
       {/* Related live match banner */}
       {relatedLiveMatch && (
         <Link
-          href={`/matches/${relatedLiveMatch.id}`}
+          href={`/matches/${(relatedLiveMatch as any).slug || relatedLiveMatch.id}`}
           className="block bg-emerald-900/30 border-b border-emerald-500/20 hover:bg-emerald-900/40 transition-colors"
         >
           <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 lg:px-8 flex items-center justify-center gap-3">

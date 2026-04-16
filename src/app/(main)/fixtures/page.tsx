@@ -351,7 +351,7 @@ export default async function FixturesPage({ searchParams }: PageProps) {
                     return (
                       <div key={match.id}>
                       <Link
-                        href={`/matches/${match.id}`}
+                        href={`/matches/${match.slug || match.id}`}
                         className={`flex items-center px-4 py-3 bg-zinc-900 hover:bg-zinc-800/50 transition-colors ${
                           isLive ? 'border-l-2 border-l-emerald-500' : ''
                         }`}

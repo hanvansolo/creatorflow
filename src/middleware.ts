@@ -38,6 +38,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(`https://www.footy-feed.com${pathname}${search}`, 301);
   }
 
+  // IndexNow key verification file. Requested by Bing/Yandex when they
+  // receive a ping — must serve the key as plaintext at /{key}.txt.
+  const indexNowKey = process.env.INDEXNOW_KEY;
+  if (indexNowKey && pathname === `/${indexNowKey}.txt`) {
+    return new NextResponse(indexNowKey, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
   // Skip i18n for API, Next internals, and static assets — matcher already
   // filters most but double-guard here for safety.
   const isBypass = pathname.startsWith('/api') || pathname.startsWith('/_next');

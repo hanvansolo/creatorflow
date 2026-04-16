@@ -112,7 +112,7 @@ function ScoresPanel({ onClose, data }: { onClose: () => void; data: MenuData | 
             const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status);
             const isFt = m.status === 'finished';
             return (
-              <Link key={m.id} href={`/matches/${m.id}`} onClick={onClose} className="flex items-center gap-2.5 rounded-md px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+              <Link key={m.id} href={`/matches/${(m as any).slug || m.id}`} onClick={onClose} className="flex items-center gap-2.5 rounded-md px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                 {m.homeLogo && <Logo src={m.homeLogo} name={m.homeName} size={22} />}
                 <span className="text-sm text-zinc-600 dark:text-zinc-400 w-20 truncate text-right">{m.homeName.split(' ').pop()}</span>
                 <span className={cn('text-sm font-bold tabular-nums min-w-[32px] text-center', isLive ? 'text-emerald-500' : isFt ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-400')}>

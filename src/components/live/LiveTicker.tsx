@@ -138,7 +138,7 @@ export async function LiveTicker() {
             return (
               <Link
                 key={match.id}
-                href={`/matches/${match.id}`}
+                href={`/matches/${(match as any).slug || match.id}`}
                 className="shrink-0 mx-1 my-1.5"
               >
                 <div className={`flex flex-col items-center justify-center rounded-xl px-5 py-3 w-[170px] h-[100px] transition-colors hover:bg-zinc-700/50 ${

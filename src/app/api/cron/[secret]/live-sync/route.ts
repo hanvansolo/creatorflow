@@ -92,7 +92,7 @@ export async function GET(
     console.log(`[live-sync] Found ${liveFixtures.length} live matches`);
 
     const matchesNeedingAnalysis: Array<{ matchId: string; trigger: string }> = [];
-    const kickoffTweets: Array<{ home: string; away: string; competition: string; matchId: string; homeLogo?: string; awayLogo?: string }> = [];
+    const kickoffTweets: Array<{ home: string; away: string; competition: string; matchId: string; matchSlug: string; homeLogo?: string; awayLogo?: string }> = [];
     const finishedMatches: Array<{ matchId: string; home: string; away: string; homeScore: number; awayScore: number; competition: string; slug: string }> = [];
     let updatedCount = 0;
 
@@ -184,6 +184,7 @@ export async function GET(
               away: awayClub.name,
               competition: fixture.league.name || '',
               matchId,
+              matchSlug: slug,
               homeLogo: homeClub.logoUrl || undefined,
               awayLogo: awayClub.logoUrl || undefined,
             });
@@ -208,6 +209,7 @@ export async function GET(
                 away: ac.name,
                 competition: fixture.league.name || '',
                 matchId,
+                matchSlug: existingMatch.slug || matchId,
                 homeLogo: hc.logoUrl || undefined,
                 awayLogo: ac.logoUrl || undefined,
               });
@@ -504,7 +506,7 @@ export async function GET(
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
         const awayTag = kick.away.replace(/[^a-zA-Z0-9]/g, '');
         const compTag = kick.competition.replace(/[^a-zA-Z0-9]/g, '');
-        const matchUrl = `https://www.footy-feed.com/matches/${kick.matchId}`;
+        const matchUrl = `https://www.footy-feed.com/matches/${kick.matchSlug || kick.matchId}`;
 
         // Generate OG match image URL with team logos
         const ogParams = new URLSearchParams({
@@ -644,6 +646,18 @@ export async function GET(
         try {
           await db.execute(sql`UPDATE matches SET social_posted = FALSE WHERE id = ${kick.matchId}::uuid`);
         } catch {}
+      }
+    }
+
+    // 5b. Ping IndexNow for the matches that just went live — gets Bing/Yandex
+    //     to crawl the match URL within minutes instead of hours.
+    if (toPost.length > 0) {
+      try {
+        const { pingIndexNow } = await import('@/lib/seo/indexnow');
+        const urls = toPost.map(k => `/matches/${k.matchSlug || k.matchId}`);
+        await pingIndexNow(urls);
+      } catch (e) {
+        console.error('[live-sync] IndexNow ping failed:', (e as Error).message);
       }
     }
 

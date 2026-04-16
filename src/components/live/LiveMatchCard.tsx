@@ -14,6 +14,7 @@ interface MatchEvent {
 
 interface LiveMatch {
   id: string;
+  slug?: string | null;
   home_name: string;
   away_name: string;
   home_code?: string | null;
@@ -138,7 +139,7 @@ export function LiveMatchCard({ match, events }: LiveMatchCardProps) {
 
   return (
     <Link
-      href={`/matches/${match.id}`}
+      href={`/matches/${match.slug || match.id}`}
       className={`block relative overflow-hidden rounded-lg transition-all hover:scale-[1.01] ${
         isRecentGoal
           ? 'ring-2 ring-emerald-500/50 bg-emerald-950/20'

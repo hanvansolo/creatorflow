@@ -297,7 +297,7 @@ async function getUpcomingMatchPost(): Promise<{ text: string; url: string; imag
 
   const m = rows[0];
   const kickTime = new Date(m.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  const matchUrl = `https://www.footy-feed.com/matches/${m.id}`;
+  const matchUrl = `https://www.footy-feed.com/matches/${m.slug || m.id}`;
 
   let predLine = '';
   if (m.predicted_outcome) {
