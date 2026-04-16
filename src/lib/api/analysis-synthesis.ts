@@ -179,7 +179,7 @@ Your full analysis (400-800 words, markdown formatted)
 
   try {
     const response = await getAnthropic().messages.create({
-      model: 'claude-sonnet-4-5-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -199,8 +199,9 @@ Your full analysis (400-800 words, markdown formatted)
       content: contentMatch[1].trim(),
     };
   } catch (e) {
-    console.error('[synthesis] Claude call failed:', (e as Error).message);
-    return null;
+    const msg = (e as Error).message;
+    console.error('[synthesis] Claude call failed:', msg);
+    throw new Error(`Claude: ${msg}`);
   }
 }
 
