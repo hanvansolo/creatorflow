@@ -492,8 +492,10 @@ export async function GET(
       .sort((a, b) => b.score - a.score);
 
     const highValue = scoredMatches.filter(k => k.score >= 4);
-    const bestAvailable = highValue.length > 0 ? highValue : scoredMatches.slice(0, 2); // During quiet periods, post top 2
-    const toPost = bestAvailable.filter(k => k.score > 0);
+    // During quiet periods (no top-flight games), post the top 2 available — but
+    // only filter out the youth/reserve penalty (score < 0). Anything else is fair game.
+    const bestAvailable = highValue.length > 0 ? highValue : scoredMatches.slice(0, 2);
+    const toPost = bestAvailable.filter(k => k.score >= 0);
 
     console.log(`[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} selected for posting (scores: ${toPost.map(m => `${m.home} vs ${m.away}=${m.score}`).join(', ')})`);
 
