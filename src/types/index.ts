@@ -11,7 +11,7 @@ export interface NewsSource {
   priority: number;
 }
 
-export type CredibilityRating = 'verified' | 'unverified' | 'clickbait' | 'opinion' | 'rumour';
+export type CredibilityRating = 'verified' | 'unverified' | 'clickbait' | 'opinion' | 'rumour' | 'analysis';
 
 export interface NewsArticle {
   id: string;

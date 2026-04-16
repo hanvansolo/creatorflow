@@ -28,6 +28,10 @@ const ratingConfig: Record<CredibilityRating, { label: string; className: string
     label: 'Rumour',
     className: 'bg-amber-500 text-black border-amber-400',
   },
+  analysis: {
+    label: 'Analysis',
+    className: 'bg-purple-600 text-white border-purple-500',
+  },
 };
 
 export function CredibilityBadge({ rating, className }: CredibilityBadgeProps) {

@@ -26,6 +26,7 @@ const DEFAULT_JOBS = [
   { name: 'live-sync',          path: '/api/cron/{secret}/live-sync',          intervalMs: 60 * 1000,            delayMs: 30_000   }, // Every 1 min - live scores, events, stats + social posting
   { name: 'fix-images',         path: '/api/cron/{secret}/fix-images',         intervalMs: 30 * 60 * 1000,      delayMs: 540_000  }, // Every 30 min - re-scrape missing article images
   { name: 'respin',             path: '/api/cron/{secret}/respin?limit=10',    intervalMs: 30 * 60 * 1000,      delayMs: 570_000  }, // Every 30 min - expand short articles with AI
+  { name: 'synthesis',          path: '/api/cron/{secret}/synthesis',          intervalMs: 4 * 60 * 60 * 1000,  delayMs: 600_000  }, // Every 4h - multi-source analysis pieces
 ];
 
 async function loadSettingsFromDB(): Promise<Map<string, { intervalMs: number; enabled: boolean }>> {
