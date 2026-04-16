@@ -34,6 +34,7 @@ import {
 import { getLocale } from '@/lib/i18n/locale';
 import { translateField } from '@/lib/i18n/translate';
 import { DEFAULT_LOCALE } from '@/lib/i18n/config';
+import { AUTHORS, getAuthorBySlug } from '@/lib/constants/authors';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -119,7 +120,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: article.summary || article.content?.slice(0, 160) || '',
       image: article.imageUrl || undefined,
       publishedTime: article.publishedAt?.toISOString() || new Date().toISOString(),
-      author: 'Footy Feed',
+      author: article.author || 'Footy Feed',
       section: 'News',
       tags: article.tags || [],
     }),
@@ -303,7 +304,19 @@ export default async function NewsArticlePage({ params }: PageProps) {
             <Clock className="h-4 w-4" />
             {formatRelativeTime(article.publishedAt)}
           </span>
-          <span className="text-sm text-zinc-500">by Footy Feed</span>
+          {(() => {
+            const author = AUTHORS.find(a => a.name === article.author);
+            const name = author?.name || article.author || 'Footy Feed';
+            const slug = author?.slug;
+            return slug ? (
+              <Link href={`/authors/${slug}`} className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+                {author?.avatar && <img src={author.avatar} alt="" className="h-5 w-5 rounded-full" />}
+                by {name}
+              </Link>
+            ) : (
+              <span className="text-sm text-zinc-500">by {name}</span>
+            );
+          })()}
           <a href="#comments" className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
             <MessageSquare className="h-4 w-4" />
             {commentCount}

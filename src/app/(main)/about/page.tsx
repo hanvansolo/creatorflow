@@ -1,8 +1,11 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Newspaper, Zap, Brain, BarChart3, Radio, Users } from 'lucide-react';
 import { createPageMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/i18n/locale';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { AUTHORS } from '@/lib/constants/authors';
 
 export const metadata: Metadata = createPageMetadata(
   'About Footy Feed - Your Football News Hub',
@@ -46,6 +49,34 @@ export default async function AboutPage() {
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">{feature.title}</h3>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">{feature.description}</p>
             </div>
+          ))}
+        </div>
+
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mt-12 mb-6">Our Team</h2>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {AUTHORS.map(author => (
+            <Link
+              key={author.slug}
+              href={`/authors/${author.slug}`}
+              className="group rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 hover:border-emerald-500/30 transition-colors"
+            >
+              <div className="flex items-center gap-4 mb-3">
+                <Image
+                  src={author.avatar}
+                  alt={author.name}
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-full"
+                />
+                <div>
+                  <h3 className="font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-400 transition-colors">
+                    {author.name}
+                  </h3>
+                  <p className="text-xs text-emerald-500">{author.role}</p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3">{author.bio}</p>
+            </Link>
           ))}
         </div>
 

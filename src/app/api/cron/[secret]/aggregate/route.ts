@@ -9,6 +9,7 @@ import { rateCredibility, rateCredibilityHeuristic } from '@/lib/api/credibility
 import { generateNewsSlug } from '@/lib/utils';
 import { downloadImage } from '@/lib/utils/image-downloader';
 import { generateArticleImage } from '@/lib/api/image-generator';
+import { pickAuthor } from '@/lib/constants/authors';
 import { pingNewUrls } from '@/lib/seo/ping';
 import { postToAllPlatforms } from '@/lib/social/post';
 import { runCronJob } from '@/lib/cron/run-job';
@@ -349,6 +350,7 @@ export async function GET(
 
         // Insert article
         try {
+          const assignedAuthor = pickAuthor(finalTitle, article.tags, credibilityRating);
           const [insertedArticle] = await db.insert(newsArticles).values({
             sourceId,
             externalId: article.externalId,
@@ -357,7 +359,7 @@ export async function GET(
             slug: finalSlug,
             summary: finalSummary,
             content: finalContent,
-            author: article.author,
+            author: assignedAuthor.name,
             imageUrl: finalImageUrl,
             originalUrl: article.originalUrl,
             publishedAt: article.publishedAt,
