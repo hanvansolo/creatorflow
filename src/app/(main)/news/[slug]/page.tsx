@@ -119,7 +119,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: article.summary || article.content?.slice(0, 160) || '',
       image: article.imageUrl || undefined,
       publishedTime: article.publishedAt?.toISOString() || new Date().toISOString(),
-      author: article.author || article.sourceName || 'Footy Feed',
+      author: 'Footy Feed',
       section: 'News',
       tags: article.tags || [],
     }),
@@ -227,7 +227,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
       description: article.summary || article.content?.slice(0, 160) || '',
       image: articleImage || '/api/og/default',
       datePublished: article.publishedAt?.toISOString() || new Date().toISOString(),
-      authorName: article.author || article.sourceName || 'Footy Feed',
+      authorName: 'Footy Feed',
       url: `${SITE_CONFIG.url}/news/${slug}`,
       articleBody: article.content || article.summary || undefined,
     })
@@ -294,8 +294,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
             <Badge variant="danger">Breaking</Badge>
           )}
           <Badge variant="outline" className="flex items-center gap-1.5">
-            <SourceFavicon url={article.sourceUrl || undefined} name={article.sourceName || 'Unknown'} size={18} />
-            {article.sourceName}
+            Footy Feed
           </Badge>
           {article.credibilityRating && (
             <CredibilityBadge rating={article.credibilityRating as CredibilityRating} />
@@ -304,9 +303,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
             <Clock className="h-4 w-4" />
             {formatRelativeTime(article.publishedAt)}
           </span>
-          {article.author && (
-            <span className="text-sm text-zinc-500">by {article.author}</span>
-          )}
+          <span className="text-sm text-zinc-500">by Footy Feed</span>
           <a href="#comments" className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
             <MessageSquare className="h-4 w-4" />
             {commentCount}
@@ -343,6 +340,11 @@ export default async function NewsArticlePage({ params }: PageProps) {
               className="object-cover"
               priority
             />
+            {article.sourceName && (
+              <p className="absolute bottom-0 right-0 bg-black/60 px-2 py-1 text-[10px] text-zinc-400">
+                &copy; {article.sourceName}
+              </p>
+            )}
           </div>
         )}
 
@@ -398,25 +400,6 @@ export default async function NewsArticlePage({ params }: PageProps) {
             })}
           </div>
         )}
-
-        {/* Source Link */}
-        <Card className="mt-4">
-          <CardContent className="flex items-center justify-between p-4">
-            <div>
-              <p className="text-sm text-zinc-400">Original source</p>
-              <p className="font-medium text-white">{article.sourceName}</p>
-            </div>
-            <Link
-              href={article.originalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2 text-sm text-white transition-colors hover:bg-zinc-700"
-            >
-              Read Original
-              <ExternalLink className="h-4 w-4" />
-            </Link>
-          </CardContent>
-        </Card>
 
         {/* In-article ad */}
         <div className="my-6">
@@ -539,7 +522,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
                       <p className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
                         {item.title}
                       </p>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">{item.sourceName}</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">{formatRelativeTime(item.publishedAt)}</p>
                     </div>
                   </Link>
                 ))}

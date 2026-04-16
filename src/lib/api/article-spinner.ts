@@ -24,28 +24,30 @@ export async function spinArticle(
 ): Promise<SpunArticle> {
   const currentYear = new Date().getFullYear();
 
-  const prompt = `You are a football/soccer news writer. Rewrite the following article in your own words, maintaining the factual information but using completely different phrasing and structure. Make it engaging and professional.
+  const prompt = `You are a senior football journalist writing for Footy Feed. Your style is direct, factual, and engaging — you get to the point immediately and never pad.
 
 CURRENT DATE CONTEXT: The current year is ${currentYear}. All references to "this season", "upcoming", "next year" etc. should be relative to ${currentYear}.
 
-CRITICAL ACCURACY RULES — THESE ARE NON-NEGOTIABLE:
-- ONLY include facts, quotes, names, dates, scores, and statistics that are EXPLICITLY stated in the original article below
-- NEVER invent quotes, statistics, background context, or analysis that isn't in the original
-- NEVER add "according to reports", "it is believed", or any speculative language unless the original contains it
-- NEVER change club names, player names, manager names, or club affiliations — use EXACTLY what the original states
-- NEVER change years, dates, transfer fees, scores, or any numbers — copy them EXACTLY
-- If a fact is not in the original text, DO NOT INCLUDE IT. Period.
+YOUR #1 PRIORITY: Identify the ACTUAL NEWS — the key fact, result, announcement, or development — and lead with it. If the original buries the point under 500 words of context, you put it in the first sentence. Readers come for the news, not the buildup.
+
+CRITICAL ACCURACY RULES — NON-NEGOTIABLE:
+- ONLY include facts, quotes, names, dates, scores, and statistics that are EXPLICITLY stated in the original
+- NEVER invent quotes, statistics, context, or analysis not in the original
+- NEVER change club names, player names, manager names, or affiliations
+- NEVER change years, dates, transfer fees, scores, or numbers
+- If a fact is not in the original, DO NOT INCLUDE IT
 
 WRITING RULES:
-- Rewrite the original in your own words with different phrasing and structure
-- Write in an engaging, professional football journalism style
-- Create a new compelling headline (same subject matter). Headline MUST be under 80 characters — be concise and punchy
-- Write a brief 2-3 sentence summary
-- Match the LENGTH of the original article. If the original is 200 words, write ~200 words. If it's 800 words, write ~800 words. Do NOT pad short articles to make them longer.
-- Use proper paragraph structure
-- Include subheadings where appropriate for articles over 400 words
-- Do not add any information that wasn't in the original
-- Do not include any disclaimers about rewriting
+- Lead with the news. First sentence = the key development. No throat-clearing.
+- Cut all filler: "it remains to be seen", "time will tell", "as we know", "in other news". If a sentence adds no new information, delete it.
+- Keep direct quotes — these are gold. But trim the setup around them.
+- If the original is 800 words of padding around 200 words of actual news, write 200 words. Do NOT match the original length for the sake of it. Shorter and complete beats long and padded.
+- If the original IS genuinely information-dense (stats, multiple developments, quotes), match its length.
+- Headline MUST be under 80 characters — be specific about what happened, not vague.
+- Summary: 1-2 sentences, conveys the core news so a reader doesn't need to click.
+- Use subheadings only if the article covers multiple distinct developments.
+- NEVER reference the original source, author, or publication. Write as if you are the original reporter.
+- NEVER include "according to [source]" or "as reported by". Just state the facts.
 
 Original Title: ${originalTitle}
 
@@ -124,39 +126,34 @@ export async function extractAndSpin(
     return { title: originalTitle, summary: '', content: '' };
   }
 
-  const prompt = `You are a senior football journalist. Rewrite this article in a clean, engaging style while trimming unnecessary padding and filler.
+  const prompt = `You are a senior football journalist writing for Footy Feed. Extract the actual news from this article and rewrite it — readers want facts, not filler.
 
 CURRENT DATE CONTEXT: The current year is ${currentYear}.
 
-TRIM these types of filler:
-- Repetitive sentences that restate the same point
-- Obvious "as we all know" or "it goes without saying" padding
-- Generic closing paragraphs that add no new information
-- Excessive marketing or promotional language
+YOUR #1 PRIORITY: Find the actual point — the news, result, quote, development — and lead with it. Cut everything that isn't adding information.
 
-KEEP ALL of the following - these are essential:
-- The full story arc and narrative flow
-- ALL direct quotes from players, managers, officials
-- All data, stats, scores, and tactical details
-- Background context that helps readers understand the story
-- Analysis and expert insight
-- Multiple perspectives on the story
+CUT aggressively:
+- Repetitive sentences restating the same fact
+- "As we all know" / "it remains to be seen" / "time will tell" padding
+- Generic closing paragraphs that add nothing
+- Setup paragraphs that delay the actual news
 
-CRITICAL ACCURACY RULES — NON-NEGOTIABLE:
-- ONLY include facts that are EXPLICITLY stated in the original article
-- NEVER invent quotes, stats, context, or analysis not in the original
-- NEVER change club names, player names, or affiliations — use EXACTLY what the original states
-- NEVER change years, dates, or numbers — copy them EXACTLY
-- If a fact is not in the original, DO NOT INCLUDE IT
+KEEP:
+- ALL direct quotes — these are gold
+- All data, stats, scores, transfer fees
+- Genuinely new context that helps understand why this matters
+
+ACCURACY — NON-NEGOTIABLE:
+- ONLY include facts EXPLICITLY in the original
+- NEVER invent quotes, stats, or analysis
+- NEVER change names, dates, or numbers
 
 WRITING STYLE:
-- Professional sports journalism with good flow
-- Lead with the most newsworthy angle
-- Match the length of the original — do NOT pad short articles
-- If the original is 300 words, write ~300 words. If 1000 words, write ~1000 words
-- Use subheadings to break up longer sections
-- Write a sharp headline that captures the key news. The headline MUST be under 48 characters (a suffix will be appended) - be concise and punchy
-- Summary should be 2-3 sentences conveying the core story
+- Lead with the news — first sentence = what happened
+- Be SHORTER than the original if it's padded
+- Headline under 80 characters — specific about what happened
+- Summary: 1-2 sentences conveying the core news
+- NEVER reference the original source or author
 
 Original Title: ${originalTitle}
 
