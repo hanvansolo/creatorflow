@@ -39,7 +39,7 @@ CRITICAL ACCURACY RULES — THESE ARE NON-NEGOTIABLE:
 WRITING RULES:
 - Rewrite the original in your own words with different phrasing and structure
 - Write in an engaging, professional football journalism style
-- Create a new compelling headline (same subject matter). Headline MUST be under 48 characters — be concise and punchy
+- Create a new compelling headline (same subject matter). Headline MUST be under 80 characters — be concise and punchy
 - Write a brief 2-3 sentence summary
 - Match the LENGTH of the original article. If the original is 200 words, write ~200 words. If it's 800 words, write ~800 words. Do NOT pad short articles to make them longer.
 - Use proper paragraph structure

@@ -326,6 +326,14 @@ export async function GET(
           }
         }
 
+        // Skip thin articles — Google News penalises pages with no real content.
+        // 150 words ≈ 900 chars is the minimum for a meaningful article.
+        const wordCount = (finalContent || finalSummary || '').split(/\s+/).length;
+        if (wordCount < 50) {
+          console.log(`[Aggregate] Skipping thin article (${wordCount} words): ${finalTitle?.slice(0, 60)}`);
+          continue;
+        }
+
         // Generate slug
         const slug = generateNewsSlug(finalTitle, article.publishedAt);
         let finalSlug = slug;

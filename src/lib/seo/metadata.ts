@@ -15,12 +15,13 @@ import type {
  * Generate base metadata with common fields
  */
 export function generateBaseMetadata(seo: SEOMetadata): Metadata {
-  // Truncate title to 48 chars at word boundary (leaves room for " | Footy Feed" suffix)
+  // Keep title under 80 chars at word boundary — leaves room for " | Footy Feed"
+  // suffix appended by Next.js template. Google shows ~55-60 chars in SERPs but
+  // indexes the full title; longer = better for Google News headline matching.
   let title = seo.title;
-  if (title.length > 48) {
-    title = title.slice(0, 48).replace(/\s+\S*$/, '');
-    // Ensure we didn't trim too aggressively
-    if (title.length < 30) title = seo.title.slice(0, 48);
+  if (title.length > 80) {
+    title = title.slice(0, 80).replace(/\s+\S*$/, '');
+    if (title.length < 40) title = seo.title.slice(0, 80);
   }
   // Truncate description to 155 chars at a word boundary
   let description = seo.description;

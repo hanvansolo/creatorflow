@@ -229,6 +229,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
       datePublished: article.publishedAt?.toISOString() || new Date().toISOString(),
       authorName: article.author || article.sourceName || 'Footy Feed',
       url: `${SITE_CONFIG.url}/news/${slug}`,
+      articleBody: article.content || article.summary || undefined,
     })
   );
 

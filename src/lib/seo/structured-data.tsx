@@ -53,6 +53,7 @@ export function generateArticleStructuredData(params: {
   dateModified?: string;
   authorName: string;
   url: string;
+  articleBody?: string;
 }): StructuredDataArticle {
   return {
     '@type': 'NewsArticle',
@@ -64,9 +65,11 @@ export function generateArticleStructuredData(params: {
     author: {
       '@type': 'Person',
       name: params.authorName,
+      url: `${SITE_CONFIG.url}/about`,
     },
     publisher: publisherOrganization,
     mainEntityOfPage: params.url,
+    ...(params.articleBody ? { articleBody: params.articleBody.slice(0, 5000) } : {}),
   };
 }
 
