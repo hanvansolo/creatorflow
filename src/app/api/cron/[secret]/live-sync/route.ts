@@ -625,9 +625,11 @@ export async function GET(
           }
         }
 
-        // Instagram — needs a public image URL (ogImageUrl fits).
+        // Instagram — needs a public image URL (ogImageUrl fits). URL is
+        // appended to the caption (IG doesn't hyperlink it, but at least it's
+        // visible to readers).
         try {
-          const igRes = await postCustomInstagram(fbText, ogImageUrl);
+          const igRes = await postCustomInstagram(fbText, ogImageUrl, matchUrl);
           if (igRes.success) {
             anySuccess = true;
             console.log(`[live-sync] Instagram kickoff posted: ${kick.home} vs ${kick.away}`);
@@ -818,7 +820,7 @@ export async function GET(
               const [tweetRes, fbRes, igRes, bsRes, thRes] = await Promise.allSettled([
                 postCustomTweet(tweetText.slice(0, 280)),
                 postCustomFacebook(fbText, articleUrl),
-                postCustomInstagram(fbText, reportOgImage),
+                postCustomInstagram(fbText, reportOgImage, articleUrl),
                 bsPost(tweetText.slice(0, 280), articleUrl, [], reportOgImage),
                 thPost(`${fbText}\n\n${articleUrl}`, articleUrl, reportOgImage),
               ]);

@@ -423,9 +423,10 @@ export async function GET(
         }
       }
 
-      // Instagram — post if we have an image (IG requires images)
+      // Instagram — post if we have an image (IG requires images).
+      // Pass content.url so the link is appended to the caption.
       if (canIg && content.image) {
-        const igRes = await postCustomInstagram(content.text, content.image);
+        const igRes = await postCustomInstagram(content.text, content.image, content.url);
         results.instagram = igRes;
         if (igRes.success) {
           await markPosted('ig');

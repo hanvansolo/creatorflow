@@ -265,10 +265,15 @@ export async function postToInstagram(
  * Post a custom image + caption to Instagram.
  * Used for kickoff alerts, score updates, etc.
  * Requires a publicly accessible image URL (Instagram won't accept local files).
+ *
+ * Instagram doesn't hyperlink URLs in captions, but we still append the link
+ * in plain text so users can copy it and so the post clearly references the
+ * source article rather than dead-ending on the image.
  */
 export async function postCustomInstagram(
   caption: string,
-  imageUrl: string
+  imageUrl: string,
+  link?: string,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const accessToken = await getInstagramToken();
 
@@ -281,6 +286,10 @@ export async function postCustomInstagram(
   }
 
   const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://www.footy-feed.com${imageUrl}`;
+  // Only append if caller didn't already bake the link into the caption.
+  const finalCaption = link && !caption.includes(link)
+    ? `${caption}\n\n${link}`
+    : caption;
 
   try {
     // Resolve the IG user ID from the token (new Instagram API)
@@ -297,7 +306,7 @@ export async function postCustomInstagram(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         image_url: fullImageUrl,
-        caption: caption.slice(0, 2200),
+        caption: finalCaption.slice(0, 2200),
         access_token: accessToken,
       }),
       signal: AbortSignal.timeout(20000),
