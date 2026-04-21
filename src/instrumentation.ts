@@ -27,6 +27,7 @@ const DEFAULT_JOBS = [
   { name: 'fix-images',         path: '/api/cron/{secret}/fix-images',         intervalMs: 30 * 60 * 1000,      delayMs: 540_000  }, // Every 30 min - re-scrape missing article images
   { name: 'respin',             path: '/api/cron/{secret}/respin?limit=10',    intervalMs: 30 * 60 * 1000,      delayMs: 570_000  }, // Every 30 min - expand short articles with AI
   { name: 'synthesis',          path: '/api/cron/{secret}/synthesis',          intervalMs: 4 * 60 * 60 * 1000,  delayMs: 600_000  }, // Every 4h - multi-source analysis pieces
+  { name: 'social-post',        path: '/api/cron/{secret}/social-post',        intervalMs: 30 * 60 * 1000,      delayMs: 630_000  }, // Every 30 min - throttled article posting (hourly-capped)
 ];
 
 async function loadSettingsFromDB(): Promise<Map<string, { intervalMs: number; enabled: boolean }>> {

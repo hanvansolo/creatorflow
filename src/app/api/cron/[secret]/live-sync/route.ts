@@ -499,10 +499,16 @@ export async function GET(
 
     console.log(`[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} selected for posting (scores: ${toPost.map(m => `${m.home} vs ${m.away}=${m.score}`).join(', ')})`);
 
+    // Additional per-platform caps — on top of scoreMatch filtering, hard-cap
+    // FB/Twitter posts per run so a 10+ big-match Saturday can't flood the feed.
+    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 4);
+    const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 3);
+
     let tweetsSent = 0;
     let fbSent = 0;
     for (const kick of toPost) {
       const comp = kick.competition;
+      if (tweetsSent >= MAX_KICKOFF_TW_PER_RUN && fbSent >= MAX_KICKOFF_FB_PER_RUN) break;
 
       try {
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
@@ -712,9 +718,33 @@ export async function GET(
               const homeTag = fm.home.replace(/[^a-zA-Z0-9]/g, '');
               const awayTag = fm.away.replace(/[^a-zA-Z0-9]/g, '');
               const compTag = fm.competition.replace(/[^a-zA-Z0-9]/g, '');
+              const scoreLine = `${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away}`;
+              const tags = `#${homeTag} #${awayTag} #${compTag} #MatchReport`;
 
-              const tweetText = `📝 MATCH REPORT: ${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away}\n\n${summaryText.slice(0, 140)}\n\n${articleUrl}\n\n#${homeTag} #${awayTag} #${compTag} #MatchReport`;
-              const fbText = `📝 MATCH REPORT: ${fm.home} ${fm.homeScore}-${fm.awayScore} ${fm.away}\n\n${summaryText}\n\n#${homeTag} #${awayTag} #${compTag} #MatchReport`;
+              // Vary match-report captions by scoreline + teams so Saturday
+              // rounds of 10+ reports don't look identical on the feed.
+              const REPORT_TW_TEMPLATES = [
+                (sl: string, s: string) => `📝 FULL-TIME: ${sl}\n\n${s.slice(0, 140)}\n\n${articleUrl}\n\n${tags}`,
+                (sl: string, s: string) => `🏁 MATCH REPORT: ${sl}\n\n${s.slice(0, 140)}\n\n${articleUrl}\n\n${tags}`,
+                (sl: string, s: string) => `⏱️ Full-time scenes: ${sl}\n\n${s.slice(0, 140)}\n\n${articleUrl}\n\n${tags}`,
+                (sl: string, s: string) => `📋 That's a wrap: ${sl}\n\n${s.slice(0, 140)}\n\n${articleUrl}\n\n${tags}`,
+                (sl: string, s: string) => `🔚 ${sl}\n\n${s.slice(0, 160)}\n\n${articleUrl}\n\n${tags}`,
+              ];
+              const REPORT_FB_TEMPLATES = [
+                (sl: string, s: string) => `📝 FULL-TIME: ${sl}\n\n${s}\n\n${tags}`,
+                (sl: string, s: string) => `🏁 MATCH REPORT: ${sl}\n\n${s}\n\n${tags}`,
+                (sl: string, s: string) => `⏱️ Full-time scenes at ${sl}\n\n${s}\n\n${tags}`,
+                (sl: string, s: string) => `📋 That's a wrap — ${sl}\n\n${s}\n\n${tags}`,
+                (sl: string, s: string) => `🔚 ${sl}\n\nThe verdict:\n\n${s}\n\n${tags}`,
+              ];
+
+              // Deterministic pick: same match always gets the same template.
+              const reportSeed = fm.matchId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+              const twReport = REPORT_TW_TEMPLATES[reportSeed % REPORT_TW_TEMPLATES.length];
+              const fbReport = REPORT_FB_TEMPLATES[reportSeed % REPORT_FB_TEMPLATES.length];
+
+              const tweetText = twReport(scoreLine, summaryText);
+              const fbText = fbReport(scoreLine, summaryText);
 
               const [tweetRes, fbRes] = await Promise.allSettled([
                 postCustomTweet(tweetText.slice(0, 280)),

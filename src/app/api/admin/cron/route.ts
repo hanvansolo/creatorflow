@@ -24,6 +24,7 @@ const DEFAULT_JOBS = [
   { jobName: 'regenerate-images', intervalMs: 0,                   label: 'Regenerate Images' },
   { jobName: 'fix-images',        intervalMs: 0,                   label: 'Fix Images' },
   { jobName: 'reseed-calendar',   intervalMs: 0,                   label: 'Reseed Calendar' },
+  { jobName: 'social-post',       intervalMs: 30 * 60 * 1000,      label: 'Social Post' },
   { jobName: 'email-daily',       intervalMs: 24 * 60 * 60 * 1000, label: 'Daily Email' },
   { jobName: 'email-weekly',      intervalMs: 7 * 24 * 60 * 60 * 1000, label: 'Weekly Email' },
   { jobName: 'email-race-reminder', intervalMs: 0,                 label: 'Race Reminder Email' },

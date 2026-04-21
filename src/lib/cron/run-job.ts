@@ -131,6 +131,11 @@ export async function runCronJob(jobName: string): Promise<{ success: boolean; r
         response = await GET(request, { params });
         break;
       }
+      case 'social-post': {
+        const { GET } = await import('@/app/api/cron/[secret]/social-post/route');
+        response = await GET(request, { params });
+        break;
+      }
       default:
         return { success: false, result: { error: `Unknown job: ${jobName}` } };
     }

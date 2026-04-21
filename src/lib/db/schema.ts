@@ -339,6 +339,7 @@ export const newsArticles = pgTable('news_articles', {
   originalTitle: text('original_title'),
   credibilityRating: varchar('credibility_rating', { length: 20 }),
   voteScore: integer('vote_score').default(0),
+  socialPosted: boolean('social_posted').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
   index('idx_news_articles_published_at').on(table.publishedAt),
@@ -1203,3 +1204,22 @@ export const leagueGameweekStandingsRelations = relations(leagueGameweekStanding
     references: [leagueMembers.id],
   }),
 }));
+
+// ===== SOCIAL POSTS =====
+// Tracks every social post we make, per platform. Used for dedup (don't post
+// the same article twice) and throttling (enforce min gaps between posts,
+// cap posts per hour, etc). Mirrors Cricket Feed's pattern.
+export const socialPosts = pgTable('social_posts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  platform: varchar('platform', { length: 20 }).notNull(), // facebook, twitter, bluesky, threads, instagram
+  contentType: varchar('content_type', { length: 30 }).notNull(), // article, match_kickoff, match_report, match_live, briefing
+  contentId: varchar('content_id', { length: 250 }).notNull(), // source UUID or date string
+  postText: text('post_text').notNull(),
+  externalPostId: varchar('external_post_id', { length: 250 }),
+  status: varchar('status', { length: 20 }).default('posted').notNull(), // posted, failed
+  error: text('error'),
+  postedAt: timestamp('posted_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_social_posts_content').on(table.contentType, table.contentId),
+  index('idx_social_posts_platform').on(table.platform, table.postedAt),
+]);

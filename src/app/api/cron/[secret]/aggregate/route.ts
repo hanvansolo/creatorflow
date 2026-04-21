@@ -11,7 +11,6 @@ import { downloadImage } from '@/lib/utils/image-downloader';
 import { generateArticleImage } from '@/lib/api/image-generator';
 import { pickAuthor } from '@/lib/constants/authors';
 import { pingNewUrls } from '@/lib/seo/ping';
-import { postToAllPlatforms } from '@/lib/social/post';
 import { runCronJob } from '@/lib/cron/run-job';
 
 export const dynamic = 'force-dynamic';
@@ -371,7 +370,6 @@ export async function GET(
           newArticleUrls.push(`https://www.footy-feed.com/news/${slug}`);
 
           // Generate AI image if article has no image
-          let socialImageUrl = finalImageUrl;
           if (ENABLE_AI_IMAGES && !finalImageUrl && insertedArticle) {
             try {
               console.log(`[ImageGen] Generating image for: ${finalTitle.slice(0, 50)}...`);
@@ -382,7 +380,6 @@ export async function GET(
                   .set({ imageUrl: generatedImageUrl })
                   .where(eq(newsArticles.id, insertedArticle.id));
                 imagesGenerated++;
-                socialImageUrl = generatedImageUrl;
                 console.log(`[ImageGen] Image generated successfully`);
               }
             } catch (imgError) {
@@ -390,9 +387,9 @@ export async function GET(
             }
           }
 
-          // Auto-post to social platforms with image (non-blocking)
-          postToAllPlatforms(finalTitle, slug, finalSummary || undefined, article.tags || undefined, socialImageUrl || undefined)
-            .catch(e => console.error('[SOCIAL] Post failed:', e));
+          // Social posting is decoupled: the social-post cron picks up
+          // unposted articles every 30 minutes with hourly-cap throttling
+          // to prevent the Facebook algorithm from flagging us as spammy.
         } catch (error) {
           console.error('Failed to insert article:', error);
         }

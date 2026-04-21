@@ -1,20 +1,107 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
-// Lazy-load Anthropic client to avoid initialization issues
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+// Lazy-load OpenAI client
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
-  return _anthropic;
+  return _openai;
 }
+
+// Override with SPINNER_MODEL=gpt-4o for higher-quality rewrites at ~10x cost.
+const SPINNER_MODEL = process.env.SPINNER_MODEL || 'gpt-4o-mini';
 
 export interface SpunArticle {
   title: string;
   summary: string;
   content: string;
+}
+
+export type SpinFailureReason =
+  | 'source_too_thin'
+  | 'api_error'
+  | 'parse_error'
+  | 'output_too_short'
+  | 'output_too_similar';
+
+export class SpinError extends Error {
+  constructor(message: string, public readonly reason: SpinFailureReason) {
+    super(message);
+    this.name = 'SpinError';
+  }
+}
+
+// Publish-gate thresholds — AdSense flags thin/duplicate content.
+const MIN_SOURCE_WORDS = 80;
+const MIN_OUTPUT_WORDS = 500;
+const MAX_SIMILARITY = 0.6;
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+// Jaccard similarity on 5-word shingles — catches lazy rewrites that keep
+// long phrases verbatim from the source.
+function shingleSimilarity(a: string, b: string): number {
+  const shingles = (text: string) => {
+    const words = text.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+    const set = new Set<string>();
+    for (let i = 0; i <= words.length - 5; i++) {
+      set.add(words.slice(i, i + 5).join(' '));
+    }
+    return set;
+  };
+  const sa = shingles(a);
+  const sb = shingles(b);
+  if (sa.size === 0 || sb.size === 0) return 0;
+  let overlap = 0;
+  for (const s of sa) if (sb.has(s)) overlap++;
+  const union = sa.size + sb.size - overlap;
+  return union === 0 ? 0 : overlap / union;
+}
+
+async function callSpinner(prompt: string, attempts = 2): Promise<string> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const response = await getOpenAI().chat.completions.create({
+        model: SPINNER_MODEL,
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const text = response.choices[0]?.message?.content;
+      if (!text) throw new Error('Empty response from OpenAI');
+      return text;
+    } catch (error) {
+      lastError = error;
+      if (i < attempts - 1) {
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
+    }
+  }
+  throw new SpinError(
+    `OpenAI API failed after ${attempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+    'api_error'
+  );
+}
+
+function parseSpinOutput(text: string): SpunArticle {
+  const titleMatch = text.match(/---TITLE---\s*([\s\S]*?)\s*---SUMMARY---/);
+  const summaryMatch = text.match(/---SUMMARY---\s*([\s\S]*?)\s*---CONTENT---/);
+  const contentMatch = text.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);
+  if (!titleMatch || !summaryMatch || !contentMatch) {
+    throw new SpinError('Could not extract all fields from spinner response', 'parse_error');
+  }
+  return {
+    title: titleMatch[1].trim(),
+    summary: summaryMatch[1].trim(),
+    content: contentMatch[1].trim(),
+  };
 }
 
 export async function spinArticle(
@@ -23,39 +110,54 @@ export async function spinArticle(
   originalSummary?: string
 ): Promise<SpunArticle> {
   const currentYear = new Date().getFullYear();
+  const source = originalContent || originalSummary || '';
+  const sourceWords = countWords(source);
 
-  const prompt = `You are a senior football journalist writing for Footy Feed. Your style is direct, factual, and engaging — you get to the point immediately and never pad.
+  if (sourceWords < MIN_SOURCE_WORDS) {
+    throw new SpinError(
+      `Source too thin to spin meaningfully (${sourceWords} words, need ${MIN_SOURCE_WORDS})`,
+      'source_too_thin'
+    );
+  }
+
+  const prompt = `You are a senior football/soccer journalist producing original, publication-ready analysis for a news site that must pass Google AdSense quality review. Transform the source below into a substantively original article — not a reworded copy.
 
 CURRENT DATE CONTEXT: The current year is ${currentYear}. All references to "this season", "upcoming", "next year" etc. should be relative to ${currentYear}.
 
-YOUR #1 PRIORITY: Identify the ACTUAL NEWS — the key fact, result, announcement, or development — and lead with it. If the original buries the point under 500 words of context, you put it in the first sentence. Readers come for the news, not the buildup.
+LEAD WITH THE NEWS: First sentence = the key development. No throat-clearing.
 
 CRITICAL ACCURACY RULES — NON-NEGOTIABLE:
-- ONLY include facts, quotes, names, dates, scores, and statistics that are EXPLICITLY stated in the original
-- NEVER invent quotes, statistics, context, or analysis not in the original
+- ONLY include facts, quotes, names, dates, scores, and statistics EXPLICITLY stated in the original
+- NEVER invent quotes, statistics, or events not present in the original
 - NEVER change club names, player names, manager names, or affiliations
 - NEVER change years, dates, transfer fees, scores, or numbers
-- If a fact is not in the original, DO NOT INCLUDE IT
+- Do not add information you cannot justify from the source
+
+ORIGINALITY RULES (critical for AdSense compliance):
+- Do NOT copy any sentence or phrase of 5+ consecutive words from the source verbatim
+- Completely restructure the narrative: different opening angle, different paragraph order, different transitions
+- Add genuine editorial value using football knowledge: tactical context, historical context (prior meetings, form, precedent), competitive implications (title race, relegation, European qualification), and fan-relevant analysis
+- Frame the story with a clear editorial angle, not a neutral wire restatement
+- NEVER reference the original source, author, or publication. Write as if you are the original reporter.
+- NEVER include "according to [source]" or "as reported by"
 
 WRITING RULES:
-- Lead with the news. First sentence = the key development. No throat-clearing.
-- Cut filler phrases: "it remains to be seen", "time will tell", "as we know". If a sentence adds no new information, cut it.
-- Keep ALL direct quotes — these are gold and add length naturally.
-- MINIMUM 200 words for the article body. If the source material has quotes, context, stats, or multiple angles — USE THEM. A proper article has substance.
-- Expand where warranted: add context from facts in the original (e.g. "Beckham, who bought the club in 2014" if the original mentions it). Use subheadings to break up sections.
-- Target 300-600 words for a standard news piece. Only go below 200 if the source is genuinely a one-line announcement with zero additional detail.
-- Headline MUST be under 80 characters — be specific about what happened, not vague.
-- Summary: 2-3 sentences that convey the story so it works as a standalone blurb.
-- Use subheadings for articles over 250 words to break up the text.
-- NEVER reference the original source, author, or publication. Write as if you are the original reporter.
-- NEVER include "according to [source]" or "as reported by". Just state the facts.
+- 600-900 words minimum in the body. Shorter output will be rejected.
+- Use 2-3 H2-style subheadings (plain text on their own line) to structure the piece
+- Lead paragraph must be a fresh hook, not a rephrase of the source's first sentence
+- Professional football journalism tone — engaging but not sensational
+- Keep ALL direct quotes from the original — they add length naturally
+- Cut filler phrases: "it remains to be seen", "time will tell", "as we know"
+- Headline under 48 characters, punchy, no clickbait
+- Summary: 2-3 sentences capturing the core story and why it matters
+- Do not include any disclaimers, meta-commentary, or references to "this article" / "the original"
 
-Original Title: ${originalTitle}
+Source Title: ${originalTitle}
 
-Original Article:
-${originalContent || originalSummary}
+Source Article:
+${source}
 
-Respond using this exact format with the delimiters:
+Respond using this exact format with the delimiters (no other text before or after):
 
 ---TITLE---
 Your new headline here
@@ -65,50 +167,26 @@ Your 2-3 sentence summary here
 Your full rewritten article here
 ---END---`;
 
-  try {
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    });
+  const text = await callSpinner(prompt);
+  const result = parseSpinOutput(text);
 
-    const textContent = response.content[0];
-    if (textContent.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
-
-    // Extract fields using delimiter format
-    const text = textContent.text;
-
-    const titleMatch = text.match(/---TITLE---\s*([\s\S]*?)\s*---SUMMARY---/);
-    const summaryMatch = text.match(/---SUMMARY---\s*([\s\S]*?)\s*---CONTENT---/);
-    const contentMatch = text.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);
-
-    if (!titleMatch || !summaryMatch || !contentMatch) {
-      throw new Error('Could not extract all fields from response');
-    }
-
-    const result: SpunArticle = {
-      title: titleMatch[1].trim(),
-      summary: summaryMatch[1].trim(),
-      content: contentMatch[1].trim(),
-    };
-
-    return result;
-  } catch (error) {
-    console.error('Failed to spin article:', error);
-    // Return original content if spinning fails
-    return {
-      title: originalTitle,
-      summary: originalSummary || originalContent?.slice(0, 200) + '...',
-      content: originalContent || originalSummary || '',
-    };
+  const outputWords = countWords(result.content);
+  if (outputWords < MIN_OUTPUT_WORDS) {
+    throw new SpinError(
+      `Spun article too short (${outputWords} words, need ${MIN_OUTPUT_WORDS})`,
+      'output_too_short'
+    );
   }
+
+  const similarity = shingleSimilarity(source, result.content);
+  if (similarity > MAX_SIMILARITY) {
+    throw new SpinError(
+      `Spun article too similar to source (${similarity.toFixed(2)} overlap, max ${MAX_SIMILARITY})`,
+      'output_too_similar'
+    );
+  }
+
+  return result;
 }
 
 /**
@@ -121,10 +199,14 @@ export async function extractAndSpin(
   originalSummary?: string
 ): Promise<SpunArticle> {
   const currentYear = new Date().getFullYear();
-
   const sourceText = originalContent || originalSummary || '';
-  if (!sourceText.trim()) {
-    return { title: originalTitle, summary: '', content: '' };
+  const sourceWords = countWords(sourceText);
+
+  if (sourceWords < MIN_SOURCE_WORDS) {
+    throw new SpinError(
+      `Source too thin to extract (${sourceWords} words, need ${MIN_SOURCE_WORDS})`,
+      'source_too_thin'
+    );
   }
 
   const prompt = `You are a senior football journalist writing for Footy Feed. Extract the actual news from this article and rewrite it — readers want facts, not filler.
@@ -139,25 +221,27 @@ CUT aggressively:
 - Generic closing paragraphs that add nothing
 - Setup paragraphs that delay the actual news
 
-KEEP:
-- ALL direct quotes — these are gold
-- All data, stats, scores, transfer fees
-- Genuinely new context that helps understand why this matters
+KEEP ALL of the following — essential:
+- ALL direct quotes from players, managers, officials — these are gold
+- All data, stats, scores, transfer fees, tactical details
+- Background context that helps readers understand why this matters
+- Analysis and expert insight
 
-ACCURACY — NON-NEGOTIABLE:
-- ONLY include facts EXPLICITLY in the original
-- NEVER invent quotes, stats, or analysis
-- NEVER change names, dates, or numbers
+CRITICAL ACCURACY RULES:
+- ONLY include facts that are EXPLICITLY stated in the original article
+- NEVER invent quotes, stats, context, or analysis not in the original
+- NEVER change club names, player names, or affiliations — use EXACTLY what the original states
+- NEVER change years, dates, transfer fees, or numbers — copy them EXACTLY
 
 WRITING STYLE:
 - Lead with the news — first sentence = what happened
-- Cut padding but KEEP substance. MINIMUM 200 words for the body.
-- Use ALL available quotes, stats, and context from the original — these add length naturally.
-- Target 300-600 words. Only go below 200 if the source is genuinely a one-sentence announcement.
-- Use subheadings for articles over 250 words.
-- Headline under 80 characters — specific about what happened
+- Professional football journalism with good flow
+- The article MUST be at least 600 words — expand with deeper analysis and context from the original where needed
+- Minimum 6-8 paragraphs
+- Use subheadings to break up longer sections
+- Headline under 48 characters — be concise and punchy
 - Summary: 2-3 sentences conveying the core story
-- NEVER reference the original source or author
+- NEVER reference the original source, author, or publication
 
 Original Title: ${originalTitle}
 
@@ -174,40 +258,18 @@ Your 1-2 sentence summary here
 Your trimmed, rewritten article here
 ---END---`;
 
-  try {
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
-    });
+  const text = await callSpinner(prompt);
+  const result = parseSpinOutput(text);
 
-    const textContent = response.content[0];
-    if (textContent.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
-
-    const text = textContent.text;
-    const titleMatch = text.match(/---TITLE---\s*([\s\S]*?)\s*---SUMMARY---/);
-    const summaryMatch = text.match(/---SUMMARY---\s*([\s\S]*?)\s*---CONTENT---/);
-    const contentMatch = text.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);
-
-    if (!titleMatch || !summaryMatch || !contentMatch) {
-      throw new Error('Could not extract all fields from response');
-    }
-
-    return {
-      title: titleMatch[1].trim(),
-      summary: summaryMatch[1].trim(),
-      content: contentMatch[1].trim(),
-    };
-  } catch (error) {
-    console.error('Failed to extract and spin article:', error);
-    return {
-      title: originalTitle,
-      summary: originalSummary || sourceText.slice(0, 200) + '...',
-      content: sourceText,
-    };
+  const outputWords = countWords(result.content);
+  if (outputWords < MIN_OUTPUT_WORDS) {
+    throw new SpinError(
+      `Extracted article too short (${outputWords} words, need ${MIN_OUTPUT_WORDS})`,
+      'output_too_short'
+    );
   }
+
+  return result;
 }
 
 export async function spinArticleBatch(
@@ -216,10 +278,8 @@ export async function spinArticleBatch(
     content?: string;
     summary?: string;
   }>
-): Promise<SpunArticle[]> {
-  const results: SpunArticle[] = [];
-
-  // Process in batches to avoid rate limits
+): Promise<Array<SpunArticle | null>> {
+  const results: Array<SpunArticle | null> = [];
   for (const article of articles) {
     try {
       const spun = await spinArticle(
@@ -228,18 +288,11 @@ export async function spinArticleBatch(
         article.summary
       );
       results.push(spun);
-
-      // Small delay between requests to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
       console.error(`Failed to spin article "${article.title}":`, error);
-      results.push({
-        title: article.title,
-        summary: article.summary || '',
-        content: article.content || '',
-      });
+      results.push(null);
     }
   }
-
   return results;
 }

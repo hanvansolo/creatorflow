@@ -1,0 +1,41 @@
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
+import postgres from 'postgres';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+async function main() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error('DATABASE_URL not set');
+    process.exit(1);
+  }
+
+  const sqlPath = resolve(__dirname, '..', 'drizzle', '0007_social_posts.sql');
+  const raw = readFileSync(sqlPath, 'utf8');
+
+  const statements = raw
+    .split('--> statement-breakpoint')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  console.log(`Applying ${statements.length} statement(s) from 0007_social_posts.sql`);
+
+  const sql = postgres(url, { prepare: false });
+  try {
+    for (const stmt of statements) {
+      const preview = stmt.slice(0, 80).replace(/\s+/g, ' ');
+      console.log(`  → ${preview}...`);
+      await sql.unsafe(stmt);
+    }
+    console.log('Done.');
+  } finally {
+    await sql.end();
+  }
+}
+
+main().catch((err) => {
+  console.error('FAILED:', err instanceof Error ? err.message : err);
+  process.exit(1);
+});

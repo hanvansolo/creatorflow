@@ -29,6 +29,7 @@ const DEFAULT_JOBS = [
   { jobName: 'regenerate-images', intervalMs: 0,                   label: 'Regenerate Images',   description: 'Regenerates existing AI images with improved prompts' },
   { jobName: 'fix-images',        intervalMs: 0,                   label: 'Fix Images',          description: 'Repairs broken image refs (runs after aggregation)' },
   { jobName: 'reseed-calendar',   intervalMs: 0,                   label: 'Reseed Calendar',     description: 'Reseeds 2026 race calendar, sessions and circuits from latest data' },
+  { jobName: 'social-post',       intervalMs: 30 * 60 * 1000,      label: 'Social Post',         description: 'Posts news articles to social platforms (throttled to avoid spam flags)' },
   { jobName: 'email-daily',       intervalMs: 24 * 60 * 60 * 1000, label: 'Daily Email',         description: 'Sends daily news roundup to newsletter subscribers (8am)' },
   { jobName: 'email-weekly',      intervalMs: 7 * 24 * 60 * 60 * 1000, label: 'Weekly Email',    description: 'Sends weekly roundup to newsletter subscribers (Sunday)' },
   { jobName: 'email-race-reminder', intervalMs: 0,                 label: 'Race Reminder Email', description: 'Sends race weekend reminder 3 days before race' },
