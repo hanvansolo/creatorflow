@@ -603,14 +603,69 @@ export async function GET(
           await new Promise(r => setTimeout(r, 3000));
         }
 
-        // Post to platforms — track if ANY platform succeeded
+        // Post to platforms — track if ANY platform succeeded.
+        // Twitter stays off via TWITTER_PAUSED flag in twitter.ts — postCustomTweet
+        // returns a paused error so calling it is a cheap no-op.
         let anySuccess = false;
 
-        // Twitter, Facebook, Instagram, Threads all paused — Bluesky only for now.
-        // Twitter: killed (TWITTER_PAUSED in twitter.ts).
-        // Facebook: suspended pending account review.
-        // Instagram: depends on FB access token.
-        // Threads: Meta action-block (subcode 2207051), waiting for flag to decay.
+        // Facebook — postCustomFacebook handles its own credential lookup.
+        // Honour per-platform kickoff cap.
+        if (fbSent < MAX_KICKOFF_FB_PER_RUN) {
+          try {
+            const fbRes = await postCustomFacebook(fbText, matchUrl, ogImageUrl);
+            if (fbRes.success) {
+              anySuccess = true;
+              fbSent++;
+              console.log(`[live-sync] Facebook kickoff posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Facebook kickoff failed: ${fbRes.error}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Facebook kickoff threw:`, e);
+          }
+        }
+
+        // Instagram — needs a public image URL (ogImageUrl fits).
+        try {
+          const igRes = await postCustomInstagram(fbText, ogImageUrl);
+          if (igRes.success) {
+            anySuccess = true;
+            console.log(`[live-sync] Instagram kickoff posted: ${kick.home} vs ${kick.away}`);
+          } else {
+            console.error(`[live-sync] Instagram kickoff failed: ${igRes.error}`);
+          }
+        } catch (e) {
+          console.error(`[live-sync] Instagram kickoff threw:`, e);
+        }
+
+        // Threads — title-with-hashtags branch keeps our pre-built caption intact.
+        try {
+          const { postToThreads } = await import('@/lib/social/threads');
+          const thRes = await postToThreads(`${fbText}\n\n${matchUrl}`, matchUrl, ogImageUrl);
+          if (thRes.success) {
+            anySuccess = true;
+            console.log(`[live-sync] Threads kickoff posted: ${kick.home} vs ${kick.away}`);
+          } else {
+            console.error(`[live-sync] Threads kickoff failed: ${thRes.error}`);
+          }
+        } catch (e) {
+          console.error(`[live-sync] Threads kickoff threw:`, e);
+        }
+
+        // Twitter — kept here so it resumes automatically when TWITTER_PAUSED
+        // flips to false. Returns { success: false, error: 'paused' } today.
+        if (tweetsSent < MAX_KICKOFF_TW_PER_RUN) {
+          try {
+            const twRes = await postCustomTweet(tweetText, ogImageUrl);
+            if (twRes.success) {
+              anySuccess = true;
+              tweetsSent++;
+              console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Twitter kickoff threw:`, e);
+          }
+        }
 
         try {
           const { postToBluesky } = await import('@/lib/social/bluesky');
@@ -746,9 +801,26 @@ export async function GET(
               const tweetText = twReport(scoreLine, summaryText);
               const fbText = fbReport(scoreLine, summaryText);
 
-              const [tweetRes, fbRes] = await Promise.allSettled([
+              // Generate a full-time OG image for IG (optional — fall back to no image).
+              const reportOgParams = new URLSearchParams({
+                home: fm.home,
+                away: fm.away,
+                comp: fm.competition,
+                status: 'finished',
+                homeScore: String(fm.homeScore),
+                awayScore: String(fm.awayScore),
+              });
+              const reportOgImage = `https://www.footy-feed.com/api/og/match?${reportOgParams.toString()}`;
+
+              const { postToBluesky: bsPost } = await import('@/lib/social/bluesky');
+              const { postToThreads: thPost } = await import('@/lib/social/threads');
+
+              const [tweetRes, fbRes, igRes, bsRes, thRes] = await Promise.allSettled([
                 postCustomTweet(tweetText.slice(0, 280)),
                 postCustomFacebook(fbText, articleUrl),
+                postCustomInstagram(fbText, reportOgImage),
+                bsPost(tweetText.slice(0, 280), articleUrl, [], reportOgImage),
+                thPost(`${fbText}\n\n${articleUrl}`, articleUrl, reportOgImage),
               ]);
 
               if (tweetRes.status === 'fulfilled' && tweetRes.value?.success) {
@@ -756,6 +828,15 @@ export async function GET(
               }
               if (fbRes.status === 'fulfilled' && fbRes.value?.success) {
                 console.log(`[live-sync] Match report FB post sent: ${fm.home} vs ${fm.away}`);
+              }
+              if (igRes.status === 'fulfilled' && igRes.value?.success) {
+                console.log(`[live-sync] Match report IG post sent: ${fm.home} vs ${fm.away}`);
+              }
+              if (bsRes.status === 'fulfilled' && bsRes.value?.success) {
+                console.log(`[live-sync] Match report Bluesky post sent: ${fm.home} vs ${fm.away}`);
+              }
+              if (thRes.status === 'fulfilled' && thRes.value?.success) {
+                console.log(`[live-sync] Match report Threads post sent: ${fm.home} vs ${fm.away}`);
               }
             } catch (socialErr) {
               console.error(`[live-sync] Social posting error for report:`, socialErr);

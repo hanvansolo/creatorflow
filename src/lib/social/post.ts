@@ -52,12 +52,15 @@ export async function postToAllPlatforms(
   tags?: string[],
   imageUrl?: string
 ): Promise<SocialPostResult> {
+  // Twitter stays off via TWITTER_PAUSED flag in twitter.ts — postToTwitter
+  // returns { success: false, error: 'Twitter posting paused' } on its own,
+  // so we can call it unconditionally.
   const results = await Promise.allSettled([
-    null, // Twitter paused
-    null, // Facebook suspended pending account review
-    null, // Instagram disabled while FB is out (shared auth)
+    (process.env.TWITTER_CLIENT_ID || process.env.TWITTER_OAUTH2_TOKEN) && checkTwitterRateLimit() ? postToTwitter(title, slug, tags, imageUrl, summary) : null,
+    (process.env.FACEBOOK_PAGE_ID || process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_TOKEN) && checkFacebookRateLimit() ? postToFacebook(title, slug, summary, tags) : null,
+    (process.env.INSTAGRAM_ACCOUNT_ID && imageUrl) ? postToInstagram(title, slug, imageUrl, tags) : null,
     process.env.BLUESKY_HANDLE ? postToBluesky(title, slug, tags, imageUrl) : null,
-    null, // Threads paused — Meta action-block (subcode 2207051)
+    process.env.THREADS_USER_ID ? postToThreads(title, slug, imageUrl) : null,
   ]);
 
   const get = (i: number) => {
