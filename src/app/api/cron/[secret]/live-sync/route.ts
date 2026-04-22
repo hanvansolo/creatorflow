@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
   db,
   matches,
@@ -12,6 +12,7 @@ import {
   competitionSeasons,
   newsArticles,
   matchPredictions,
+  socialPosts,
 } from '@/lib/db';
 import {
   getLiveFixtures,
@@ -23,7 +24,64 @@ import {
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
 import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/api/match-reports';
 import { postCustomTweet } from '@/lib/social/twitter';
-import { postCustomFacebook, postCustomInstagram } from '@/lib/social/facebook';
+import { postCustomFacebook, postCustomInstagram, postFacebookComment } from '@/lib/social/facebook';
+
+/**
+ * Post a FB comment on a match's kickoff post, deduped via social_posts.
+ * - `contentType` distinguishes event comments (match_comment), HT
+ *   (match_ht), FT (match_ft) so we can dedup per kind.
+ * - `contentId` is whatever makes the dedup unique: for events it's the
+ *   matchEvents.id; for HT/FT it's the matchId.
+ *
+ * Natural cap: dedup means each event comments once, plus one HT and one FT
+ * per match. A 10-goal thriller tops out around ~12 comments — below FB's
+ * comment-rate threshold.
+ */
+async function postMatchComment(args: {
+  postId: string;
+  contentType: 'match_comment' | 'match_ht' | 'match_ft';
+  contentId: string;
+  message: string;
+}) {
+  const [existing] = await db
+    .select({ id: socialPosts.id })
+    .from(socialPosts)
+    .where(
+      and(
+        eq(socialPosts.platform, 'facebook'),
+        eq(socialPosts.contentType, args.contentType),
+        eq(socialPosts.contentId, args.contentId),
+      ),
+    )
+    .limit(1);
+  if (existing) return;
+
+  const res = await postFacebookComment(args.postId, args.message);
+  try {
+    await db.insert(socialPosts).values({
+      platform: 'facebook',
+      contentType: args.contentType,
+      contentId: args.contentId,
+      postText: args.message.slice(0, 2000),
+      externalPostId: res.id,
+      status: res.success ? 'posted' : 'failed',
+      error: res.success ? undefined : res.error,
+    });
+  } catch (err) {
+    console.error('[live-sync] Failed to log match comment:', err instanceof Error ? err.message : err);
+  }
+  if (res.success) {
+    console.log(`[live-sync] FB comment posted on ${args.postId}: ${args.message.slice(0, 80)}`);
+  } else {
+    console.error(`[live-sync] FB comment failed on ${args.postId}: ${res.error}`);
+  }
+}
+
+/** Human-readable minute string for an event, e.g. "45+2'" or "23'". */
+function formatMinute(minute: number | null, addedTime: number | null): string {
+  if (minute == null) return '';
+  return addedTime ? `${minute}+${addedTime}'` : `${minute}'`;
+}
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -432,6 +490,123 @@ export async function GET(
           const trigger = newSignificantEvents[0]?.eventType || 'goal';
           matchesNeedingAnalysis.push({ matchId, trigger });
         }
+
+        // 3b. FB comment thread on the kickoff post.
+        // Only runs when the match already had a FB kickoff post in a
+        // previous cron run (existingMatch.fbKickoffPostId set). Brand-new
+        // matches get their comment thread next run, after the kickoff post.
+        const kickoffPostId = existingMatch?.fbKickoffPostId;
+        if (kickoffPostId) {
+          try {
+            const [hc] = await db.select({ name: clubs.name, shortName: clubs.shortName }).from(clubs).where(eq(clubs.id, existingMatch!.homeClubId)).limit(1);
+            const [ac] = await db.select({ name: clubs.name, shortName: clubs.shortName }).from(clubs).where(eq(clubs.id, existingMatch!.awayClubId)).limit(1);
+            const homeName = hc?.shortName || hc?.name || 'Home';
+            const awayName = ac?.shortName || ac?.name || 'Away';
+            const homeScore = fixture.goals.home ?? 0;
+            const awayScore = fixture.goals.away ?? 0;
+            const scoreLine = `${homeName} ${homeScore}-${awayScore} ${awayName}`;
+
+            // HT transition
+            if (newStatus === 'halftime' && existingMatch!.status === 'live') {
+              await postMatchComment({
+                postId: kickoffPostId,
+                contentType: 'match_ht',
+                contentId: matchId,
+                message: `⏸️ HALF-TIME\n\n${scoreLine}`,
+              });
+            }
+
+            // FT transition
+            if (newStatus === 'finished' && ['live', 'halftime', 'extra_time', 'penalties'].includes(existingMatch!.status)) {
+              await postMatchComment({
+                postId: kickoffPostId,
+                contentType: 'match_ft',
+                contentId: matchId,
+                message: `🔚 FULL-TIME\n\n${scoreLine}`,
+              });
+            }
+
+            // Significant events (goals, reds, VAR) — one comment per event.
+            const sigEvents = updatedEvents.filter((e) => SIGNIFICANT_EVENTS.has(e.eventType));
+            if (sigEvents.length > 0) {
+              // Pre-load which of these events we've already commented on so
+              // we don't hammer the Graph API once per cron iteration.
+              const ids = sigEvents.map((e) => e.id);
+              const already = await db
+                .select({ contentId: socialPosts.contentId })
+                .from(socialPosts)
+                .where(
+                  and(
+                    eq(socialPosts.platform, 'facebook'),
+                    eq(socialPosts.contentType, 'match_comment'),
+                    inArray(socialPosts.contentId, ids),
+                  ),
+                );
+              const alreadySet = new Set(already.map((a) => a.contentId));
+
+              // Sort oldest first so the comment thread reads chronologically.
+              const toComment = sigEvents
+                .filter((e) => !alreadySet.has(e.id))
+                .sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0));
+
+              for (const ev of toComment) {
+                let playerName = '';
+                if (ev.playerId) {
+                  const [p] = await db
+                    .select({ firstName: players.firstName, lastName: players.lastName, knownAs: players.knownAs })
+                    .from(players)
+                    .where(eq(players.id, ev.playerId))
+                    .limit(1);
+                  playerName = p?.knownAs || p?.lastName || p?.firstName || '';
+                }
+                let teamName = '';
+                if (ev.clubId) {
+                  if (ev.clubId === existingMatch!.homeClubId) teamName = homeName;
+                  else if (ev.clubId === existingMatch!.awayClubId) teamName = awayName;
+                }
+
+                const minStr = formatMinute(ev.minute, ev.addedTime);
+                let text = '';
+                switch (ev.eventType) {
+                  case 'goal':
+                    text = playerName
+                      ? `⚽ GOAL! ${playerName}${teamName ? ` (${teamName})` : ''} ${minStr}\n\n${scoreLine}`
+                      : `⚽ GOAL${teamName ? ` — ${teamName}` : ''} ${minStr}\n\n${scoreLine}`;
+                    break;
+                  case 'own_goal':
+                    text = playerName
+                      ? `😬 OWN GOAL — ${playerName} ${minStr}\n\n${scoreLine}`
+                      : `😬 OWN GOAL ${minStr}\n\n${scoreLine}`;
+                    break;
+                  case 'penalty_scored':
+                    text = playerName
+                      ? `⚽ PENALTY! ${playerName}${teamName ? ` (${teamName})` : ''} ${minStr}\n\n${scoreLine}`
+                      : `⚽ PENALTY scored ${minStr}\n\n${scoreLine}`;
+                    break;
+                  case 'red_card':
+                    text = playerName
+                      ? `🟥 RED CARD — ${playerName}${teamName ? ` (${teamName})` : ''} ${minStr}`
+                      : `🟥 RED CARD${teamName ? ` — ${teamName}` : ''} ${minStr}`;
+                    break;
+                  case 'var_decision':
+                    text = `📺 VAR (${minStr})${ev.description ? ` — ${ev.description}` : ''}`;
+                    break;
+                  default:
+                    continue;
+                }
+
+                await postMatchComment({
+                  postId: kickoffPostId,
+                  contentType: 'match_comment',
+                  contentId: ev.id,
+                  message: text,
+                });
+              }
+            }
+          } catch (commentErr) {
+            console.error(`[live-sync] Comment-thread error for ${matchId}:`, commentErr instanceof Error ? commentErr.message : commentErr);
+          }
+        }
       } catch (err) {
         console.error(`[live-sync] Error processing fixture ${fixture.fixture.id}:`, err);
         // Continue with next fixture
@@ -609,14 +784,19 @@ export async function GET(
         let anySuccess = false;
 
         // Facebook — postCustomFacebook handles its own credential lookup.
-        // Honour per-platform kickoff cap.
+        // Honour per-platform kickoff cap. Save the returned post id so later
+        // runs can post event comments (goals, cards, HT, FT) on the same
+        // thread instead of flooding the feed with new posts.
         if (fbSent < MAX_KICKOFF_FB_PER_RUN) {
           try {
             const fbRes = await postCustomFacebook(fbText, matchUrl, ogImageUrl);
             if (fbRes.success) {
               anySuccess = true;
               fbSent++;
-              console.log(`[live-sync] Facebook kickoff posted: ${kick.home} vs ${kick.away}`);
+              if (fbRes.id) {
+                await db.update(matches).set({ fbKickoffPostId: fbRes.id }).where(eq(matches.id, kick.matchId));
+              }
+              console.log(`[live-sync] Facebook kickoff posted: ${kick.home} vs ${kick.away} (id=${fbRes.id})`);
             } else {
               console.error(`[live-sync] Facebook kickoff failed: ${fbRes.error}`);
             }

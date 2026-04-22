@@ -155,6 +155,10 @@ export const matches = pgTable('matches', {
   attendance: integer('attendance'),
   socialPosted: boolean('social_posted').default(false),
   matchReportGenerated: boolean('match_report_generated').default(false),
+  // Facebook post id of the kickoff post — used by live-sync to comment
+  // live updates (goals, cards, HT, FT) on the same thread rather than
+  // spamming new posts.
+  fbKickoffPostId: varchar('fb_kickoff_post_id', { length: 250 }),
   slug: varchar('slug', { length: 200 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

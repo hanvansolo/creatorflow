@@ -82,6 +82,37 @@ export async function postToFacebook(
 }
 
 /**
+ * Post a comment on an existing Facebook Page post. Used by live-sync to
+ * reply to the kickoff post with live updates (goals, cards, HT, FT) so
+ * every match event boosts engagement on ONE post instead of spinning off
+ * fresh posts that fragment the reach.
+ */
+export async function postFacebookComment(
+  postId: string,
+  message: string,
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const pageToken = await getPageToken();
+  if (!pageToken) return { success: false, error: 'Facebook not configured' };
+
+  try {
+    const res = await fetch(`https://graph.facebook.com/v25.0/${postId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ message, access_token: pageToken }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.id) {
+      return { success: true, id: data.id };
+    }
+    return { success: false, error: data.error?.message || JSON.stringify(data).slice(0, 300) };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+/**
  * Post a custom message to Facebook Page (no rate limiting).
  * Used for kickoff alerts, goal alerts, etc.
  */
