@@ -101,6 +101,11 @@ export type ContentType =
   | 'match_live'
   | 'briefing';
 
+export interface RelatedCoverage {
+  sourceName: string;
+  url: string;
+}
+
 export interface TrackedPostInput {
   articleId: string; // used as contentId for dedup
   title: string;
@@ -109,12 +114,18 @@ export interface TrackedPostInput {
   tags?: string[];
   imageUrl?: string;
   sourceName?: string | null;
+  isBreaking?: boolean;
+  // Optional companion articles covering the same story from other sources.
+  // Rendered as "More coverage:" block at the bottom of FB/IG captions.
+  related?: RelatedCoverage[];
 }
 
 /**
- * Build a varied Facebook caption for a news article. Three shapes, picked
+ * Build a varied Facebook caption for a news article. Four shapes, picked
  * deterministically from the article id hash so retries stay consistent and
- * the feed doesn't look like a template copy-paste.
+ * the feed doesn't look like a template copy-paste. If `related` coverage is
+ * provided, appends a "More coverage:" block with up to 3 source links so the
+ * post reads as curation rather than a single-source echo.
  */
 export function buildArticleFbCaption(input: TrackedPostInput): string {
   const hashtags = buildHashtags(input.title, input.tags || []);
@@ -122,14 +133,27 @@ export function buildArticleFbCaption(input: TrackedPostInput): string {
   const summary = (input.summary || '').slice(0, 200).replace(/\s+\S*$/, '').trim();
   const seed = input.articleId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 
-  const templates: Array<(t: string, s: string, src: string, tags: string) => string> = [
-    (t, s, src, tags) => [t, s, src, tags].filter(Boolean).join('\n\n'),
-    (t, s, src, tags) => [t, s ? `${s}…` : '', tags].filter(Boolean).join('\n\n'),
-    (t, s, src, tags) => [`📰 ${t}`, s, tags].filter(Boolean).join('\n\n'),
-    (t, s, src, tags) => [`🔎 ${t}`, s, src, tags].filter(Boolean).join('\n\n'),
-  ];
+  // Prefix varies — for breaking news we flag it, otherwise rotate shape.
+  const templates: Array<(t: string, s: string, src: string, tags: string) => string> = input.isBreaking
+    ? [
+        (t, s, src, tags) => [`🚨 BREAKING: ${t}`, s, src, tags].filter(Boolean).join('\n\n'),
+        (t, s, src, tags) => [`🚨 ${t}`, s, src, tags].filter(Boolean).join('\n\n'),
+      ]
+    : [
+        (t, s, src, tags) => [t, s, src, tags].filter(Boolean).join('\n\n'),
+        (t, s, src, tags) => [t, s ? `${s}…` : '', tags].filter(Boolean).join('\n\n'),
+        (t, s, src, tags) => [`📰 ${t}`, s, tags].filter(Boolean).join('\n\n'),
+        (t, s, src, tags) => [`🔎 ${t}`, s, src, tags].filter(Boolean).join('\n\n'),
+      ];
 
-  return templates[seed % templates.length](input.title, summary, source, hashtags).trim();
+  let caption = templates[seed % templates.length](input.title, summary, source, hashtags).trim();
+
+  if (input.related && input.related.length > 0) {
+    const lines = input.related.slice(0, 3).map((r) => `• ${r.sourceName}: ${r.url}`).join('\n');
+    caption = `${caption}\n\nMore coverage:\n${lines}`;
+  }
+
+  return caption;
 }
 
 /**
