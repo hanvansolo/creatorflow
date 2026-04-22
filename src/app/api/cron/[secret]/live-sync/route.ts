@@ -25,6 +25,7 @@ import { generateMatchAnalysis } from '@/lib/api/match-analysis';
 import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/api/match-reports';
 import { postCustomTweet } from '@/lib/social/twitter';
 import { postCustomFacebook, postCustomInstagram, postFacebookComment } from '@/lib/social/facebook';
+import { isValidApiFootballLogo } from '@/lib/utils/api-football-logo';
 
 /**
  * Post a FB comment on a match's kickoff post, deduped via social_posts.
@@ -174,20 +175,25 @@ export async function GET(
             let [homeClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.home.id)).limit(1);
             let [awayClub] = await db.select().from(clubs).where(eq(clubs.apiFootballId, fixture.teams.away.id)).limit(1);
 
-            // Auto-create clubs that don't exist yet
+            // Auto-create clubs that don't exist yet. API-Football serves a
+            // generic "no image" placeholder (90,381 bytes) for clubs it
+            // doesn't have logos for — we store null instead so the OG image
+            // and site fall back to initials rather than a broken-looking
+            // camera icon.
             if (!homeClub) {
               try {
                 const t = fixture.teams.home;
                 const slug = t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                const validLogo = await isValidApiFootballLogo(t.logo);
                 const [created] = await db.insert(clubs).values({
                   name: t.name,
                   slug,
-                  logoUrl: t.logo,
+                  logoUrl: validLogo ? t.logo : null,
                   apiFootballId: t.id,
                   country: fixture.league.country || null,
                 }).returning();
                 homeClub = created;
-                console.log(`[live-sync] Auto-created club: ${t.name}`);
+                console.log(`[live-sync] Auto-created club: ${t.name}${validLogo ? '' : ' (no logo — placeholder)'}`);
               } catch { /* slug conflict — try to find by name */
                 [homeClub] = await db.select().from(clubs).where(eq(clubs.name, fixture.teams.home.name)).limit(1);
               }
@@ -196,15 +202,16 @@ export async function GET(
               try {
                 const t = fixture.teams.away;
                 const slug = t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                const validLogo = await isValidApiFootballLogo(t.logo);
                 const [created] = await db.insert(clubs).values({
                   name: t.name,
                   slug,
-                  logoUrl: t.logo,
+                  logoUrl: validLogo ? t.logo : null,
                   apiFootballId: t.id,
                   country: fixture.league.country || null,
                 }).returning();
                 awayClub = created;
-                console.log(`[live-sync] Auto-created club: ${t.name}`);
+                console.log(`[live-sync] Auto-created club: ${t.name}${validLogo ? '' : ' (no logo — placeholder)'}`);
               } catch {
                 [awayClub] = await db.select().from(clubs).where(eq(clubs.name, fixture.teams.away.name)).limit(1);
               }
