@@ -61,7 +61,10 @@ async function callSpinner(prompt: string, attempts = 2): Promise<string> {
     try {
       const response = await getOpenAI().chat.completions.create({
         model: SPINNER_MODEL,
-        max_tokens: 4000,
+        // gpt-4.1-nano / gpt-5-nano reject max_tokens outright. Use the
+        // newer max_completion_tokens which works on both the new and
+        // old model families.
+        max_completion_tokens: 4000,
         temperature: 0.7,
         messages: [{ role: 'user', content: prompt }],
       });

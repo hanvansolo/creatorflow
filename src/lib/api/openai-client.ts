@@ -29,7 +29,13 @@ export const AI_MODEL = process.env.AI_MODEL || 'gpt-4.1-nano';
 
 /**
  * Convenience helper: make a chat completion and return the plain text,
- * or null on failure. Keeps the 9 migrated call sites short.
+ * or null on failure.
+ *
+ * Uses `max_completion_tokens` — the newer parameter that gpt-4.1-nano,
+ * gpt-5-nano, and the o-series all require. `max_tokens` is rejected
+ * outright by these models ("Unsupported parameter" error). The older
+ * gpt-4o-mini family still accepts `max_completion_tokens` too, so this
+ * is safe as a global default.
  */
 export async function chatComplete(opts: {
   prompt: string;
@@ -44,7 +50,7 @@ export async function chatComplete(opts: {
 
   const res = await getOpenAIClient().chat.completions.create({
     model: opts.model || AI_MODEL,
-    max_tokens: opts.maxTokens ?? 1024,
+    max_completion_tokens: opts.maxTokens ?? 1024,
     temperature: opts.temperature ?? 0.7,
     messages,
   });

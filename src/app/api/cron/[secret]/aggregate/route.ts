@@ -402,9 +402,28 @@ export async function GET(
           finalSlug = `${slug}-${Date.now()}`;
         }
 
-        // Insert article
+        // Insert article. Coerce tags to a plain string[] because some RSS
+        // feeds deliver tags as objects (e.g. { _: 'Transfer', $: { domain: 'x' } }),
+        // which crashes postgres-js serialisation with "Cannot convert object
+        // to primitive value" when it tries to Array.join internally.
+        const safeTags: string[] = Array.isArray(article.tags)
+          ? article.tags
+              .map((t: unknown) => {
+                if (typeof t === 'string') return t;
+                if (t && typeof t === 'object') {
+                  const obj = t as Record<string, unknown>;
+                  // rss-parser sometimes returns { _: 'label', $: {...} }
+                  if (typeof obj._ === 'string') return obj._;
+                  if (typeof obj.name === 'string') return obj.name;
+                  if (typeof obj.term === 'string') return obj.term;
+                }
+                return '';
+              })
+              .filter((s) => s.length > 0 && s.length < 100)
+          : [];
+
         try {
-          const assignedAuthor = pickAuthor(finalTitle, article.tags, credibilityRating);
+          const assignedAuthor = pickAuthor(finalTitle, safeTags, credibilityRating);
           const [insertedArticle] = await db.insert(newsArticles).values({
             sourceId,
             externalId: article.externalId,
@@ -417,7 +436,7 @@ export async function GET(
             imageUrl: finalImageUrl,
             originalUrl: article.originalUrl,
             publishedAt: article.publishedAt,
-            tags: article.tags,
+            tags: safeTags,
             isBreaking: false,
             credibilityRating,
             // Spin tracking: success → spun_at set, no retry. Attempt (success
