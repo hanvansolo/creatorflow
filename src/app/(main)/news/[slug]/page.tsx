@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 
 import { CommentSection } from '@/components/comments/CommentSection';
 import { AnnotatedParagraphs } from '@/components/deep-dives/AnnotatedContent';
-import { db, newsArticles, newsSources, comments, leagueStandings, clubs, competitionSeasons, competitions } from '@/lib/db';
+import { db, newsArticles, newsSources, articleSources, comments, leagueStandings, clubs, competitionSeasons, competitions } from '@/lib/db';
 import { LiveTicker } from '@/components/live/LiveTicker';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
 import { TrendingUp, Trophy, Calendar, Zap, Table, BarChart3, ArrowUpRight, Newspaper, ArrowRight } from 'lucide-react';
@@ -150,11 +150,23 @@ export default async function NewsArticlePage({ params }: PageProps) {
   }
 
   // Fetch trending articles, image pool, annotated content, comment count, and sidebar data
-  const [trendingArticles, imagePool, annotatedContent, commentCountResult, latestArticles, topStandings] = await Promise.all([
+  const [trendingArticles, imagePool, annotatedContent, commentCountResult, moreCoverage, latestArticles, topStandings] = await Promise.all([
     getTrendingArticles(article.id),
     getArticleImagePool(),
     article.content ? prepareAnnotatedContent(article.content) : null,
     db.select({ count: sql<number>`count(*)` }).from(comments).where(and(eq(comments.contentType, 'article'), eq(comments.contentId, slug), eq(comments.status, 'active'))),
+    // Other sources that covered this same story — populated by the aggregate cron at ingest.
+    db
+      .select({
+        sourceName: articleSources.sourceName,
+        originalUrl: articleSources.originalUrl,
+        originalTitle: articleSources.originalTitle,
+        publishedAt: articleSources.publishedAt,
+      })
+      .from(articleSources)
+      .where(eq(articleSources.articleId, article.id))
+      .orderBy(desc(articleSources.publishedAt))
+      .limit(8),
     // Latest 5 articles for sidebar
     db.select({
       id: newsArticles.id,
@@ -411,6 +423,46 @@ export default async function NewsArticlePage({ params }: PageProps) {
                 <p key={i} className="text-zinc-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
               );
             })}
+          </div>
+        )}
+
+        {/* More coverage — other sources that covered the same story */}
+        {moreCoverage.length > 0 && (
+          <div className="mt-10 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-white tracking-tight">MORE COVERAGE</h3>
+            </div>
+            <p className="mb-3 text-xs text-zinc-500">
+              Other sources reporting on this story.
+            </p>
+            <ul className="space-y-2">
+              {moreCoverage.map((src, i) => (
+                <li key={i}>
+                  <a
+                    href={src.originalUrl}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    className="group flex items-start gap-3 rounded-lg border border-transparent p-2 hover:border-zinc-700 hover:bg-zinc-800/50 transition"
+                  >
+                    <div className="flex-shrink-0 w-16 text-[11px] font-semibold uppercase tracking-wide text-emerald-400 mt-0.5">
+                      {src.sourceName || 'Source'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-zinc-200 group-hover:text-white line-clamp-2">
+                        {src.originalTitle || src.originalUrl}
+                      </p>
+                      {src.publishedAt && (
+                        <p className="mt-0.5 text-[11px] text-zinc-500">
+                          {formatRelativeTime(src.publishedAt)}
+                        </p>
+                      )}
+                    </div>
+                    <ExternalLink className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-zinc-600 group-hover:text-emerald-400" />
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
