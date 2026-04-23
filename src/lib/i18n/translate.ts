@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { db, translations } from '@/lib/db';
 import { DEFAULT_LOCALE, LOCALE_NAMES, type Locale } from './config';
+import { chatComplete } from '@/lib/api/openai-client';
 
 let _tableEnsured = false;
 async function ensureTable(): Promise<void> {
@@ -27,15 +27,6 @@ async function ensureTable(): Promise<void> {
   }
 }
 
-let _anthropic: Anthropic | null = null;
-function anthropic(): Anthropic | null {
-  if (_anthropic) return _anthropic;
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return null;
-  _anthropic = new Anthropic({ apiKey: key });
-  return _anthropic;
-}
-
 const FIELD_GUIDANCE: Record<string, string> = {
   title: 'Keep it punchy and headline-style. Preserve team and competition names. Do not add quotes around the output.',
   summary: 'Keep it tight — one to two sentences max. Preserve team and competition names.',
@@ -45,24 +36,16 @@ const FIELD_GUIDANCE: Record<string, string> = {
 
 async function translateOne(text: string, target: Locale, field: string): Promise<string> {
   if (target === DEFAULT_LOCALE) return text;
-  const client = anthropic();
-  if (!client) return text;
+  if (!process.env.OPENAI_API_KEY) return text;
 
   try {
     const guidance = FIELD_GUIDANCE[field] || FIELD_GUIDANCE.generic;
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: Math.min(4000, Math.ceil(text.length * 2 + 200)),
-      messages: [
-        {
-          role: 'user',
-          content: `Translate the following football news ${field} into ${LOCALE_NAMES[target]}. ${guidance} Output ONLY the translation — no preamble, no quotes.\n\n${text}`,
-        },
-      ],
+    const out = await chatComplete({
+      maxTokens: Math.min(4000, Math.ceil(text.length * 2 + 200)),
+      temperature: 0.3,
+      prompt: `Translate the following football news ${field} into ${LOCALE_NAMES[target]}. ${guidance} Output ONLY the translation — no preamble, no quotes.\n\n${text}`,
     });
-    const out = msg.content[0];
-    if (out.type === 'text') return out.text.trim();
-    return text;
+    return out ? out.trim() : text;
   } catch (e) {
     console.error(`[translate] ${target}/${field} failed:`, (e as Error).message);
     return text;

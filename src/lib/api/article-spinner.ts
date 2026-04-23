@@ -1,19 +1,10 @@
-import OpenAI from 'openai';
+import { getOpenAIClient as getOpenAI, AI_MODEL } from './openai-client';
 
-// Lazy-load OpenAI client
-let _openai: OpenAI | null = null;
-function getOpenAI(): OpenAI {
-  if (!_openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is not set');
-    }
-    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return _openai;
-}
-
-// Override with SPINNER_MODEL=gpt-4o for higher-quality rewrites at ~10x cost.
-const SPINNER_MODEL = process.env.SPINNER_MODEL || 'gpt-4o-mini';
+// The spinner is the heaviest AI call (long article rewrites). It falls back
+// to AI_MODEL by default but allows overriding to a higher-quality model
+// (e.g. SPINNER_MODEL=gpt-4o) without affecting cheaper calls like credibility
+// rating, translation, or match analysis.
+const SPINNER_MODEL = process.env.SPINNER_MODEL || AI_MODEL;
 
 export interface SpunArticle {
   title: string;

@@ -8,12 +8,12 @@
  *   TELEGRAM_CHANNELS=@footyfeed_en:en,@footyfeed_es:es,@footyfeed_pt:pt,@footyfeed_ar:ar
  *
  * A single TELEGRAM_BOT_TOKEN posts to all channels. Content is translated
- * via Anthropic before sending when langCode !== 'en'.
+ * via OpenAI before sending when langCode !== 'en'.
  *
  * Bot must be added as admin to each channel before posting.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { chatComplete } from '@/lib/api/openai-client';
 
 type Channel = { chatId: string; lang: string };
 
@@ -51,24 +51,15 @@ const LANG_NAMES: Record<string, string> = {
 
 async function translate(text: string, targetLang: string): Promise<string> {
   if (targetLang === 'en' || !LANG_NAMES[targetLang]) return text;
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return text;
+  if (!process.env.OPENAI_API_KEY) return text;
 
   try {
-    const anthropic = new Anthropic({ apiKey: key });
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: `Translate the following football social media post into ${LANG_NAMES[targetLang]}. Preserve emojis, hashtags (convert to natural ${LANG_NAMES[targetLang]} hashtags where appropriate), URLs, team names, and competition names. Output ONLY the translation — no preamble, no quotes, no explanation.\n\n${text}`,
-        },
-      ],
+    const out = await chatComplete({
+      maxTokens: 500,
+      temperature: 0.3,
+      prompt: `Translate the following football social media post into ${LANG_NAMES[targetLang]}. Preserve emojis, hashtags (convert to natural ${LANG_NAMES[targetLang]} hashtags where appropriate), URLs, team names, and competition names. Output ONLY the translation — no preamble, no quotes, no explanation.\n\n${text}`,
     });
-    const out = msg.content[0];
-    if (out.type === 'text') return out.text.trim();
-    return text;
+    return out ? out.trim() : text;
   } catch (e) {
     console.error(`[Telegram] Translation to ${targetLang} failed:`, (e as Error).message);
     return text;

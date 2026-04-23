@@ -1,14 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { db, matchAnalysis, matchStats, matchEvents, matches, clubs, competitions, competitionSeasons } from '@/lib/db';
 import { eq, and, desc } from 'drizzle-orm';
-
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-  return _anthropic;
-}
+import { chatComplete } from './openai-client';
 
 interface AnalysisResult {
   homeWinPct: number;
@@ -143,17 +135,8 @@ Respond in JSON format only, no markdown or code blocks:
   "analysis": "Two-three sentence tactical analysis..."
 }`;
 
-    // 5. Call Claude
-    const anthropic = getAnthropic();
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    // Parse the response
-    const responseText =
-      response.content[0].type === 'text' ? response.content[0].text : '';
+    // 5. Call AI
+    const responseText = (await chatComplete({ maxTokens: 512, temperature: 0.3, prompt })) || '';
 
     let result: AnalysisResult;
     try {
@@ -161,7 +144,7 @@ Respond in JSON format only, no markdown or code blocks:
       const jsonStr = responseText.replace(/```json?\s*/g, '').replace(/```\s*/g, '').trim();
       result = JSON.parse(jsonStr);
     } catch (parseErr) {
-      console.error('[match-analysis] Failed to parse Claude response:', responseText);
+      console.error('[match-analysis] Failed to parse AI response:', responseText);
       return;
     }
 

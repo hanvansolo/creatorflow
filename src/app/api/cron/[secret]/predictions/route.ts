@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, gte, lte, isNull, sql } from 'drizzle-orm';
 import { db, matches, matchPredictions, clubs, competitions, competitionSeasons } from '@/lib/db';
 import { getFixturePredictions } from '@/lib/api/football-api';
-import Anthropic from '@anthropic-ai/sdk';
+import { chatComplete } from '@/lib/api/openai-client';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -34,14 +34,6 @@ function isPredictionWorthy(competitionName: string): boolean {
   return PREDICTION_PARTIAL.some(p => competitionName.includes(p));
 }
 
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-  return _anthropic;
-}
-
 interface AIPrediction {
   predictedOutcome: 'home' | 'draw' | 'away';
   predictedHomeScore: number;
@@ -59,7 +51,7 @@ async function generateAIPrediction(
   competitionName: string,
   apiPrediction: any
 ): Promise<AIPrediction | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!process.env.OPENAI_API_KEY) return null;
 
   try {
     const pred = apiPrediction?.predictions;
@@ -95,14 +87,8 @@ Respond in JSON only, no markdown:
   "reasoning": "Brief 1-2 sentence reasoning combining form, H2H, and statistical analysis"
 }`;
 
-    const anthropic = getAnthropic();
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 256,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = await chatComplete({ maxTokens: 256, temperature: 0.3, prompt });
+    if (!text) return null;
     const jsonStr = text.replace(/```json?\s*/g, '').replace(/```\s*/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (e) {

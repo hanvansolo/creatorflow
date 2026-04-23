@@ -1,5 +1,4 @@
 // @ts-nocheck
-import Anthropic from '@anthropic-ai/sdk';
 import {
   db,
   matches,
@@ -14,16 +13,9 @@ import {
   players,
 } from '@/lib/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { chatComplete } from './openai-client';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
-
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-  return _anthropic;
-}
 
 /**
  * Get or create the "Footy Feed Match Reports" news source.
@@ -346,20 +338,14 @@ Your 2-3 sentence summary here
 ---REPORT---
 Your full 400-800 word report here`;
 
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const responseText = response.content[0]?.type === 'text' ? response.content[0].text : '';
+    const responseText = (await chatComplete({ maxTokens: 4000, prompt })) || '';
 
     const titleMatch = responseText.match(/---TITLE---\s*([\s\S]*?)---SUMMARY---/);
     const summaryMatch = responseText.match(/---SUMMARY---\s*([\s\S]*?)---REPORT---/);
     const reportMatch = responseText.match(/---REPORT---\s*([\s\S]*?)$/);
 
     if (!titleMatch || !summaryMatch || !reportMatch) {
-      console.error('[match-report] Could not parse Claude response');
+      console.error('[match-report] Could not parse AI response');
       return { success: false, error: 'Failed to parse AI response' };
     }
 

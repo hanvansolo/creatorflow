@@ -1,17 +1,6 @@
 // @ts-nocheck
-import Anthropic from '@anthropic-ai/sdk';
 import type { CredibilityRating } from '@/types';
-
-// Lazy-load Anthropic client to avoid initialization issues
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-  }
-  return _anthropic;
-}
+import { chatComplete } from './openai-client';
 
 /**
  * Uses AI to rate an article's credibility based on title and content.
@@ -23,13 +12,10 @@ export async function rateCredibility(
   sourceName: string
 ): Promise<CredibilityRating> {
   try {
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 50,
-      messages: [
-        {
-          role: 'user',
-          content: `Rate this football news article's credibility. Respond with ONLY one word from these options: verified, unverified, clickbait, opinion, rumour
+    const text = await chatComplete({
+      maxTokens: 50,
+      temperature: 0,
+      prompt: `Rate this football news article's credibility. Respond with ONLY one word from these options: verified, unverified, clickbait, opinion, rumour
 
 Rules:
 - "verified" = factual reporting with quotes/data from official sources, press conferences, or team statements
@@ -43,16 +29,11 @@ Title: ${title}
 Content: ${content.slice(0, 500)}
 
 Rating:`,
-        },
-      ],
     });
 
-    const text = response.content[0];
-    if (text.type !== 'text') return 'unverified';
-
-    const rating = text.text.trim().toLowerCase() as CredibilityRating;
+    if (!text) return 'unverified';
+    const rating = text.trim().toLowerCase() as CredibilityRating;
     const validRatings: CredibilityRating[] = ['verified', 'unverified', 'clickbait', 'opinion', 'rumour'];
-
     return validRatings.includes(rating) ? rating : 'unverified';
   } catch (error) {
     console.error('Credibility rating failed:', error);
