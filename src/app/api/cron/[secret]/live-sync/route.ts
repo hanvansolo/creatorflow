@@ -237,13 +237,20 @@ export async function GET(
               referee: fixture.fixture.referee,
               slug,
               round: fixture.league.round,
-              socialPosted: false, // Will be set to true only after successful social post
+              // CLAIM the post slot at insert time. If every platform fails
+              // later, the release-on-failure block near the end of the run
+              // flips this back to FALSE so the next cron run retries. Do
+              // NOT change this to false — the existing-match path below only
+              // queues matches where social_posted is FALSE, so a new match
+              // left as FALSE would be re-queued (and re-posted) on every
+              // subsequent run.
+              socialPosted: true,
             }).returning({ id: matches.id });
 
             matchId = inserted.id;
             console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
 
-            // New match — queue for posting (socialPosted=true on INSERT prevents duplicate on next cron run)
+            // New match — queue for posting. The insert above claimed the lock.
             kickoffTweets.push({
               home: homeClub.name,
               away: awayClub.name,
