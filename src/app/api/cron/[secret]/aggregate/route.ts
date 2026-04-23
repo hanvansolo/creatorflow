@@ -193,8 +193,11 @@ export async function GET(
         let finalTitle = article.title;
         let finalSummary = article.summary;
         let finalContent = article.content;
+        let spinSucceeded = false;           // true → set spun_at on insert (never retried)
+        let spinAttempted = false;           // true → spin_attempts starts at 1 (respin gated)
 
         if (ENABLE_SPINNING && (article.content || article.summary) && spunCount < MAX_SPINS_PER_RUN) {
+          spinAttempted = true;
           try {
             // Scrape the full article text from the source URL
             // RSS only gives us 1-2 sentence excerpts — we need the real article
@@ -264,6 +267,7 @@ export async function GET(
             finalSummary = spun.summary;
             finalContent = spun.content;
             spunCount++;
+            spinSucceeded = true;
 
             } // end of else (enough source material)
           } catch (error) {
@@ -365,6 +369,10 @@ export async function GET(
             tags: article.tags,
             isBreaking: false,
             credibilityRating,
+            // Spin tracking: success → spun_at set, no retry. Attempt (success
+            // or fail) → attempts=1 so respin only tries N-1 more times.
+            spunAt: spinSucceeded ? new Date() : null,
+            spinAttempts: spinAttempted ? 1 : 0,
           }).returning({ id: newsArticles.id });
           insertedCount++;
           newArticleUrls.push(`https://www.footy-feed.com/news/${slug}`);

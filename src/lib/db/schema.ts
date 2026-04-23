@@ -344,6 +344,11 @@ export const newsArticles = pgTable('news_articles', {
   credibilityRating: varchar('credibility_rating', { length: 20 }),
   voteScore: integer('vote_score').default(0),
   socialPosted: boolean('social_posted').default(false),
+  // Spin tracking — prevents the respin cron from re-spinning articles that
+  // have already been processed successfully, and caps retries on articles
+  // that keep failing so we don't burn budget on hopeless thin RSS stubs.
+  spunAt: timestamp('spun_at', { withTimezone: true }),
+  spinAttempts: integer('spin_attempts').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
   index('idx_news_articles_published_at').on(table.publishedAt),

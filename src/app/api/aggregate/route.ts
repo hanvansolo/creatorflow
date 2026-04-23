@@ -114,8 +114,11 @@ export async function POST(request: Request) {
         let finalTitle = article.title;
         let finalSummary = article.summary;
         let finalContent = article.content;
+        let spinSucceeded = false;
+        let spinAttempted = false;
 
         if (ENABLE_SPINNING && (article.content || article.summary)) {
+          spinAttempted = true;
           try {
             const spun = await spinArticle(
               article.title,
@@ -126,6 +129,7 @@ export async function POST(request: Request) {
             finalSummary = spun.summary;
             finalContent = spun.content;
             spunCount++;
+            spinSucceeded = true;
           } catch (error) {
             console.error('Spinning failed, using original:', error);
           }
@@ -173,6 +177,8 @@ export async function POST(request: Request) {
             publishedAt: article.publishedAt,
             tags: article.tags,
             isBreaking: false,
+            spunAt: spinSucceeded ? new Date() : null,
+            spinAttempts: spinAttempted ? 1 : 0,
           }).returning({ id: newsArticles.id });
           insertedCount++;
 
