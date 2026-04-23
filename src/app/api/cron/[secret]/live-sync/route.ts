@@ -38,12 +38,23 @@ import { isValidApiFootballLogo } from '@/lib/utils/api-football-logo';
  * per match. A 10-goal thriller tops out around ~12 comments — below FB's
  * comment-rate threshold.
  */
+// Kill switch for FB comment posting. Defaults to disabled because our
+// current page token is missing `pages_manage_engagement` — every comment
+// attempt fails with "(#200) The permission(s) …pages_manage_engagement
+// are not available. It could be because either they are deprecated or
+// need to be approved by App Review". Leaving it enabled burns 5–10 failed
+// Graph API calls per minute and adds log noise. Re-enable by setting
+// FB_COMMENTS_ENABLED=true once Meta approves the permission.
+const FB_COMMENTS_ENABLED = process.env.FB_COMMENTS_ENABLED === 'true';
+
 async function postMatchComment(args: {
   postId: string;
   contentType: 'match_comment' | 'match_ht' | 'match_ft';
   contentId: string;
   message: string;
 }) {
+  if (!FB_COMMENTS_ENABLED) return;
+
   const [existing] = await db
     .select({ id: socialPosts.id })
     .from(socialPosts)
@@ -687,6 +698,17 @@ export async function GET(
     const toPost = bestAvailable.filter(k => k.score >= 0);
 
     console.log(`[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} selected for posting (scores: ${toPost.map(m => `${m.home} vs ${m.away}=${m.score}`).join(', ')})`);
+
+    // Log which kickoffs we're dropping so "why didn't this match post" is
+    // answerable from the cron log instead of detective work in the DB.
+    const toPostIds = new Set(toPost.map(k => k.matchId));
+    const dropped = scoredMatches.filter(k => !toPostIds.has(k.matchId));
+    if (dropped.length > 0) {
+      console.log(
+        `[live-sync] Dropped ${dropped.length} kickoffs: ` +
+        dropped.map(m => `${m.home} vs ${m.away} [${m.competition || 'no comp'}] score=${m.score}`).join(' | '),
+      );
+    }
 
     // Additional per-platform caps — on top of scoreMatch filtering, hard-cap
     // FB/Twitter posts per run so a 10+ big-match Saturday can't flood the feed.
