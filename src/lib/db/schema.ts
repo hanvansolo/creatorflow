@@ -357,6 +357,27 @@ export const newsArticles = pgTable('news_articles', {
   uniqueIndex('idx_news_articles_source_external').on(table.sourceId, table.externalId),
 ]);
 
+// ===== ARTICLE SOURCES =====
+// Additional sources covering the same story. Rather than create N
+// near-duplicate news_articles rows (one per feed that covered the story
+// and N separate AI spin calls), the aggregate cron detects similar-title
+// inserts and records them here pointing at the single primary article.
+// Rendered as "More coverage: BBC · Sky Sports · …" at the bottom of the
+// primary article's page and FB captions.
+export const articleSources = pgTable('article_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  articleId: uuid('article_id').references(() => newsArticles.id, { onDelete: 'cascade' }).notNull(),
+  sourceId: uuid('source_id').references(() => newsSources.id),
+  sourceName: varchar('source_name', { length: 200 }),
+  originalUrl: text('original_url').notNull(),
+  originalTitle: text('original_title'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_article_sources_article').on(table.articleId),
+  uniqueIndex('idx_article_sources_url').on(table.articleId, table.originalUrl),
+]);
+
 // ===== ARTICLE VOTES =====
 export const articleVotes = pgTable('article_votes', {
   id: uuid('id').primaryKey().defaultRandom(),

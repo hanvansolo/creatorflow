@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { db, newsSources, newsArticles, aggregationJobs } from '@/lib/db';
+import { db, newsSources, newsArticles, articleSources, aggregationJobs } from '@/lib/db';
 import { eq, and, gte } from 'drizzle-orm';
 import { parseMultipleFeeds, type RSSFeedConfig } from '@/lib/aggregation';
 import { RSS_FEEDS } from '@/lib/constants/sources';
@@ -89,10 +89,17 @@ export async function GET(
     console.log(`Parsing ${feedConfigs.length} feeds...`);
     const articlesBySource = await parseMultipleFeeds(feedConfigs);
 
-    // Load recent article titles from DB for similarity dedup (last 48h)
+    // Load recent article titles from DB for similarity clustering (last 48h).
+    // We use this to detect "same story covered by a different source" so we
+    // can attach the new source to the existing primary article instead of
+    // creating another near-duplicate that would need its own AI spin.
     const recentCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const recentTitles = await db
-      .select({ title: newsArticles.title, originalTitle: newsArticles.originalTitle })
+    const recentArticles = await db
+      .select({
+        id: newsArticles.id,
+        title: newsArticles.title,
+        originalTitle: newsArticles.originalTitle,
+      })
       .from(newsArticles)
       .where(gte(newsArticles.publishedAt, recentCutoff));
 
@@ -106,25 +113,33 @@ export async function GET(
       const union = new Set([...setA, ...setB]);
       return union.size > 0 ? intersection.size / union.size : 0;
     }
-    // Build normalized title set from DB + current batch
-    const knownTitles = new Set<string>();
-    for (const row of recentTitles) {
-      knownTitles.add(normalizeTitle(row.title));
-      if (row.originalTitle) knownTitles.add(normalizeTitle(row.originalTitle));
+
+    // (articleId, normalizedTitle) pairs — populated from recent DB rows and
+    // any new primaries we insert in this batch. Keyed by article.id so we
+    // can return the primary's id when a match is found.
+    const indexedTitles: Array<{ id: string; norm: string }> = [];
+    for (const row of recentArticles) {
+      if (row.title) indexedTitles.push({ id: row.id, norm: normalizeTitle(row.title) });
+      if (row.originalTitle) indexedTitles.push({ id: row.id, norm: normalizeTitle(row.originalTitle) });
     }
 
-    function isSimilarToKnown(title: string): boolean {
+    /**
+     * Returns the id of an existing primary article whose title is close
+     * enough to `title` that they're covering the same story, or null if
+     * this is a fresh story that should become its own primary.
+     */
+    function findPrimary(title: string): string | null {
       const normalized = normalizeTitle(title);
-      for (const known of knownTitles) {
-        if (titleSimilarity(normalized, known) >= 0.65) return true;
+      for (const row of indexedTitles) {
+        if (titleSimilarity(normalized, row.norm) >= 0.45) return row.id;
       }
-      return false;
+      return null;
     }
 
     // Insert articles into database
     let insertedCount = 0;
     let skippedCount = 0;
-    let dedupedCount = 0;
+    let clusteredCount = 0;   // attached to an existing primary — no spin, no duplicate row
     let spunCount = 0;
     let imagesDownloaded = 0;
     let imagesGenerated = 0;
@@ -178,15 +193,51 @@ export async function GET(
           continue;
         }
 
-        // Title similarity dedup — catch "same story, different ID" from same or different sources
-        if (isSimilarToKnown(article.title)) {
-          console.log(`[Aggregate] Skipped similar: "${article.title?.slice(0, 60)}..."`);
-          dedupedCount++;
-          skippedCount++;
+        // If this story is already covered by a primary in our DB, attach
+        // the new source to that primary instead of creating a duplicate.
+        // No spin call, no duplicate row — just a record that BBC / Sky /
+        // whoever else covered the same thing, rendered at the bottom of
+        // the primary's page as "More coverage".
+        const primaryId = findPrimary(article.title);
+        if (primaryId) {
+          try {
+            const [feedSource] = await db
+              .select({ name: newsSources.name })
+              .from(newsSources)
+              .where(eq(newsSources.id, sourceId))
+              .limit(1);
+            await db.insert(articleSources).values({
+              articleId: primaryId,
+              sourceId,
+              sourceName: feedSource?.name || sourceSlug,
+              originalUrl: article.originalUrl,
+              originalTitle: article.title,
+              publishedAt: article.publishedAt,
+            }).onConflictDoNothing();
+            clusteredCount++;
+            console.log(`[Aggregate] Clustered "${article.title?.slice(0, 60)}..." into primary ${primaryId.slice(0, 8)}`);
+          } catch (e) {
+            console.error('[Aggregate] Failed to record source:', e);
+          }
           continue;
         }
-        // Add this title to known set so later articles in this batch also get deduped
-        knownTitles.add(normalizeTitle(article.title));
+
+        // New story — we'll add it to the in-batch index right after the
+        // insert below so later items in this run can cluster into it.
+
+        // Cheap pre-filter: if the heuristic credibility rater already says
+        // "clickbait" or "opinion", there's no point paying for the AI spin.
+        // These pieces rarely convert for AdSense and are the easiest to
+        // identify from title alone.
+        const preRating = rateCredibilityHeuristic(
+          article.title,
+          article.content || article.summary || '',
+          sourceSlug,
+        );
+        const spinSkippedLowValue = preRating === 'clickbait' || preRating === 'opinion';
+        if (spinSkippedLowValue) {
+          console.log(`[Aggregate] Skipping spin (low-value ${preRating}): "${article.title?.slice(0, 60)}..."`);
+        }
 
         // Spin the article content if enabled
         const MAX_SPINS_PER_RUN = 20;
@@ -196,7 +247,7 @@ export async function GET(
         let spinSucceeded = false;           // true → set spun_at on insert (never retried)
         let spinAttempted = false;           // true → spin_attempts starts at 1 (respin gated)
 
-        if (ENABLE_SPINNING && (article.content || article.summary) && spunCount < MAX_SPINS_PER_RUN) {
+        if (ENABLE_SPINNING && !spinSkippedLowValue && (article.content || article.summary) && spunCount < MAX_SPINS_PER_RUN) {
           spinAttempted = true;
           try {
             // Scrape the full article text from the source URL
@@ -377,6 +428,16 @@ export async function GET(
           insertedCount++;
           newArticleUrls.push(`https://www.footy-feed.com/news/${slug}`);
 
+          // Add to in-batch index so any later RSS items in this run that
+          // cover the same story cluster into this article rather than
+          // creating yet another duplicate.
+          if (insertedArticle?.id) {
+            indexedTitles.push({ id: insertedArticle.id, norm: normalizeTitle(article.title) });
+            if (finalTitle && finalTitle !== article.title) {
+              indexedTitles.push({ id: insertedArticle.id, norm: normalizeTitle(finalTitle) });
+            }
+          }
+
           // Generate AI image if article has no image
           if (ENABLE_AI_IMAGES && !finalImageUrl && insertedArticle) {
             try {
@@ -450,7 +511,7 @@ export async function GET(
       success: true,
       inserted: insertedCount,
       skipped: skippedCount,
-      deduped: dedupedCount,
+      clustered: clusteredCount,
       spun: spunCount,
       imagesDownloaded,
       imagesGenerated,
