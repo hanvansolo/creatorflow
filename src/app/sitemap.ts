@@ -5,25 +5,9 @@ import { SITE_CONFIG } from '@/lib/seo';
 import { LOCALES, DEFAULT_LOCALE, LOCALE_BCP47, type Locale } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
-
-/**
- * Sitemap is split into chunks using Next.js's generateSitemaps pattern.
- * A single giant sitemap used to 500 under load (memory + per-entry hreflang
- * made each article ~500 bytes of XML, which tipped over at ~20k entries).
- * Each chunk below emits a separate /sitemap-<id>.xml and Google stitches
- * them via a sitemap index automatically.
- */
-export async function generateSitemaps() {
-  return [
-    { id: 0 }, // static + competitions
-    { id: 1 }, // news articles
-    { id: 2 }, // teams (clubs)
-    { id: 3 }, // matches (last 14d → 14d ahead)
-    { id: 4 }, // what-if scenarios + fixture dates
-  ];
-}
 
 function prefix(locale: Locale): string {
   return locale === DEFAULT_LOCALE ? '' : `/${locale}`;
@@ -38,14 +22,29 @@ function buildAlternates(path: string): Record<string, string> {
   return languages;
 }
 
-/** Safely coerce a value to a Date, falling back to `now` on null/invalid. */
+/** Coerce to Date; fall back to `fallback` on null/invalid/undefined. */
 function safeDate(v: unknown, fallback: Date): Date {
   if (v == null) return fallback;
   const d = v instanceof Date ? v : new Date(v as string | number);
   return isNaN(d.getTime()) ? fallback : d;
 }
 
-async function staticAndCompetitionsSitemap(now: Date): Promise<SitemapEntry[]> {
+/**
+ * Single sitemap — no generateSitemaps().
+ *
+ * We tried splitting into chunks via generateSitemaps but Next.js 16 has a
+ * conflict: sitemap.ts + generateSitemaps reserves /sitemap.xml for an
+ * auto-index that wasn't emitting, while a custom route at
+ * app/sitemap.xml/route.ts got shadowed by the convention. End result was
+ * a 404 on the canonical URL. Back to one sitemap — kept the null-safety
+ * and per-query try/catch so a single bad row can't 500 the whole thing,
+ * and trimmed the news × locale multiplication to stay well under Google's
+ * 50k-URL limit with headroom.
+ */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const base = SITE_CONFIG.url;
+  const now = new Date();
+
   const STATIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['changeFrequency']; priority: number }> = [
     { path: '',            changeFrequency: 'hourly',  priority: 1.0  },
     { path: '/news',       changeFrequency: 'hourly',  priority: 0.9  },
@@ -66,10 +65,12 @@ async function staticAndCompetitionsSitemap(now: Date): Promise<SitemapEntry[]> 
   ];
 
   const out: SitemapEntry[] = [];
+
+  // Static pages × locales with hreflang alternates
   for (const s of STATIC_PATHS) {
     for (const loc of LOCALES) {
       out.push({
-        url: `${SITE_CONFIG.url}${prefix(loc)}${s.path}`,
+        url: `${base}${prefix(loc)}${s.path}`,
         lastModified: now,
         changeFrequency: s.changeFrequency,
         priority: s.priority,
@@ -78,79 +79,31 @@ async function staticAndCompetitionsSitemap(now: Date): Promise<SitemapEntry[]> 
     }
   }
 
-  try {
-    const allCompetitions = await db
-      .select({ slug: competitions.slug })
-      .from(competitions)
-      .where(isNotNull(competitions.slug));
-    for (const c of allCompetitions) {
-      if (!c.slug) continue;
-      out.push({
-        url: `${SITE_CONFIG.url}/tables?competition=${c.slug}`,
-        lastModified: now,
-        changeFrequency: 'daily',
-        priority: 0.7,
-      });
-    }
-  } catch (e) {
-    console.error('[sitemap] competitions query failed:', e instanceof Error ? e.message : e);
-  }
-
-  return out;
-}
-
-async function newsSitemap(now: Date): Promise<SitemapEntry[]> {
+  // News articles — canonical URL only (default locale). Hreflang alternates
+  // tell Google about the translations, so we don't need a separate URL per
+  // locale × article. This was the primary source of bloat before.
   try {
     const articles = await db
       .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
       .from(newsArticles)
       .orderBy(desc(newsArticles.publishedAt))
-      .limit(2000);
-
-    const out: SitemapEntry[] = [];
+      .limit(5000);
     for (const a of articles) {
       if (!a.slug) continue;
       const path = `/news/${a.slug}`;
-      const lastModified = safeDate(a.publishedAt, now);
-      for (const loc of LOCALES) {
-        out.push({
-          url: `${SITE_CONFIG.url}${prefix(loc)}${path}`,
-          lastModified,
-          changeFrequency: 'weekly',
-          priority: 0.7,
-          alternates: { languages: buildAlternates(path) },
-        });
-      }
+      out.push({
+        url: `${base}${path}`,
+        lastModified: safeDate(a.publishedAt, now),
+        changeFrequency: 'weekly',
+        priority: 0.7,
+        alternates: { languages: buildAlternates(path) },
+      });
     }
-    return out;
   } catch (e) {
     console.error('[sitemap] news query failed:', e instanceof Error ? e.message : e);
-    return [];
   }
-}
 
-async function teamsSitemap(now: Date): Promise<SitemapEntry[]> {
-  try {
-    const allClubs = await db
-      .select({ slug: clubs.slug })
-      .from(clubs)
-      .where(isNotNull(clubs.slug))
-      .limit(5000);
-    return allClubs
-      .filter((c) => !!c.slug)
-      .map((c) => ({
-        url: `${SITE_CONFIG.url}/teams/${c.slug}`,
-        lastModified: now,
-        changeFrequency: 'weekly' as const,
-        priority: 0.6,
-      }));
-  } catch (e) {
-    console.error('[sitemap] clubs query failed:', e instanceof Error ? e.message : e);
-    return [];
-  }
-}
-
-async function matchesSitemap(now: Date): Promise<SitemapEntry[]> {
+  // Matches — ±14 day window
   try {
     const windowStart = new Date();
     windowStart.setDate(windowStart.getDate() - 14);
@@ -175,36 +128,77 @@ async function matchesSitemap(now: Date): Promise<SitemapEntry[]> {
       .orderBy(desc(matches.kickoff))
       .limit(3000);
 
-    return recentMatches
-      .filter((m) => !!m.slug)
-      .map((m) => {
-        const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status ?? '');
-        const kickoff = safeDate(m.kickoff, now);
-        const hoursUntil = (kickoff.getTime() - now.getTime()) / 3_600_000;
-        const isUpcomingSoon = hoursUntil > 0 && hoursUntil < 24;
-        const isFinished = m.status === 'finished';
-        return {
-          url: `${SITE_CONFIG.url}/matches/${m.slug}`,
-          lastModified: safeDate(m.updatedAt, kickoff),
-          changeFrequency: (isLive
-            ? 'always'
-            : isUpcomingSoon
-            ? 'hourly'
-            : isFinished
-            ? 'weekly'
-            : 'daily') as SitemapEntry['changeFrequency'],
-          priority: isLive ? 0.95 : isUpcomingSoon ? 0.85 : isFinished ? 0.6 : 0.75,
-        };
+    for (const m of recentMatches) {
+      if (!m.slug) continue;
+      const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status ?? '');
+      const kickoff = safeDate(m.kickoff, now);
+      const hoursUntil = (kickoff.getTime() - now.getTime()) / 3_600_000;
+      const isUpcomingSoon = hoursUntil > 0 && hoursUntil < 24;
+      const isFinished = m.status === 'finished';
+      out.push({
+        url: `${base}/matches/${m.slug}`,
+        lastModified: safeDate(m.updatedAt, kickoff),
+        changeFrequency: (isLive ? 'always' : isUpcomingSoon ? 'hourly' : isFinished ? 'weekly' : 'daily') as SitemapEntry['changeFrequency'],
+        priority: isLive ? 0.95 : isUpcomingSoon ? 0.85 : isFinished ? 0.6 : 0.75,
       });
+    }
   } catch (e) {
     console.error('[sitemap] matches query failed:', e instanceof Error ? e.message : e);
-    return [];
   }
-}
 
-async function whatIfAndFixturesSitemap(now: Date): Promise<SitemapEntry[]> {
-  const out: SitemapEntry[] = [];
+  // Clubs
+  try {
+    const allClubs = await db
+      .select({ slug: clubs.slug })
+      .from(clubs)
+      .where(isNotNull(clubs.slug))
+      .limit(5000);
+    for (const c of allClubs) {
+      if (!c.slug) continue;
+      out.push({
+        url: `${base}/teams/${c.slug}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      });
+    }
+  } catch (e) {
+    console.error('[sitemap] clubs query failed:', e instanceof Error ? e.message : e);
+  }
 
+  // Competition table pages
+  try {
+    const allCompetitions = await db
+      .select({ slug: competitions.slug })
+      .from(competitions)
+      .where(isNotNull(competitions.slug));
+    for (const c of allCompetitions) {
+      if (!c.slug) continue;
+      out.push({
+        url: `${base}/tables?competition=${c.slug}`,
+        lastModified: now,
+        changeFrequency: 'daily',
+        priority: 0.7,
+      });
+    }
+  } catch (e) {
+    console.error('[sitemap] competitions query failed:', e instanceof Error ? e.message : e);
+  }
+
+  // Fixture date buckets (rolling 10-day window)
+  for (let i = -3; i <= 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    out.push({
+      url: `${base}/fixtures?date=${dateStr}`,
+      lastModified: now,
+      changeFrequency: i === 0 ? 'hourly' : 'daily',
+      priority: i === 0 ? 0.9 : 0.6,
+    });
+  }
+
+  // What-if scenarios
   try {
     const scenarios = await db
       .select({ slug: whatIfScenarios.slug, updatedAt: whatIfScenarios.updatedAt })
@@ -213,7 +207,7 @@ async function whatIfAndFixturesSitemap(now: Date): Promise<SitemapEntry[]> {
     for (const s of scenarios) {
       if (!s.slug) continue;
       out.push({
-        url: `${SITE_CONFIG.url}/what-if/${s.slug}`,
+        url: `${base}/what-if/${s.slug}`,
         lastModified: safeDate(s.updatedAt, now),
         changeFrequency: 'monthly',
         priority: 0.5,
@@ -223,29 +217,5 @@ async function whatIfAndFixturesSitemap(now: Date): Promise<SitemapEntry[]> {
     console.error('[sitemap] what-if query failed:', e instanceof Error ? e.message : e);
   }
 
-  for (let i = -3; i <= 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
-    out.push({
-      url: `${SITE_CONFIG.url}/fixtures?date=${dateStr}`,
-      lastModified: now,
-      changeFrequency: i === 0 ? 'hourly' : 'daily',
-      priority: i === 0 ? 0.9 : 0.6,
-    });
-  }
-
   return out;
-}
-
-export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
-  switch (id) {
-    case 0: return staticAndCompetitionsSitemap(now);
-    case 1: return newsSitemap(now);
-    case 2: return teamsSitemap(now);
-    case 3: return matchesSitemap(now);
-    case 4: return whatIfAndFixturesSitemap(now);
-    default: return [];
-  }
 }
