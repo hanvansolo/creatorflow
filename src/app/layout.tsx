@@ -127,6 +127,16 @@ export default async function RootLayout({
           data-track-errors="true"
           data-track-popups="true"
         />
+        {/* Microsoft Clarity — session recordings, heatmaps, rage clicks.
+            Project ID: wgbe67hyvk. Same hardcoded-in-layout rationale as
+            Nitopulse above — analytics reliability > admin-panel flexibility. */}
+        <Script id="ms-clarity" strategy="afterInteractive">
+          {`(function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "wgbe67hyvk");`}
+        </Script>
         {/* HeadScripts injects scripts from admin/scripts (AdSense, GA, etc.)
             directly into <head> as raw <script> tags so SSR crawlers see them */}
         <Suspense fallback={null}>
