@@ -2,7 +2,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import PitchShotMap from '../PitchShotMap';
 import PlayerPerformanceGrid from '../PlayerPerformanceGrid';
 import MomentumTimeline from '../MomentumTimeline';
 import FormGuide from '../FormGuide';
@@ -261,11 +260,6 @@ export default function SummaryTab({
           homeStats={homeStats}
           awayStats={awayStats}
         />
-      )}
-
-      {/* ---- Shot Analysis Pitch ---- */}
-      {(homeStats || awayStats) && (isLive || isFinished) && (
-        <PitchShotMap match={match} events={events} homeStats={homeStats} awayStats={awayStats} />
       )}
 
       {/* ---- Player Performance ---- */}
