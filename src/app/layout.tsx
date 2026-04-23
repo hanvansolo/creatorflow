@@ -110,6 +110,23 @@ export default async function RootLayout({
           src="//ezoicanalytics.com/analytics.js"
           strategy="afterInteractive"
         />
+        {/* Nitopulse analytics — hardcoded here (not in admin/scripts) to
+            guarantee it loads on every page regardless of Suspense timing or
+            DB fetch latency. Analytics reliability > flexibility. If you
+            change the site token, update the data-site attribute below. */}
+        <Script
+          id="nitopulse"
+          src="https://app.nitopulse.com/t.js"
+          strategy="afterInteractive"
+          data-site="F40sAHLqNt5BRSnG9rZnR"
+          data-track-clicks="true"
+          data-track-scroll="true"
+          data-track-forms="true"
+          data-track-media="true"
+          data-track-performance="true"
+          data-track-errors="true"
+          data-track-popups="true"
+        />
         {/* HeadScripts injects scripts from admin/scripts (AdSense, GA, etc.)
             directly into <head> as raw <script> tags so SSR crawlers see them */}
         <Suspense fallback={null}>
