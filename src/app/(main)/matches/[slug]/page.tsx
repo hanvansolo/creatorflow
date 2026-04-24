@@ -10,6 +10,7 @@ import {
 } from '@/lib/api/football-api';
 import { getOrLoadSquad } from '@/lib/api/player-loader';
 import { MatchDetailClient } from '@/components/match/MatchDetailClient';
+import { LiveMatchesSidebar } from '@/components/live/LiveMatchesSidebar';
 import type { MatchPageData, MatchEvent, TeamStats, PlayerRating } from '@/components/match/types';
 
 export const dynamic = 'force-dynamic';
@@ -332,5 +333,10 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ sl
     articles,
   };
 
-  return <MatchDetailClient data={pageData} />;
+  return (
+    <MatchDetailClient
+      data={pageData}
+      sidebar={<LiveMatchesSidebar excludeMatchId={match.id} />}
+    />
+  );
 }
