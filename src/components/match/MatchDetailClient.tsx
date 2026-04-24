@@ -19,6 +19,7 @@ import NewsTab from './tabs/NewsTab';
 import HeadToHeadTab from './tabs/HeadToHeadTab';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { AffiliateBanner } from '@/components/ads/AffiliateBanner';
 import type { MatchPageData, LiveRefreshData, MatchEvent, TeamStats, MatchAnalysisRow } from './types';
 
 function isLiveStatus(status: string) {
@@ -268,6 +269,11 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
         </div>
       </div>
 
+      {/* Affiliate banner (wide) — sits between hero and tabs on match pages */}
+      <div className="mx-auto max-w-5xl px-4">
+        <AffiliateBanner variant="wide" />
+      </div>
+
       {/* Tabbed Content */}
       <div className="mx-auto max-w-5xl px-4 py-4">
         <Tabs defaultValue="summary" className="w-full">
@@ -356,10 +362,13 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
           </div>
         </Tabs>
 
-        {/* Ad */}
+        {/* Ad — existing display network */}
         <div className="my-6">
           <HorizontalAd />
         </div>
+
+        {/* Affiliate banner (medium) — between display ad and footer links */}
+        <AffiliateBanner variant="medium" />
 
         {/* Footer links */}
         <section className="grid gap-3 sm:grid-cols-3 mt-4">

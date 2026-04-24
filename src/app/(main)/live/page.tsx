@@ -11,6 +11,7 @@ import { CompetitionSelector } from '@/components/competitions';
 import { LiveMatchCard } from '@/components/live/LiveMatchCard';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
+import { AffiliateBanner } from '@/components/ads/AffiliateBanner';
 import { getLocale } from '@/lib/i18n/locale';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { DEFAULT_LOCALE } from '@/lib/i18n/config';
@@ -243,6 +244,9 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
           <HorizontalAd />
         </div>
 
+        {/* Affiliate banner (wide) — prime spot above the live fixtures */}
+        <AffiliateBanner variant="wide" />
+
         {/* Competition selector */}
         <CompetitionSelector
           competitions={ALL_COMPETITIONS}
@@ -297,6 +301,9 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
             </p>
           </div>
         ) : null}
+
+        {/* Affiliate banner (medium) — between live list and footer quick links */}
+        <AffiliateBanner variant="medium" />
 
         {/* Quick links */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">

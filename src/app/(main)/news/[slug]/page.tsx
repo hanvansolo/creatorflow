@@ -23,6 +23,7 @@ import { prepareAnnotatedContent } from '@/lib/utils/prepare-annotated-content';
 import type { CredibilityRating } from '@/types';
 import { AdSlot, InArticleAd } from '@/components/ads/AdSlot';
 import { NativeAd, SidebarAd } from '@/components/ads/ProfitableAds';
+import { AffiliateBannerRotator } from '@/components/ads/AffiliateBanner';
 import {
   generateArticleMetadata,
   generateAlternates,
@@ -470,6 +471,9 @@ export default async function NewsArticlePage({ params }: PageProps) {
         <div className="my-6">
           <NativeAd className="my-8" />
         </div>
+
+        {/* Affiliate banner — rotates between creatives based on article slug */}
+        <AffiliateBannerRotator seed={slug} />
 
         {/* Comments */}
         <div id="comments">
