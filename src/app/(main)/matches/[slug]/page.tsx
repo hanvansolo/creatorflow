@@ -4,11 +4,11 @@ import { notFound, redirect } from 'next/navigation';
 import { db, newsArticles, newsSources } from '@/lib/db';
 import { sql, desc, ilike, or } from 'drizzle-orm';
 import {
-  getFixtureEvents, getFixtureStatistics, getFixtureOdds, getLiveOdds,
-  getFixtureLineups, getFixturePlayerStats, getFixturePredictions, getFixtureInjuries,
+  getFixtureEvents, getFixtureStatistics,
   mapEventType,
 } from '@/lib/api/football-api';
 import { getOrLoadSquad } from '@/lib/api/player-loader';
+import { getCachedSecondaryData } from '@/lib/api/match-secondary-cache';
 import { MatchDetailClient } from '@/components/match/MatchDetailClient';
 import { LiveMatchesSidebar } from '@/components/live/LiveMatchesSidebar';
 import type { MatchPageData, MatchEvent, TeamStats, PlayerRating } from '@/components/match/types';
@@ -213,75 +213,28 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ sl
     await Promise.allSettled(apiCalls);
   }
 
-  // Secondary API calls (lineups, player stats, predictions, injuries, odds) — all in parallel
-  let lineups: any[] = [];
-  let playerRatings: PlayerRating[] = [];
-  let predictions: any = null;
-  let injuries: any[] = [];
-  let odds: any = null;
+  // Secondary API data (lineups, player stats, predictions, injuries, odds) —
+  // DB-cached so we don't burn the API quota on every page view. Finished
+  // matches read from cache forever once populated; live games refresh
+  // every 90s; upcoming refresh hourly.
+  const secondary = await getCachedSecondaryData(
+    match.id,
+    match.api_football_id,
+    match.status,
+    match.home_name,
+    match.away_name,
+    {
+      cache: match.secondary_data_cache ?? null,
+      fetchedAt: match.secondary_data_fetched_at ? new Date(match.secondary_data_fetched_at) : null,
+      cachedStatus: match.secondary_data_status ?? null,
+    },
+  );
 
-  if (match.api_football_id) {
-    const results = await Promise.allSettled([
-      isPlayed ? getFixtureLineups(match.api_football_id) : Promise.resolve({ response: [] }),
-      isPlayed ? getFixturePlayerStats(match.api_football_id) : Promise.resolve({ response: [] }),
-      getFixturePredictions(match.api_football_id),
-      getFixtureInjuries(match.api_football_id),
-      match.status !== 'finished'
-        ? (['live', 'halftime', 'extra_time', 'penalties'].includes(match.status)
-          ? getLiveOdds(match.api_football_id)
-          : getFixtureOdds(match.api_football_id))
-        : Promise.resolve({ response: [] }),
-    ]);
-
-    // Lineups
-    if (results[0].status === 'fulfilled' && results[0].value?.response?.length > 0) {
-      lineups = results[0].value.response;
-    }
-
-    // Player ratings
-    if (results[1].status === 'fulfilled' && results[1].value?.response?.length > 0) {
-      playerRatings = results[1].value.response.flatMap((team: any) =>
-        (team.players || []).map((p: any) => ({
-          name: p.player.name,
-          photo: p.player.photo,
-          position: p.statistics?.[0]?.games?.position || '?',
-          rating: p.statistics?.[0]?.games?.rating || null,
-          minutes: p.statistics?.[0]?.games?.minutes || null,
-          goals: p.statistics?.[0]?.goals?.total || null,
-          assists: p.statistics?.[0]?.goals?.assists || null,
-          shots: p.statistics?.[0]?.shots?.total || null,
-          passes: p.statistics?.[0]?.passes?.total || null,
-          tackles: p.statistics?.[0]?.tackles?.total || null,
-          teamName: team.team.name,
-          teamId: team.team.id,
-          playerId: p.player.id,
-          slug: p.player.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-        }))
-      );
-    }
-
-    // Predictions
-    if (results[2].status === 'fulfilled' && results[2].value?.response?.length > 0) {
-      predictions = results[2].value.response[0];
-    }
-
-    // Injuries
-    if (results[3].status === 'fulfilled' && results[3].value?.response?.length > 0) {
-      injuries = results[3].value.response;
-    }
-
-    // Odds
-    if (results[4].status === 'fulfilled' && results[4].value?.response?.length > 0) {
-      const oddsData = results[4].value.response[0];
-      odds = {
-        isLive: ['live', 'halftime', 'extra_time', 'penalties'].includes(match.status),
-        homeName: match.home_name,
-        awayName: match.away_name,
-        update: oddsData.update,
-        bookmakers: oddsData.bookmakers || (oddsData.odds ? [{ id: 0, name: 'Live', bets: oddsData.odds }] : []),
-      };
-    }
-  }
+  const lineups = secondary.lineups;
+  const playerRatings = secondary.playerRatings as PlayerRating[];
+  const predictions = secondary.predictions;
+  const injuries = secondary.injuries;
+  const odds = secondary.odds;
 
   // Load squads
   const [homeSquad, awaySquad] = await Promise.all([

@@ -160,6 +160,13 @@ export const matches = pgTable('matches', {
   // spamming new posts.
   fbKickoffPostId: varchar('fb_kickoff_post_id', { length: 250 }),
   slug: varchar('slug', { length: 200 }).notNull(),
+  // Cache for the per-page-render API-Football secondary calls
+  // (lineups, predictions, injuries, odds, player ratings) so we don't
+  // burn the API quota every time someone views a match page. Keyed by
+  // status — once a match is finished the cache is locked.
+  secondaryDataCache: jsonb('secondary_data_cache'),
+  secondaryDataFetchedAt: timestamp('secondary_data_fetched_at', { withTimezone: true }),
+  secondaryDataStatus: varchar('secondary_data_status', { length: 20 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
