@@ -138,6 +138,23 @@ export async function GET(
   try {
     console.log('[live-sync] Starting live match sync...');
 
+    // Pre-check: skip the API entirely if no match in our DB is anywhere
+    // near a live window. Saves a paid-API call every cron tick during the
+    // overnight / between-matchdays gaps.
+    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const fiveMinFromNow = new Date(Date.now() + 5 * 60 * 1000);
+    const liveStatusList = ['live', 'halftime', 'extra_time', 'penalties'];
+    const couldBeLive = await db.execute(sql`
+      SELECT 1 FROM matches
+      WHERE status = ANY(${liveStatusList})
+         OR (kickoff BETWEEN ${fourHoursAgo.toISOString()} AND ${fiveMinFromNow.toISOString()})
+      LIMIT 1
+    `);
+    if ((couldBeLive as any[]).length === 0) {
+      console.log('[live-sync] No matches in live window — skipping API call');
+      return NextResponse.json({ message: 'No matches in live window', skipped: true });
+    }
+
     // 1. Get all currently live matches from API-Football
     const liveResponse = await getLiveFixtures();
     const liveFixtures = liveResponse.response;
