@@ -141,12 +141,13 @@ export async function GET(
     // Pre-check: skip the API entirely if no match in our DB is anywhere
     // near a live window. Saves a paid-API call every cron tick during the
     // overnight / between-matchdays gaps.
+    // (Status list is hardcoded — Drizzle's sql template inlines JS arrays
+    // as a tuple, not a Postgres array, so ANY($1) breaks.)
     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
     const fiveMinFromNow = new Date(Date.now() + 5 * 60 * 1000);
-    const liveStatusList = ['live', 'halftime', 'extra_time', 'penalties'];
     const couldBeLive = await db.execute(sql`
       SELECT 1 FROM matches
-      WHERE status = ANY(${liveStatusList})
+      WHERE status IN ('live', 'halftime', 'extra_time', 'penalties')
          OR (kickoff BETWEEN ${fourHoursAgo.toISOString()} AND ${fiveMinFromNow.toISOString()})
       LIMIT 1
     `);
