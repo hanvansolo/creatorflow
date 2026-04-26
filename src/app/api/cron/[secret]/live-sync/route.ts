@@ -703,41 +703,49 @@ export async function GET(
       return score;
     }
 
-    // Score and sort — post all matches scoring 4+ (real traffic potential)
-    // During quiet periods (no high-value matches), post the best available
+    // Score and sort. Two tiers:
+    //  - FB target: every non-youth/non-reserve kickoff posts to FB.
+    //  - Other platforms (TW/IG/Threads/Bluesky/Telegram) stay on the
+    //    high-value selection (top leagues, big clubs, finals) to keep
+    //    those feeds curated.
     const scoredMatches = kickoffTweets
       .map(kick => ({ ...kick, score: scoreMatch(kick) }))
       .sort((a, b) => b.score - a.score);
 
     const highValue = scoredMatches.filter(k => k.score >= 4);
-    // During quiet periods (no top-flight games), post the top 2 available — but
-    // only filter out the youth/reserve penalty (score < 0). Anything else is fair game.
     const bestAvailable = highValue.length > 0 ? highValue : scoredMatches.slice(0, 2);
-    const toPost = bestAvailable.filter(k => k.score >= 0);
+    const highValueIds = new Set(bestAvailable.filter(k => k.score >= 0).map(k => k.matchId));
 
-    console.log(`[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} selected for posting (scores: ${toPost.map(m => `${m.home} vs ${m.away}=${m.score}`).join(', ')})`);
+    // FB gets every non-youth kickoff. score < 0 = youth/reserve penalty.
+    const toPost = scoredMatches.filter(k => k.score >= 0);
 
-    // Log which kickoffs we're dropping so "why didn't this match post" is
-    // answerable from the cron log instead of detective work in the DB.
-    const toPostIds = new Set(toPost.map(k => k.matchId));
-    const dropped = scoredMatches.filter(k => !toPostIds.has(k.matchId));
+    console.log(
+      `[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} for FB, ` +
+      `${highValueIds.size} for other platforms`
+    );
+
+    // Log only matches we're fully dropping (youth/reserve) — the others
+    // are at least getting FB, so they shouldn't show up as "missing".
+    const dropped = scoredMatches.filter(k => k.score < 0);
     if (dropped.length > 0) {
       console.log(
-        `[live-sync] Dropped ${dropped.length} kickoffs: ` +
+        `[live-sync] Dropped ${dropped.length} youth/reserve kickoffs: ` +
         dropped.map(m => `${m.home} vs ${m.away} [${m.competition || 'no comp'}] score=${m.score}`).join(' | '),
       );
     }
 
-    // Additional per-platform caps — on top of scoreMatch filtering, hard-cap
-    // FB/Twitter posts per run so a 10+ big-match Saturday can't flood the feed.
-    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 4);
+    // Per-platform caps. FB defaults to 12 — covers the busiest Saturday
+    // 3pm wave (rarely > 10 simultaneous claimed kickoffs in a single run);
+    // anything beyond that releases its lock so the next 1-min run picks
+    // it up.
+    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 12);
     const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 3);
 
     let tweetsSent = 0;
     let fbSent = 0;
     for (const kick of toPost) {
       const comp = kick.competition;
-      if (tweetsSent >= MAX_KICKOFF_TW_PER_RUN && fbSent >= MAX_KICKOFF_FB_PER_RUN) break;
+      const isHighValue = highValueIds.has(kick.matchId);
 
       try {
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
@@ -859,77 +867,82 @@ export async function GET(
           }
         }
 
-        // Instagram — needs a public image URL (ogImageUrl fits). URL is
-        // appended to the caption (IG doesn't hyperlink it, but at least it's
-        // visible to readers).
-        try {
-          const igRes = await postCustomInstagram(fbText, ogImageUrl, matchUrl);
-          if (igRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Instagram kickoff posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Instagram kickoff failed: ${igRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Instagram kickoff threw:`, e);
-        }
-
-        // Threads — title-with-hashtags branch keeps our pre-built caption intact.
-        try {
-          const { postToThreads } = await import('@/lib/social/threads');
-          const thRes = await postToThreads(`${fbText}\n\n${matchUrl}`, matchUrl, ogImageUrl);
-          if (thRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Threads kickoff posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Threads kickoff failed: ${thRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Threads kickoff threw:`, e);
-        }
-
-        // Twitter — kept here so it resumes automatically when TWITTER_PAUSED
-        // flips to false. Returns { success: false, error: 'paused' } today.
-        if (tweetsSent < MAX_KICKOFF_TW_PER_RUN) {
+        // Non-FB platforms (IG/Threads/Twitter/Bluesky/Telegram) only
+        // run for high-value matches — keeps those feeds curated. FB
+        // already posted above for every non-youth kickoff.
+        if (isHighValue) {
+          // Instagram — needs a public image URL (ogImageUrl fits). URL is
+          // appended to the caption (IG doesn't hyperlink it, but at least it's
+          // visible to readers).
           try {
-            const twRes = await postCustomTweet(tweetText, ogImageUrl);
-            if (twRes.success) {
+            const igRes = await postCustomInstagram(fbText, ogImageUrl, matchUrl);
+            if (igRes.success) {
               anySuccess = true;
-              tweetsSent++;
-              console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away}`);
+              console.log(`[live-sync] Instagram kickoff posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Instagram kickoff failed: ${igRes.error}`);
             }
           } catch (e) {
-            console.error(`[live-sync] Twitter kickoff threw:`, e);
+            console.error(`[live-sync] Instagram kickoff threw:`, e);
           }
-        }
 
-        try {
-          const { postToBluesky } = await import('@/lib/social/bluesky');
-          const bsRes = await postToBluesky(tweetText.slice(0, 280), matchUrl, [], ogImageUrl);
-          if (bsRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Bluesky failed: ${bsRes.error}`);
+          // Threads — title-with-hashtags branch keeps our pre-built caption intact.
+          try {
+            const { postToThreads } = await import('@/lib/social/threads');
+            const thRes = await postToThreads(`${fbText}\n\n${matchUrl}`, matchUrl, ogImageUrl);
+            if (thRes.success) {
+              anySuccess = true;
+              console.log(`[live-sync] Threads kickoff posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Threads kickoff failed: ${thRes.error}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Threads kickoff threw:`, e);
           }
-        } catch (e) {
-          console.error(`[live-sync] Bluesky threw:`, e);
-        }
 
-        try {
-          const { postToTelegram } = await import('@/lib/social/telegram');
-          const tgText = `${fbText}\n\n${matchUrl}`;
-          const tgRes = await postToTelegram(tgText, ogImageUrl);
-          if (tgRes.anySuccess) {
-            anySuccess = true;
-            console.log(`[live-sync] Telegram: ${tgRes.sent} sent, ${tgRes.failed} failed for ${kick.home} vs ${kick.away}`);
-          } else if (tgRes.sent === 0 && tgRes.failed === 0) {
-            // not configured — skip quietly
-          } else {
-            console.error(`[live-sync] Telegram all failed: ${tgRes.errors.join('; ')}`);
+          // Twitter — kept here so it resumes automatically when TWITTER_PAUSED
+          // flips to false. Returns { success: false, error: 'paused' } today.
+          if (tweetsSent < MAX_KICKOFF_TW_PER_RUN) {
+            try {
+              const twRes = await postCustomTweet(tweetText, ogImageUrl);
+              if (twRes.success) {
+                anySuccess = true;
+                tweetsSent++;
+                console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away}`);
+              }
+            } catch (e) {
+              console.error(`[live-sync] Twitter kickoff threw:`, e);
+            }
           }
-        } catch (e) {
-          console.error(`[live-sync] Telegram threw:`, e);
+
+          try {
+            const { postToBluesky } = await import('@/lib/social/bluesky');
+            const bsRes = await postToBluesky(tweetText.slice(0, 280), matchUrl, [], ogImageUrl);
+            if (bsRes.success) {
+              anySuccess = true;
+              console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Bluesky failed: ${bsRes.error}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Bluesky threw:`, e);
+          }
+
+          try {
+            const { postToTelegram } = await import('@/lib/social/telegram');
+            const tgText = `${fbText}\n\n${matchUrl}`;
+            const tgRes = await postToTelegram(tgText, ogImageUrl);
+            if (tgRes.anySuccess) {
+              anySuccess = true;
+              console.log(`[live-sync] Telegram: ${tgRes.sent} sent, ${tgRes.failed} failed for ${kick.home} vs ${kick.away}`);
+            } else if (tgRes.sent === 0 && tgRes.failed === 0) {
+              // not configured — skip quietly
+            } else {
+              console.error(`[live-sync] Telegram all failed: ${tgRes.errors.join('; ')}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Telegram threw:`, e);
+          }
         }
 
         // The atomic lock at line ~198 / new-insert flow already claimed this match
