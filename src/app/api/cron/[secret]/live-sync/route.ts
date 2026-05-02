@@ -734,12 +734,16 @@ export async function GET(
       );
     }
 
-    // Per-platform caps. FB defaults to 12 — covers the busiest Saturday
-    // 3pm wave (rarely > 10 simultaneous claimed kickoffs in a single run);
-    // anything beyond that releases its lock so the next 1-min run picks
-    // it up.
-    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 12);
+    // Per-platform caps. FB pulled back to 3/run after FB temp-blocked
+    // the page for posting too aggressively (12/run × 60s cron interval =
+    // up to 720/hr peak, well above FB's organic page tolerance). 3/run +
+    // 15s inter-match delay = max 3 posts spread over 30s of the 60s
+    // window, ~180/hr peak. Cap-skipped matches release their lock and
+    // retry on the next tick, so a busy 3pm Saturday still gets every
+    // game posted — just over 10-15 minutes instead of all at once.
+    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 3);
     const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 3);
+    const KICKOFF_INTER_POST_DELAY_MS = Number(process.env.KICKOFF_INTER_POST_DELAY_MS || 15_000);
 
     let tweetsSent = 0;
     let fbSent = 0;
@@ -835,9 +839,10 @@ export async function GET(
 
         if (isBigMatch) console.log(`[live-sync] BIG MATCH detected: ${kick.home} vs ${kick.away} (${comp})`);
 
-        // Delay between posts to avoid rate limits (3 seconds between each)
+        // Delay between matches to avoid FB rate limits / temp blocks.
+        // Configurable via KICKOFF_INTER_POST_DELAY_MS (default 15s).
         if (tweetsSent > 0 || fbSent > 0) {
-          await new Promise(r => setTimeout(r, 3000));
+          await new Promise(r => setTimeout(r, KICKOFF_INTER_POST_DELAY_MS));
         }
 
         // Post to platforms — track if ANY platform succeeded.
