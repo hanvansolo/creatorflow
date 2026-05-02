@@ -51,6 +51,25 @@ function isPushNotable(compName: string, home: string, away: string): boolean {
     || PUSH_BIG_CLUBS.has(away);
 }
 
+// API-Football budget throttle for weekends. Saturday + Sunday UTC are
+// when ~80% of weekly fixtures kick off, blowing through the daily quota.
+// We treat the same set as "notable" for the API: those matches keep full
+// event/stats fetching; everything else just gets the live score from the
+// single getLiveFixtures() call (free per match).
+//
+// Disable by setting API_BUDGET_WEEKEND_THROTTLE=false on Railway if a
+// big league is missing from the notable set.
+function isWeekendUtc(): boolean {
+  const day = new Date().getUTCDay(); // 0=Sun, 6=Sat
+  return day === 0 || day === 6;
+}
+const WEEKEND_THROTTLE_ENABLED = process.env.API_BUDGET_WEEKEND_THROTTLE !== 'false';
+function isApiThrottled(compName: string, home: string, away: string): boolean {
+  if (!WEEKEND_THROTTLE_ENABLED) return false;
+  if (!isWeekendUtc()) return false;
+  return !isPushNotable(compName, home, away);
+}
+
 /**
  * Post a FB comment on a match's kickoff post, deduped via social_posts.
  * - `contentType` distinguishes event comments (match_comment), HT
@@ -430,9 +449,14 @@ export async function GET(
           (e) => SIGNIFICANT_EVENTS.has(e.eventType)
         ).length;
 
+        // Weekend API-budget gate — non-notable matches get score-only
+        // updates from getLiveFixtures, no per-fixture event/stats burns.
+        const apiThrottled = isApiThrottled(compName, homeName, awayName);
+
         // Only call API for events if score changed or at HT/FT
         let apiEvents: any[] = [];
-        const shouldFetchEvents = scoreChanged || (fixture.fixture.status.elapsed && fixture.fixture.status.elapsed % 15 === 0);
+        const shouldFetchEvents = !apiThrottled
+          && (scoreChanged || (fixture.fixture.status.elapsed && fixture.fixture.status.elapsed % 15 === 0));
         if (shouldFetchEvents) {
           const eventsResponse = await getFixtureEvents(apiFixtureId);
           apiEvents = eventsResponse.response || [];
@@ -517,7 +541,7 @@ export async function GET(
         // 2c. Get and upsert match statistics (only if score changed or halftime/fulltime)
         let apiStats: any[] = [];
         const isBreak = fixture.fixture.status.short === 'HT' || fixture.fixture.status.short === 'FT';
-        if (shouldFetchEvents || isBreak) {
+        if (shouldFetchEvents || (isBreak && !apiThrottled)) {
           const statsResponse = await getFixtureStatistics(apiFixtureId);
           apiStats = statsResponse.response || [];
         }
