@@ -15,6 +15,7 @@ import {
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
 import { CookieConsent } from '@/components/layout/CookieConsent';
+import { PushOptIn } from '@/components/push/PushOptIn';
 import EzoicRouteHandler from '@/components/ads/EzoicRouteHandler';
 import Script from 'next/script';
 import { getLocale } from '@/lib/i18n/locale';
@@ -159,6 +160,7 @@ export default async function RootLayout({
             <Suspense fallback={null}>
               <CookieConsent />
             </Suspense>
+            <PushOptIn />
           </div>
         </LocationProvider>
         <Suspense fallback={null}>

@@ -205,6 +205,22 @@ export async function GET(
         await db.update(newsArticles).set({ socialPosted: true }).where(eq(newsArticles.id, c.id));
         summary.breaking.posted++;
         recentTitles.push(c.title);
+
+        // Web push: breaking-news bulletin to all subscribers. Capped by
+        // breakingBudget (2/hr default), so this can't spam phones.
+        try {
+          const { sendPushToAll } = await import('@/lib/push/send');
+          sendPushToAll({
+            title: `🚨 ${c.title.slice(0, 80)}`,
+            body: c.summary?.slice(0, 140) || 'Tap to read the full story →',
+            url: `/news/${c.slug}`,
+            image: c.imageUrl || undefined,
+            tag: `article-${c.id}`,
+            requireInteraction: true,
+          }).catch(err => console.error('[social-post] breaking push failed:', err));
+        } catch (err) {
+          console.error('[social-post] push send module load failed:', err);
+        }
       } else {
         summary.breaking.errors++;
       }

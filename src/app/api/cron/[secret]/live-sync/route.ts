@@ -26,6 +26,30 @@ import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/a
 import { postCustomTweet } from '@/lib/social/twitter';
 import { postCustomFacebook, postCustomInstagram, postFacebookComment } from '@/lib/social/facebook';
 import { isValidApiFootballLogo } from '@/lib/utils/api-football-logo';
+import { sendPushToAll } from '@/lib/push/send';
+
+// Push notifications fire only for notable matches — we don't want to
+// wake users up for a Latvian Liga 2 goal. Compositions: top leagues,
+// major continental cups, and any match with a BIG_CLUB.
+const PUSH_NOTABLE_COMPS = new Set([
+  'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+  'Championship', 'Eredivisie', 'Primeira Liga',
+  'UEFA Champions League', 'UEFA Europa League', 'UEFA Conference League',
+  'FA Cup', 'EFL Cup', 'Copa del Rey', 'Coppa Italia', 'DFB Pokal',
+  'Copa Libertadores', 'Copa America', 'World Cup', 'European Championship',
+]);
+const PUSH_BIG_CLUBS = new Set([
+  'Manchester United', 'Manchester City', 'Liverpool', 'Arsenal',
+  'Chelsea', 'Tottenham', 'Real Madrid', 'Barcelona', 'Bayern Munich',
+  'Paris Saint Germain', 'Juventus', 'Inter', 'AC Milan', 'Napoli',
+  'Borussia Dortmund', 'Atletico Madrid',
+]);
+
+function isPushNotable(compName: string, home: string, away: string): boolean {
+  return PUSH_NOTABLE_COMPS.has(compName)
+    || PUSH_BIG_CLUBS.has(home)
+    || PUSH_BIG_CLUBS.has(away);
+}
 
 /**
  * Post a FB comment on a match's kickoff post, deduped via social_posts.
@@ -366,6 +390,35 @@ export async function GET(
         const scoreChanged = existingMatch
           ? (existingMatch.homeScore !== fixture.goals.home || existingMatch.awayScore !== fixture.goals.away)
           : true;
+
+        // Web push: fire on score change OR full-time, but only for
+        // notable matches. Same tag = browser replaces the previous
+        // notification, so a 4-goal thriller doesn't stack 4 banners.
+        const homeName = fixture.teams.home.name;
+        const awayName = fixture.teams.away.name;
+        const compName = fixture.league.name || '';
+        const justFinished = newStatus === 'finished'
+          && existingMatch
+          && ['live', 'halftime', 'extra_time', 'penalties'].includes(existingMatch.status);
+        if ((scoreChanged || justFinished) && isPushNotable(compName, homeName, awayName)) {
+          const score = `${fixture.goals.home ?? 0}-${fixture.goals.away ?? 0}`;
+          const minute = fixture.fixture.status.elapsed;
+          const slug = existingMatch?.slug || matchId;
+          const title = justFinished
+            ? `FT: ${homeName} ${score} ${awayName}`
+            : `⚽ GOAL — ${homeName} ${score} ${awayName}`;
+          const body = justFinished
+            ? `Full time at ${compName}. Read the report →`
+            : `${compName}${minute != null ? ` · ${minute}'` : ''}`;
+          // Fire-and-forget; don't slow down the cron loop on a slow push.
+          sendPushToAll({
+            title,
+            body,
+            url: `/matches/${slug}`,
+            tag: `match-${matchId}`,
+            renotify: true,
+          }).catch(err => console.error('[live-sync] push failed:', err));
+        }
 
         const existingEvents = await db
           .select()

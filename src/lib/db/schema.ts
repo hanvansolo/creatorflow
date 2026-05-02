@@ -941,6 +941,24 @@ export const translations = pgTable('translations', {
   lookup: index('translations_lookup_idx').on(t.contentType, t.contentId, t.locale),
 }));
 
+// ===== PUSH SUBSCRIPTIONS =====
+// Web Push subscriptions captured via the browser PushManager. One row per
+// (browser, device) pair — `endpoint` is the unique identifier provided by
+// the browser. Sends are best-effort and 410 Gone responses flip `active`
+// to FALSE so dead subs are filtered out cheaply.
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
+  active: boolean('active').default(true).notNull(),
+}, (t) => [
+  index('idx_push_subscriptions_active').on(t.active),
+]);
+
 // ===== RELATIONS =====
 
 export const competitionsRelations = relations(competitions, ({ many }) => ({
