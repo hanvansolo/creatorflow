@@ -272,6 +272,12 @@ export function MatchDetailClient({ data, sidebar }: MatchDetailClientProps) {
       {/* Main content + live-games sidebar (sidebar only on lg:+) */}
       <div className="mx-auto max-w-7xl px-4 py-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
         <div>
+          {/* Top-of-page display ad — between hero and tabs.
+              High-visibility spot on live match pages. */}
+          <div className="mb-4">
+            <HorizontalAd />
+          </div>
+
           {/* Tabbed Content */}
           <Tabs defaultValue="summary" className="w-full">
           <TabsList className="w-full flex overflow-x-auto border-b border-zinc-800 bg-transparent gap-0 rounded-none p-0 scrollbar-hide">

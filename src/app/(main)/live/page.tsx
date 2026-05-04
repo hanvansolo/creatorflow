@@ -9,7 +9,7 @@ import { Radio, ArrowRight, Zap, Calendar, Trophy, Goal } from 'lucide-react';
 import { COMPETITIONS } from '@/lib/constants/competitions';
 import { CompetitionSelector } from '@/components/competitions';
 import { LiveMatchCard } from '@/components/live/LiveMatchCard';
-import { AdSlot } from '@/components/ads/AdSlot';
+import { AdSlot, InFeedAd } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
 import { AffiliateBanner } from '@/components/ads/AffiliateBanner';
 import { getLocale } from '@/lib/i18n/locale';
@@ -257,38 +257,45 @@ export default async function LiveScoresPage({ searchParams }: PageProps) {
         {/* Live matches grouped by competition */}
         {competitionNames.length > 0 ? (
           <div className="space-y-6">
-            {competitionNames.map((compName) => (
-              <div key={compName} className="rounded-xl overflow-hidden border border-emerald-500/20">
-                {/* Competition header */}
-                <div className="flex items-center gap-2.5 bg-zinc-800/80 px-4 py-2.5 border-b border-zinc-700/50">
-                  {grouped[compName][0]?.competition_logo && (
-                    <Image
-                      src={grouped[compName][0].competition_logo!}
-                      alt={compName}
-                      width={18}
-                      height={18}
-                      className="h-[18px] w-[18px] object-contain"
-                    />
-                  )}
-                  <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">{compName}</span>
-                </div>
-
-                {/* Match cards */}
-                <div className="space-y-2 p-2">
-                  {grouped[compName].map((match) => {
-                    const matchGoals = eventsByMatch[match.id] || [];
-
-                    return (
-                      <LiveMatchCard
-                        key={match.id}
-                        match={match}
-                        events={matchGoals}
+            {competitionNames.flatMap((compName, gi) => {
+              const groupEl = (
+                <div key={compName} className="rounded-xl overflow-hidden border border-emerald-500/20">
+                  {/* Competition header */}
+                  <div className="flex items-center gap-2.5 bg-zinc-800/80 px-4 py-2.5 border-b border-zinc-700/50">
+                    {grouped[compName][0]?.competition_logo && (
+                      <Image
+                        src={grouped[compName][0].competition_logo!}
+                        alt={compName}
+                        width={18}
+                        height={18}
+                        className="h-[18px] w-[18px] object-contain"
                       />
-                    );
-                  })}
+                    )}
+                    <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">{compName}</span>
+                  </div>
+
+                  {/* Match cards */}
+                  <div className="space-y-2 p-2">
+                    {grouped[compName].map((match) => {
+                      const matchGoals = eventsByMatch[match.id] || [];
+                      return (
+                        <LiveMatchCard
+                          key={match.id}
+                          match={match}
+                          events={matchGoals}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+              // Inject an inline ad after every 3rd competition group
+              // (e.g. between Premier League / La Liga / Serie A and the next batch).
+              const showAdAfter = gi > 0 && (gi + 1) % 3 === 0 && gi < competitionNames.length - 1;
+              return showAdAfter
+                ? [groupEl, <InFeedAd key={`live-ad-${gi}`} />]
+                : [groupEl];
+            })}
           </div>
         ) : liveCount === 0 ? (
           <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 px-6 py-16 text-center">

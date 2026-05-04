@@ -154,6 +154,11 @@ export default async function NewsPage() {
 
       {/* News Grid */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Top-of-feed ad — above the fold so it's seen on every news visit */}
+        <div className="mb-6">
+          <HorizontalAd />
+        </div>
+
         <NewsFeed
           initialArticles={localizedNews}
           initialCursor={localizedNews.length >= 30 ? localizedNews[localizedNews.length - 1].publishedAt : null}

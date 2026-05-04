@@ -387,45 +387,37 @@ export default async function NewsArticlePage({ params }: PageProps) {
         )}
 
         {/* Content */}
-        {article.content && (
-          <div className="prose prose-invert mt-8 max-w-none space-y-4">
-            {article.content.split('\n\n').filter(p => p.trim()).map((paragraph, i) => {
-              const trimmed = paragraph.trim();
-              // Lines wrapped in **bold** → render as H2 subheading
-              const headingMatch = trimmed.match(/^\*\*(.+)\*\*$/);
-              if (headingMatch) {
-                return (
-                  <h2 key={i} className="text-xl font-bold text-white mt-8 mb-3">
-                    {headingMatch[1]}
-                  </h2>
-                );
-              }
-              // Lines starting with ## → render as H2
-              if (trimmed.startsWith('## ')) {
-                return (
-                  <h2 key={i} className="text-xl font-bold text-white mt-8 mb-3">
-                    {trimmed.replace(/^##\s*/, '')}
-                  </h2>
-                );
-              }
-              // Lines starting with ### → render as H3
-              if (trimmed.startsWith('### ')) {
-                return (
-                  <h3 key={i} className="text-lg font-semibold text-zinc-200 mt-6 mb-2">
-                    {trimmed.replace(/^###\s*/, '')}
-                  </h3>
-                );
-              }
-              // Regular paragraph — also handle inline **bold** and *italic*
-              const html = trimmed
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>');
-              return (
-                <p key={i} className="text-zinc-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
-              );
-            })}
-          </div>
-        )}
+        {article.content && (() => {
+          const paragraphs = article.content.split('\n\n').filter(p => p.trim());
+          // Drop in-article ads after the 2nd and 5th paragraphs — but
+          // only if the article is at least 6 paragraphs long (avoid
+          // ads-on-thin-content which AdSense penalises).
+          const adAfter = paragraphs.length >= 6 ? new Set([1, 4]) : new Set<number>();
+          return (
+            <div className="prose prose-invert mt-8 max-w-none space-y-4">
+              {paragraphs.flatMap((paragraph, i) => {
+                const trimmed = paragraph.trim();
+                let block: React.ReactNode;
+                const headingMatch = trimmed.match(/^\*\*(.+)\*\*$/);
+                if (headingMatch) {
+                  block = <h2 key={`p-${i}`} className="text-xl font-bold text-white mt-8 mb-3">{headingMatch[1]}</h2>;
+                } else if (trimmed.startsWith('## ')) {
+                  block = <h2 key={`p-${i}`} className="text-xl font-bold text-white mt-8 mb-3">{trimmed.replace(/^##\s*/, '')}</h2>;
+                } else if (trimmed.startsWith('### ')) {
+                  block = <h3 key={`p-${i}`} className="text-lg font-semibold text-zinc-200 mt-6 mb-2">{trimmed.replace(/^###\s*/, '')}</h3>;
+                } else {
+                  const html = trimmed
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+                  block = <p key={`p-${i}`} className="text-zinc-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+                }
+                return adAfter.has(i)
+                  ? [block, <InArticleAd key={`ad-${i}`} />]
+                  : [block];
+              })}
+            </div>
+          );
+        })()}
 
         {/* More coverage — other sources that covered the same story */}
         {moreCoverage.length > 0 && (
