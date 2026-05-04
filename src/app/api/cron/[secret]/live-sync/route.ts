@@ -23,7 +23,7 @@ import {
 } from '@/lib/api/football-api';
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
 import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/api/match-reports';
-import { postCustomTweet } from '@/lib/social/twitter';
+import { postCustomTweet, buildHashtags, checkTwitterDailyLimit } from '@/lib/social/twitter';
 import { postCustomFacebook, postCustomInstagram, postFacebookComment } from '@/lib/social/facebook';
 import { isValidApiFootballLogo } from '@/lib/utils/api-football-logo';
 import { sendPushToAll } from '@/lib/push/send';
@@ -819,7 +819,10 @@ export async function GET(
     // retry on the next tick, so a busy 3pm Saturday still gets every
     // game posted — just over 10-15 minutes instead of all at once.
     const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 3);
-    const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 3);
+    // Twitter Free tier = 17 posts/day. With kickoffs alone (high-value
+    // matches Sat-Sun) we can blow that fast, so cap to 1 kickoff tweet
+    // per cron run AND check the rolling 24h daily cap inside the loop.
+    const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 1);
     const KICKOFF_INTER_POST_DELAY_MS = Number(process.env.KICKOFF_INTER_POST_DELAY_MS || 15_000);
 
     let tweetsSent = 0;
@@ -910,9 +913,15 @@ export async function GET(
         const tweetTemplate = TWEET_TEMPLATES[seed % TWEET_TEMPLATES.length];
         const fbTemplate = FB_TEMPLATES[seed % FB_TEMPLATES.length];
 
-        const tags = `#${homeTag} #${awayTag} #${compTag} #Football`;
-        const tweetText = tweetTemplate(kick.home, kick.away, kick.competition, matchUrl, tags);
-        const fbText = fbTemplate(kick.home, kick.away, kick.competition, tags);
+        // Hashtags: buildHashtags maps to canonical tags (#ManCity not
+        // #ManchesterCity, #UCL not #ChampionsLeague) using the curated
+        // dictionaries in twitter.ts. Limit to 2-3 for Twitter best
+        // practice; FB tolerates more so use the full set there.
+        const allTags = buildHashtags(`${kick.home} vs ${kick.away}`, [kick.home, kick.away, kick.competition]);
+        const fbTagStr = allTags;
+        const tweetTagStr = allTags.split(' ').slice(0, 3).join(' ');
+        const tweetText = tweetTemplate(kick.home, kick.away, kick.competition, matchUrl, tweetTagStr);
+        const fbText = fbTemplate(kick.home, kick.away, kick.competition, fbTagStr);
 
         if (isBigMatch) console.log(`[live-sync] BIG MATCH detected: ${kick.home} vs ${kick.away} (${comp})`);
 
@@ -982,15 +991,28 @@ export async function GET(
             console.error(`[live-sync] Threads kickoff threw:`, e);
           }
 
-          // Twitter — kept here so it resumes automatically when TWITTER_PAUSED
-          // flips to false. Returns { success: false, error: 'paused' } today.
+          // Twitter — only the single best kickoff per run gets a tweet,
+          // and only if we're under the rolling 24h daily cap (Free tier
+          // = 17/day, we cap at 12). Live games are the priority — keeps
+          // the timeline focused on what's happening right now.
           if (tweetsSent < MAX_KICKOFF_TW_PER_RUN) {
             try {
-              const twRes = await postCustomTweet(tweetText, ogImageUrl);
-              if (twRes.success) {
-                anySuccess = true;
-                tweetsSent++;
-                console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away}`);
+              const limit = await checkTwitterDailyLimit();
+              if (!limit.ok) {
+                console.log(`[live-sync] Twitter skipped (${kick.home} vs ${kick.away}): ${limit.reason}`);
+              } else {
+                const twRes = await postCustomTweet(
+                  tweetText,
+                  ogImageUrl,
+                  { contentType: 'match_kickoff', contentId: kick.matchId },
+                );
+                if (twRes.success) {
+                  anySuccess = true;
+                  tweetsSent++;
+                  console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away} (${(limit.recent ?? 0) + 1}/12 today)`);
+                } else {
+                  console.error(`[live-sync] Twitter kickoff failed: ${twRes.error}`);
+                }
               }
             } catch (e) {
               console.error(`[live-sync] Twitter kickoff threw:`, e);

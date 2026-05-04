@@ -1,7 +1,73 @@
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
 
 // KILL SWITCH: Set to true to disable all Twitter posting
-const TWITTER_PAUSED = true;
+const TWITTER_PAUSED = process.env.TWITTER_PAUSED === 'true';
+
+// Twitter Free tier = 17 posts/day. Cap at 12 by default to leave
+// headroom for breaking-news bursts. 30-min minimum gap keeps the
+// timeline from looking like a spam feed.
+const TWITTER_DAILY_CAP = Number(process.env.TWITTER_DAILY_CAP || 12);
+const TWITTER_MIN_GAP_MIN = Number(process.env.TWITTER_MIN_GAP_MIN || 30);
+
+/**
+ * DB-backed rate-limit check. Reads social_posts to count tweets in the
+ * last 24h and the timestamp of the most recent one. Fails open (returns
+ * ok=true) on DB errors so a transient outage doesn't kill posting.
+ */
+export async function checkTwitterDailyLimit(): Promise<{ ok: boolean; reason?: string; recent?: number }> {
+  if (TWITTER_PAUSED) return { ok: false, reason: 'paused' };
+  try {
+    const { db, socialPosts } = await import('@/lib/db');
+    const { and, eq, gte, desc } = await import('drizzle-orm');
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recent = await db
+      .select({ postedAt: socialPosts.postedAt })
+      .from(socialPosts)
+      .where(and(
+        eq(socialPosts.platform, 'twitter'),
+        eq(socialPosts.status, 'posted'),
+        gte(socialPosts.postedAt, since),
+      ))
+      .orderBy(desc(socialPosts.postedAt));
+    if (recent.length >= TWITTER_DAILY_CAP) {
+      return { ok: false, reason: `daily cap (${recent.length}/${TWITTER_DAILY_CAP})`, recent: recent.length };
+    }
+    if (recent.length > 0 && recent[0].postedAt) {
+      const gapMin = (Date.now() - new Date(recent[0].postedAt).getTime()) / 60_000;
+      if (gapMin < TWITTER_MIN_GAP_MIN) {
+        return { ok: false, reason: `${gapMin.toFixed(0)}m since last (need ${TWITTER_MIN_GAP_MIN}m)`, recent: recent.length };
+      }
+    }
+    return { ok: true, recent: recent.length };
+  } catch (err) {
+    console.error('[Twitter] rate-limit check failed:', err);
+    return { ok: true };
+  }
+}
+
+async function recordTweet(
+  text: string,
+  externalId: string | null,
+  status: 'posted' | 'failed',
+  error: string | null,
+  contentType: string,
+  contentId: string,
+) {
+  try {
+    const { db, socialPosts } = await import('@/lib/db');
+    await db.insert(socialPosts).values({
+      platform: 'twitter',
+      contentType,
+      contentId,
+      postText: text.slice(0, 2000),
+      externalPostId: externalId,
+      status,
+      error: error || null,
+    });
+  } catch (err) {
+    console.error('[Twitter] failed to record post:', err);
+  }
+}
 
 // In-memory token cache (refreshed when expired)
 let cachedToken: string | null = null;
@@ -336,6 +402,12 @@ export async function postToTwitter(
   summary?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   if (TWITTER_PAUSED) return { success: false, error: 'Twitter posting paused' };
+
+  const limit = await checkTwitterDailyLimit();
+  if (!limit.ok) {
+    return { success: false, error: `rate limit: ${limit.reason}` };
+  }
+
   const token = await getAccessToken();
 
   if (!token) {
@@ -481,9 +553,19 @@ async function uploadMediaToTwitter(
  */
 export async function postCustomTweet(
   text: string,
-  imageUrl?: string
+  imageUrl?: string,
+  tracking?: { contentType: string; contentId: string },
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   if (TWITTER_PAUSED) return { success: false, error: 'Twitter posting paused' };
+
+  // Daily cap is checked at the call site for kickoff posts (live-sync)
+  // so we can log a clear "skipped" reason. We still re-check here as a
+  // belt-and-braces guard for any caller that forgot.
+  const limit = await checkTwitterDailyLimit();
+  if (!limit.ok) {
+    return { success: false, error: `rate limit: ${limit.reason}` };
+  }
+
   const token = await getAccessToken();
   if (!token) {
     // More specific error — check what's missing
@@ -549,25 +631,34 @@ export async function postCustomTweet(
 
         if (retryRes.ok && retryData.data?.id) {
           console.log(`[Twitter] Custom tweet posted: ${retryData.data.id} (after token refresh)${mediaId ? ' (with image)' : ''}`);
+          if (tracking) {
+            await recordTweet(text, retryData.data.id, 'posted', null, tracking.contentType, tracking.contentId);
+          }
           return { success: true, id: retryData.data.id };
         }
-        return {
-          success: false,
-          error: `${retryRes.status} (after refresh): ${retryData.detail || retryData.title || retryData.errors?.[0]?.message || retryText.slice(0, 200)}`,
-        };
+        const retryErr = `${retryRes.status} (after refresh): ${retryData.detail || retryData.title || retryData.errors?.[0]?.message || retryText.slice(0, 200)}`;
+        if (tracking) await recordTweet(text, null, 'failed', retryErr, tracking.contentType, tracking.contentId);
+        return { success: false, error: retryErr };
       }
     }
 
     if (res.ok && data.data?.id) {
       console.log(`[Twitter] Custom tweet posted: ${data.data.id}${mediaId ? ' (with image)' : ''}`);
+      if (tracking) {
+        await recordTweet(text, data.data.id, 'posted', null, tracking.contentType, tracking.contentId);
+      }
       return { success: true, id: data.data.id };
     }
 
+    const errMsg = `${res.status}: ${data.detail || data.title || data.errors?.[0]?.message || responseText.slice(0, 200)}`;
+    if (tracking) await recordTweet(text, null, 'failed', errMsg, tracking.contentType, tracking.contentId);
     return {
       success: false,
-      error: `${res.status}: ${data.detail || data.title || data.errors?.[0]?.message || responseText.slice(0, 200)}`,
+      error: errMsg,
     };
   } catch (e) {
-    return { success: false, error: (e as Error).message };
+    const msg = (e as Error).message;
+    if (tracking) await recordTweet(text, null, 'failed', msg, tracking.contentType, tracking.contentId);
+    return { success: false, error: msg };
   }
 }
