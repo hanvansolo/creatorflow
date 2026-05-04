@@ -993,9 +993,13 @@ export async function GET(
 
           // Twitter — only the single best kickoff per run gets a tweet,
           // and only if we're under the rolling 24h daily cap (Free tier
-          // = 17/day, we cap at 12). Live games are the priority — keeps
-          // the timeline focused on what's happening right now.
-          if (tweetsSent < MAX_KICKOFF_TW_PER_RUN) {
+          // = 17/day, we cap at 12). Live games are the priority. Score
+          // gate >= 4 means top-flight only (Top 5 European leagues,
+          // major cups, finals, big-club derbies); on quiet days the
+          // tweet quota goes to breaking news / transfer articles via
+          // the social-post cron instead of a Segunda División kickoff.
+          const TW_MIN_SCORE = 4;
+          if (tweetsSent < MAX_KICKOFF_TW_PER_RUN && (kick as any).score >= TW_MIN_SCORE) {
             try {
               const limit = await checkTwitterDailyLimit();
               if (!limit.ok) {
