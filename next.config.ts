@@ -28,15 +28,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        // Ezoic managed ads.txt — proxy instead of redirect so crawlers see content directly
-        source: '/ads.txt',
-        destination: 'https://srv.adstxtmanager.com/19390/footy-feed.com',
-      },
-    ];
-  },
+  // /ads.txt used to be a rewrite to Ezoic's AdsTxtManager, but a pure
+  // proxy can't append our AdSense publisher ID (Google requires the line
+  // for our pub-XXXX or no ads). It's now served by
+  // src/app/ads.txt/route.ts which fetches Ezoic's content and appends
+  // the missing AdSense line — Ezoic stays the source of truth for
+  // reseller entries while still satisfying Google's requirement.
   async headers() {
     return [
       {
