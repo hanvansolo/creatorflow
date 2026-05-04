@@ -411,7 +411,21 @@ export async function postToTwitter(
   const token = await getAccessToken();
 
   if (!token) {
-    return { success: false, error: 'Twitter credentials not configured. Set TWITTER_OAUTH2_TOKEN and TWITTER_REFRESH_TOKEN.' };
+    const hasClientId = !!process.env.TWITTER_CLIENT_ID;
+    const hasClientPass = !!process.env.TWITTER_CLIENT_PASS;
+    const hasRefreshInDb = await (async () => {
+      try {
+        const { db, siteSettings } = await import('@/lib/db');
+        const { eq } = await import('drizzle-orm');
+        const [r] = await db.select({ value: siteSettings.value })
+          .from(siteSettings).where(eq(siteSettings.key, 'twitter_refresh_token')).limit(1);
+        return !!r?.value;
+      } catch { return false; }
+    })();
+    return {
+      success: false,
+      error: `Twitter auth failed — clientId:${hasClientId} clientPass:${hasClientPass} dbRefreshToken:${hasRefreshInDb}. Re-authorize at /api/auth/twitter`,
+    };
   }
 
   try {
