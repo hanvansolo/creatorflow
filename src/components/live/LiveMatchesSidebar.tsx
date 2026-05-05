@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
 import { countryToRegion, REGION_ORDER, type Region } from '@/lib/utils/country-region';
 import { AffiliateBanner } from '@/components/ads/AffiliateBanner';
+import { DisplayAd } from '@/components/ads/AdSlot';
 import { LiveSidebarAccordion } from './LiveSidebarAccordion';
 
 interface LiveRow {
@@ -122,6 +123,11 @@ export async function LiveMatchesSidebar({ excludeMatchId }: { excludeMatchId?: 
           }))}
         />
       )}
+
+      {/* Sidebar display ad — sits below live matches and above the
+          all-live-scores link. Whole sidebar is sticky on lg:+ so the
+          ad stays visible as the user scrolls the match content. */}
+      <DisplayAd className="!my-0" />
 
       {/* Footer link */}
       <Link

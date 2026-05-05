@@ -592,6 +592,12 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
         )}
 
+        {/* Sidebar display ad — moved up from the bottom of the aside.
+            Below LATEST NEWS, above LEAGUE TABLE: high-visibility spot
+            on long-form article pages where users scroll past two or
+            three sidebar widgets before bouncing. */}
+        <SidebarAd className="!my-0" />
+
         {/* League Table */}
         {topStandings.length > 0 && (
           <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
@@ -645,10 +651,6 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Sidebar Ad */}
-        <div className="my-4">
-          <SidebarAd />
-        </div>
       </aside>
       </div>
       </div>
