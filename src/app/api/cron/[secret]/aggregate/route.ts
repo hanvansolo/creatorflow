@@ -21,7 +21,10 @@ const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
 
 const ENABLE_SPINNING = process.env.ANTHROPIC_API_KEY ? true : false;
 const ENABLE_IMAGE_DOWNLOAD = process.env.DOWNLOAD_IMAGES !== 'false';
-const ENABLE_AI_IMAGES = process.env.OPENAI_API_KEY ? true : false;
+// Old gate (`OPENAI_API_KEY ? true : false`) was always-on because the
+// key is always set. Now requires explicit ENABLE_AI_IMAGES=true so we
+// don't quietly burn ~$0.08 per article on broken F1-themed prompts.
+const ENABLE_AI_IMAGES = process.env.ENABLE_AI_IMAGES === 'true';
 
 export async function GET(
   request: NextRequest,

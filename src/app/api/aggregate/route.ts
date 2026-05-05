@@ -17,7 +17,7 @@ const API_KEY = process.env.ADMIN_API_KEY || 'dev-key';
 
 const ENABLE_SPINNING = process.env.ANTHROPIC_API_KEY ? true : false;
 const ENABLE_IMAGE_DOWNLOAD = process.env.DOWNLOAD_IMAGES !== 'false';
-const ENABLE_AI_IMAGES = process.env.OPENAI_API_KEY ? true : false;
+const ENABLE_AI_IMAGES = process.env.ENABLE_AI_IMAGES === 'true';
 
 export async function POST(request: Request) {
   try {
