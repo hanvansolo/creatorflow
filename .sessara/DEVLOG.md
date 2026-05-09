@@ -49,3 +49,28 @@ Now wire it into the aggregate flow as a fallback.
 ### What changed
 
 - **`src/lib/api/article-spinner.ts`** — Added `rewriteHeadline(originalTi…
+
+---
+
+## 2026-05-09 19:21 · solo · Claude Code
+
+**Prompt:**
+
+Ok, do the backfill
+
+**Outcome:**
+
+I'll create the backfill endpoint at `src/app/api/cron/[secret]/rewrite-titles/route.ts`.
+
+## Done
+
+### What changed
+
+- **New endpoint** `src/app/api/cron/[secret]/rewrite-titles/route.ts` — runs `rewriteHeadline` over existing articles in batches.
+
+### How it works
+
+- **Targets:** articles where `title = originalTitle` (explicit verbatim) OR `originalTitle IS NULL` (legacy rows from before the column was tracked). Most recent first — highest visibility = highest DMCA risk.
+- **Params:** `?limit=N` (default 50), `?offset=N` (default 0), `?dry=1` (preview only, no DB writes).
+- **Audit trail:** preserves `originalTitle` — only sets it from the current title when it was null. Existing values are kept untouched.
+- **Throttle:** 200ms between OpenAI calls (~5 RPS, comfortable for gpt-4o-mini).…
