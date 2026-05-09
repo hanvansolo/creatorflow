@@ -1,7 +1,7 @@
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.footy-feed.com';
 
 // KILL SWITCH: Set to true to disable all Twitter posting
-const TWITTER_PAUSED = true;
+const TWITTER_PAUSED = false;
 
 // In-memory token cache (refreshed when expired)
 let cachedToken: string | null = null;

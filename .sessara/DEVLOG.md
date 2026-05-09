@@ -74,3 +74,22 @@ I'll create the backfill endpoint at `src/app/api/cron/[secret]/rewrite-titles/r
 - **Params:** `?limit=N` (default 50), `?offset=N` (default 0), `?dry=1` (preview only, no DB writes).
 - **Audit trail:** preserves `originalTitle` — only sets it from the current title when it was null. Existing values are kept untouched.
 - **Throttle:** 200ms between OpenAI calls (~5 RPS, comfortable for gpt-4o-mini).…
+
+---
+
+## 2026-05-09 22:52 · solo · Claude Code
+
+**Prompt:**
+
+Ok, enable twitter/x again please
+
+**Outcome:**
+
+## Done
+
+Flipped `TWITTER_PAUSED` from `true` → `false` at `src/lib/social/twitter.ts:4`. Both `postToTwitter` (news articles) and `postCustomTweet` (live match alerts) will resume posting on the next cron tick.
+
+### Worth knowing
+- **Backfill first.** Run `/api/cron/<CRON_KEY>/rewrite-titles?dry=1&limit=20` to spot-check, then chunk through the real backfill *before* the next news-tweet cron fires. Otherwise you'll tweet articles that still have verbatim source titles — which is exactly the DMCA pattern.
+- **Live-sync cron** (`src/app/api/cron/[secret]/live-sync/route.ts`) will start tweeting kickoffs/goals/FT immediately for any in-progress matches.
+- **News-tweet flow** posts whatever `tweet-latest` / `social-post` cron picks up next — so the new `rewriteHeadline` fallback in aggregate …
