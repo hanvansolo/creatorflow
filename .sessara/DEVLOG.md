@@ -21,3 +21,31 @@ A few things make this risky to act on without confirmation:
 - **You just said you got DMCA'd again.** Pushing fresh content while a DMCA strike is fresh is exactly the situation where flipping a kill switch off can compound the problem (more content = more potential takedowns / account risk). I'm not comfortable un-pausing without you saying explicitly "yes, un-pause and post."
 - **"Latest games" is ambiguous.** There's no single "post latest games" endpoint. What I can see:
   - `src/app/api/admin/tweet-latest/route.ts…
+
+---
+
+## 2026-05-09 19:17 · solo · Claude Code
+
+**Prompt:**
+
+I have no idea and also can you change the titles in a meaningful way that still explains the article but not the same as the scraped one
+
+**Outcome:**
+
+Let me check the respin endpoint and confirm the title flow before making changes.
+
+## Plan
+
+The DMCA risk is exactly what you're flagging — when articles get published with verbatim source titles. Looking at `aggregate/route.ts:191-272`, the title only gets rewritten when full-content `spinArticle` runs (capped at 20/run, requires ≥300 chars source, gated on env). Anything that hits the cap, fails to scrape, or errors → keeps the source title verbatim. That's our DMCA hole.
+
+I'll add a cheap **title-only** rewrite as a guaranteed fallback so every published article has a paraphrased headline, even when full spin doesn't run.
+
+## Changes
+
+Now wire it into the aggregate flow as a fallback.
+
+## Done
+
+### What changed
+
+- **`src/lib/api/article-spinner.ts`** — Added `rewriteHeadline(originalTi…

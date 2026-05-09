@@ -4,7 +4,7 @@ import { db, newsSources, newsArticles, aggregationJobs } from '@/lib/db';
 import { eq, and, gte } from 'drizzle-orm';
 import { parseMultipleFeeds, type RSSFeedConfig } from '@/lib/aggregation';
 import { RSS_FEEDS } from '@/lib/constants/sources';
-import { spinArticle } from '@/lib/api/article-spinner';
+import { spinArticle, rewriteHeadline } from '@/lib/api/article-spinner';
 import { rateCredibility, rateCredibilityHeuristic } from '@/lib/api/credibility-rater';
 import { generateNewsSlug } from '@/lib/utils';
 import { downloadImage } from '@/lib/utils/image-downloader';
@@ -126,9 +126,17 @@ export async function GET(
     let skippedCount = 0;
     let dedupedCount = 0;
     let spunCount = 0;
+    let titleRewrites = 0;
     let imagesDownloaded = 0;
     let imagesGenerated = 0;
     const newArticleUrls: string[] = [];
+
+    // Title-only paraphrase fallback: ensures every published article has a
+    // headline that's not verbatim from the source, even if full-content spin
+    // didn't run (over cap, thin source, spin error). DMCA / duplicate-content
+    // defense — much cheaper than full spin so cap higher.
+    const MAX_TITLE_REWRITES_PER_RUN = 50;
+    const ENABLE_TITLE_REWRITE = !!process.env.OPENAI_API_KEY;
 
     for (const [sourceSlug, articles] of articlesBySource) {
       const sourceId = sourceMap.get(sourceSlug);
@@ -271,6 +279,28 @@ export async function GET(
           }
         }
 
+        // Title-only fallback: if full spin didn't change the headline (skipped,
+        // over cap, or failed), still paraphrase the title so we don't republish
+        // a verbatim source headline. Cheap, ~1c per 100 calls on gpt-4o-mini.
+        if (
+          ENABLE_TITLE_REWRITE
+          && finalTitle === article.title
+          && titleRewrites < MAX_TITLE_REWRITES_PER_RUN
+        ) {
+          try {
+            const newTitle = await rewriteHeadline(
+              article.title,
+              finalSummary || finalContent || ''
+            );
+            if (newTitle && newTitle !== article.title) {
+              finalTitle = newTitle;
+              titleRewrites++;
+            }
+          } catch (e) {
+            console.warn('[Aggregate] Title rewrite failed:', (e as Error).message);
+          }
+        }
+
         // Rate credibility
         let credibilityRating: string;
         if (ENABLE_SPINNING) {
@@ -409,6 +439,7 @@ export async function GET(
           metadata: {
             skipped: skippedCount,
             spun: spunCount,
+            titleRewrites,
             imagesDownloaded,
             imagesGenerated,
             duration_ms: duration,
@@ -444,6 +475,7 @@ export async function GET(
       skipped: skippedCount,
       deduped: dedupedCount,
       spun: spunCount,
+      titleRewrites,
       imagesDownloaded,
       imagesGenerated,
       fixImages: fixImagesResult.result,

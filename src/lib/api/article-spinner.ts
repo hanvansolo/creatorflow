@@ -272,6 +272,64 @@ Your trimmed, rewritten article here
   return result;
 }
 
+/**
+ * Cheap title-only paraphrase. Used as a fallback when full-content spin is
+ * skipped or fails — guarantees the published headline is not verbatim from
+ * the source (DMCA / duplicate-content defense). One small gpt-4o-mini call.
+ *
+ * Returns the rewritten headline, or the original if both attempts fail to
+ * produce a meaningfully different result. Caller should treat the original
+ * being returned as "no rewrite happened".
+ */
+export async function rewriteHeadline(
+  originalTitle: string,
+  context?: string
+): Promise<string> {
+  const grounding = context
+    ? `\n\nArticle context (for factual accuracy only — do NOT lift phrases from this):\n${context.slice(0, 800)}`
+    : '';
+
+  const prompt = `Rewrite this football news headline so it conveys the same news with different wording. Keep ALL facts, names, scores, and numbers identical to the original. Do not invent any new facts. Output ONLY the new headline — no surrounding quotes, no explanation, no prefix label.
+
+Rules:
+- Use a different angle, word order, or framing than the original
+- Under 90 characters
+- No clickbait ("you won't believe", "shock", "stunning"), no emojis
+- Keep the same tense
+- Names of clubs, players, managers must match the original exactly
+- The result MUST differ substantially from the original — not just a synonym swap
+
+Original headline: ${originalTitle}${grounding}`;
+
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+  const originalNorm = norm(originalTitle);
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await getOpenAI().chat.completions.create({
+        model: SPINNER_MODEL,
+        max_tokens: 80,
+        temperature: 0.8 + attempt * 0.15,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const raw = response.choices[0]?.message?.content?.trim() || '';
+      const cleaned = raw
+        .replace(/^["'`""]|["'`""]$/g, '')
+        .replace(/^Headline:\s*/i, '')
+        .trim();
+      if (!cleaned) continue;
+      if (norm(cleaned) === originalNorm) continue;
+      return cleaned.slice(0, 120);
+    } catch (e) {
+      if (attempt === 1) {
+        console.warn('[rewriteHeadline] OpenAI failed:', (e as Error).message);
+      }
+    }
+  }
+  return originalTitle;
+}
+
 export async function spinArticleBatch(
   articles: Array<{
     title: string;
