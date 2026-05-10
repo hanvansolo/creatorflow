@@ -20,6 +20,13 @@ function detectCountry(request: NextRequest): string | null {
   );
 }
 
+const BOT_UA_PATTERN = /bot|crawl|spider|scrape|curl|wget|python|java(?!script)|http-?client|axios|node-?fetch|headless|phantom|selenium|puppeteer|playwright|go-http|libwww|okhttp|fetch\/|got\/|httpx|requests\//i;
+
+function isLikelyBot(ua: string | null): boolean {
+  if (!ua || ua.trim() === '') return true;
+  return BOT_UA_PATTERN.test(ua);
+}
+
 function pickLocaleFromAcceptLanguage(header: string | null): Locale | null {
   if (!header) return null;
   const langs = header.split(',').map(s => s.split(';')[0].trim().toLowerCase().slice(0, 2));
@@ -46,6 +53,16 @@ export async function middleware(request: NextRequest) {
       status: 200,
       headers: { 'Content-Type': 'text/plain' },
     });
+  }
+
+  // Block SG bot traffic. Mostly DigitalOcean / AWS ap-southeast-1 scrapers
+  // hammering the news + match endpoints — burns Railway resources, no real
+  // users impacted (browser UAs from SG still pass). Set BLOCK_SG_BOTS=0 to disable.
+  if (process.env.BLOCK_SG_BOTS !== '0') {
+    const country = request.headers.get('cf-ipcountry');
+    if (country === 'SG' && isLikelyBot(request.headers.get('user-agent'))) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
   }
 
   // Skip i18n for API, Next internals, and static assets — matcher already

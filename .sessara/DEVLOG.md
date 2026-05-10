@@ -115,3 +115,25 @@ A few things I need to flag — blocking by country in this stack isn't free, an
 ### Three ways forward (pick one)
 
 1. **Put Cloudflare in front of Railway** (best long-term). Free, gives `cf-ipcountry` automatically, and Cloudflare can block SG bots at *their* edge before requests even hit your server. Zero code change …
+
+---
+
+## 2026-05-10 03:32 · solo · Claude Code
+
+**Prompt:**
+
+Behind Cloudflare but I get a shitload of traffic from there that GA picks up but it's using server resources. I'm just do not think it's genuine traffic
+
+**Outcome:**
+
+I'll add a SG + bot-UA block in middleware. Best place is right after the IndexNow key handler so it short-circuits before any locale work runs.
+
+## Done
+
+### What changed
+- **`src/middleware.ts`** — Added `BOT_UA_PATTERN` + `isLikelyBot()` helper, and a SG-bot block right after the IndexNow key handler. Returns 403 when `cf-ipcountry === "SG"` AND user-agent is empty or matches a bot pattern.
+
+### Behaviour
+- Blocks: empty UA + common scraper signatures (`bot|crawl|spider|scrape|curl|wget|python|java|http-client|axios|node-fetch|headless|phantom|selenium|puppeteer|playwright|go-http|libwww|okhttp|fetch/|got/|httpx|requests/`).
+- Pass-through: real browser UAs from SG (Chrome/Safari/Firefox/Edge) — legit users in Singapore aren't impacted.
+- Toggle off without redeploying: set `BLOCK_SG_BO…
