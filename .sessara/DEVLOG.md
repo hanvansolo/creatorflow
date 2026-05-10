@@ -137,3 +137,45 @@ I'll add a SG + bot-UA block in middleware. Best place is right after the IndexN
 - Blocks: empty UA + common scraper signatures (`bot|crawl|spider|scrape|curl|wget|python|java|http-client|axios|node-fetch|headless|phantom|selenium|puppeteer|playwright|go-http|libwww|okhttp|fetch/|got/|httpx|requests/`).
 - Pass-through: real browser UAs from SG (Chrome/Safari/Firefox/Edge) — legit users in Singapore aren't impacted.
 - Toggle off without redeploying: set `BLOCK_SG_BO…
+
+---
+
+## 2026-05-10 03:46 · solo · Claude Code
+
+**Prompt:**
+
+Just write a minimalist waf too analyse what's going on because Clodflare is not blocking it and GA is picking it up as traffic but brings the engagement to 0.1 sends
+
+
+## Smart context — active editor file (matched: diagnostic question)
+
+`sessara://ai/0d955d2e-ffd6-4273-8a11-7b9439465e29:claude-code:alt0/snippet-8.txt`
+
+```
+(ip.geoip.country eq "SG" and (cf.client.bot or http.user_agent eq "" or
+…
+
+**Outcome:**
+
+I'll add a minimalist traffic-sampling WAF. Plan:
+
+1. New `request_samples` table + migration.
+2. Edge-safe middleware sampler that fire-and-forgets to a Node API.
+3. Internal `/api/_waf/sample` route to insert samples.
+4. Admin `/api/admin/waf` route returning aggregations (top countries, UAs, paths, IP hashes, blocked counts).
+
+Now the internal sample endpoint (Node runtime):
+
+Now the analyze endpoint:
+
+Now wire middleware to sample. Edge runtime needs Web Crypto for IP hashing.
+
+Verify the diff is sane:
+
+## Done
+
+### What I added
+
+- **`src/lib/db/schema.ts:1232`** — new `requestSamples` table (country, ipHash, ua, path, method, referer, acceptLanguage, cfRay, blocked, reason, createdAt).
+- **`drizzle/0009_request_samples.sql`** — matching migration.
+- **`src/app/api/_waf/sample/route.ts…

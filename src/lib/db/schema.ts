@@ -1227,3 +1227,25 @@ export const socialPosts = pgTable('social_posts', {
   index('idx_social_posts_content').on(table.contentType, table.contentId),
   index('idx_social_posts_platform').on(table.platform, table.postedAt),
 ]);
+
+// ===== REQUEST SAMPLES (WAF / traffic analysis) =====
+// Sampled inbound requests for offline analysis of bot patterns.
+// Populated by middleware fire-and-forget to /api/_waf/sample.
+export const requestSamples = pgTable('request_samples', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  country: varchar('country', { length: 4 }),
+  ipHash: varchar('ip_hash', { length: 16 }),
+  ua: text('ua'),
+  path: varchar('path', { length: 500 }),
+  method: varchar('method', { length: 8 }),
+  referer: text('referer'),
+  acceptLanguage: varchar('accept_language', { length: 200 }),
+  cfRay: varchar('cf_ray', { length: 50 }),
+  blocked: boolean('blocked').default(false),
+  reason: varchar('reason', { length: 50 }),
+}, (table) => [
+  index('idx_request_samples_created').on(table.createdAt),
+  index('idx_request_samples_country').on(table.country, table.createdAt),
+  index('idx_request_samples_ip').on(table.ipHash, table.createdAt),
+]);

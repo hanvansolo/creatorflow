@@ -27,6 +27,60 @@ function isLikelyBot(ua: string | null): boolean {
   return BOT_UA_PATTERN.test(ua);
 }
 
+// 8-char FNV-1a hash of IP + WAF_TOKEN — privacy-preserving correlation key
+// for the request_samples table. Edge-safe, no Web Crypto needed.
+function hashIp(ip: string | null): string | null {
+  if (!ip) return null;
+  const salt = process.env.WAF_TOKEN || process.env.CRON_KEY || 'ff-waf';
+  let h = 0x811c9dc5;
+  const s = ip + ':' + salt;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+// Fire-and-forget sample to /api/_waf/sample. Sampled at WAF_SAMPLE_RATE
+// (default 0.1). Disabled entirely when WAF_SAMPLING != "1".
+function maybeSample(
+  request: NextRequest,
+  origin: string,
+  blocked: boolean,
+  reason: string | null,
+) {
+  if (process.env.WAF_SAMPLING !== '1') return;
+  const rate = parseFloat(process.env.WAF_SAMPLE_RATE || '0.1');
+  // Always log blocked requests; sample the rest.
+  if (!blocked && Math.random() >= rate) return;
+  const token = process.env.WAF_TOKEN || process.env.CRON_KEY;
+  if (!token) return;
+
+  const body = JSON.stringify({
+    country: request.headers.get('cf-ipcountry'),
+    ipHash: hashIp(request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for')),
+    ua: request.headers.get('user-agent'),
+    path: request.nextUrl.pathname,
+    method: request.method,
+    referer: request.headers.get('referer'),
+    acceptLanguage: request.headers.get('accept-language'),
+    cfRay: request.headers.get('cf-ray'),
+    blocked,
+    reason,
+  });
+
+  // keepalive lets the request survive the middleware response.
+  void fetch(`${origin}/api/_waf/sample`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-WAF-Token': token,
+    },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+
 function pickLocaleFromAcceptLanguage(header: string | null): Locale | null {
   if (!header) return null;
   const langs = header.split(',').map(s => s.split(';')[0].trim().toLowerCase().slice(0, 2));
@@ -55,15 +109,20 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  const origin = request.nextUrl.origin;
+
   // Block SG bot traffic. Mostly DigitalOcean / AWS ap-southeast-1 scrapers
   // hammering the news + match endpoints — burns Railway resources, no real
   // users impacted (browser UAs from SG still pass). Set BLOCK_SG_BOTS=0 to disable.
   if (process.env.BLOCK_SG_BOTS !== '0') {
     const country = request.headers.get('cf-ipcountry');
     if (country === 'SG' && isLikelyBot(request.headers.get('user-agent'))) {
+      maybeSample(request, origin, true, 'sg_bot_ua');
       return new NextResponse('Forbidden', { status: 403 });
     }
   }
+
+  maybeSample(request, origin, false, null);
 
   // Skip i18n for API, Next internals, and static assets — matcher already
   // filters most but double-guard here for safety.
