@@ -93,3 +93,25 @@ Flipped `TWITTER_PAUSED` from `true` → `false` at `src/lib/social/twitter.ts:4
 - **Backfill first.** Run `/api/cron/<CRON_KEY>/rewrite-titles?dry=1&limit=20` to spot-check, then chunk through the real backfill *before* the next news-tweet cron fires. Otherwise you'll tweet articles that still have verbatim source titles — which is exactly the DMCA pattern.
 - **Live-sync cron** (`src/app/api/cron/[secret]/live-sync/route.ts`) will start tweeting kickoffs/goals/FT immediately for any in-progress matches.
 - **News-tweet flow** posts whatever `tweet-latest` / `social-post` cron picks up next — so the new `rewriteHeadline` fallback in aggregate …
+
+---
+
+## 2026-05-10 03:27 · solo · Claude Code
+
+**Prompt:**
+
+Can we block bot traffic from Singapore please
+
+**Outcome:**
+
+## Heads up before I block anything
+
+A few things I need to flag — blocking by country in this stack isn't free, and "bot traffic" is fuzzy enough that a wrong call could nuke legit users.
+
+### What's already there
+- `src/middleware.ts:14` already has `detectCountry()` reading `cf-ipcountry` / `x-vercel-ip-country` / `x-country` headers.
+- **Problem:** Railway does *not* set any of those headers. Direct Railway traffic = no country info = nothing to gate on. So this only works if there's a CDN/proxy in front of the app providing geo headers. Is there?
+
+### Three ways forward (pick one)
+
+1. **Put Cloudflare in front of Railway** (best long-term). Free, gives `cf-ipcountry` automatically, and Cloudflare can block SG bots at *their* edge before requests even hit your server. Zero code change …
