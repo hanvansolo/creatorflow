@@ -218,3 +218,31 @@ Checking how user posts query handles Facebook rate limiting.
 
 [ASSISTANT]
 Now let me check the user-posts query to understand if there's a posts-per-day check a…
+
+---
+
+## 2026-05-17 15:29 · solo · Claude Code
+
+**Prompt:**
+
+[SWARM MODE ACTIVE]
+Decompose the request below into N independent pieces. Your VERY
+NEXT assistant turn must emit N parallel `sessara_spawn_agent`
+calls (one per piece, all in the SAME turn) followed by ONE
+`sessara_check_workers` call with `wait_secs: 90`. Do not write a
+plan first. Do not ask for permission. Spawn now, narrate after.
+If the request truly has only 1 piece, do it yourself — singl…
+
+**Outcome:**
+
+## Current state
+
+No TikTok code exists in this repo. Searched `tiktok|TikTok|TIKTOK` — zero matches. Existing publishers: `facebook.ts`, `twitter.ts`, `threads.ts`, `bluesky.ts`, `telegram.ts` (+ Instagram inside `facebook.ts`).
+
+## Why TikTok is the hard one
+
+TikTok isn't a drop-in copy of the Facebook publisher pattern. Three blockers stand between Footy Feed and auto-posting:
+
+1. **Video-only.** No text/link/image posts. Every post needs an MP4/MOV. Footy Feed produces text+image news, so step zero is "generate a video" (Remotion / FFmpeg burn-in / Shotstack / Creatomate / similar). That's bigger than the posting layer.
+2. **Content Posting API gating.** TikTok's [Content Posting API](https://developers.tiktok.com/doc/content-posting-api-get-started) has two modes:
+   - **Direct Post**…
