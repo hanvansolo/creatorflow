@@ -179,3 +179,42 @@ Verify the diff is sane:
 - **`src/lib/db/schema.ts:1232`** — new `requestSamples` table (country, ipHash, ua, path, method, referer, acceptLanguage, cfRay, blocked, reason, createdAt).
 - **`drizzle/0009_request_samples.sql`** — matching migration.
 - **`src/app/api/_waf/sample/route.ts…
+
+---
+
+## 2026-05-17 14:43 · solo · Claude Code
+
+**Prompt:**
+
+Can you please limit the facebook posting
+
+**Outcome:**
+
+I'll look into the Facebook posting code to understand what needs limiting.
+
+[ASSISTANT]
+I'll look into the Facebook posting code to understand what needs limiting.
+
+[ASSISTANT]
+I'll search for Facebook posting code.
+
+[ASSISTANT]
+Looking at the Facebook publisher and rate limiter.
+
+[ASSISTANT]
+Checking the Facebook publisher and Reddit's rate limit pattern.
+
+[ASSISTANT]
+Now let me look at how other publishers (Reddit, X) use rate limiting.
+
+[ASSISTANT]
+Checking how Reddit applies the limit and Facebook's user posts query.
+
+[ASSISTANT]
+Now let me see how Reddit applies the limit and check the Facebook user posts query.
+
+[ASSISTANT]
+Checking how user posts query handles Facebook rate limiting.
+
+[ASSISTANT]
+Now let me check the user-posts query to understand if there's a posts-per-day check a…
