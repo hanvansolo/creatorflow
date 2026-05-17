@@ -246,3 +246,31 @@ TikTok isn't a drop-in copy of the Facebook publisher pattern. Three blockers st
 1. **Video-only.** No text/link/image posts. Every post needs an MP4/MOV. Footy Feed produces text+image news, so step zero is "generate a video" (Remotion / FFmpeg burn-in / Shotstack / Creatomate / similar). That's bigger than the posting layer.
 2. **Content Posting API gating.** TikTok's [Content Posting API](https://developers.tiktok.com/doc/content-posting-api-get-started) has two modes:
    - **Direct Post**…
+
+---
+
+## 2026-05-17 16:21 · solo · Claude Code
+
+**Prompt:**
+
+[SWARM MODE ACTIVE]
+Decompose the request below into N independent pieces. Your VERY
+NEXT assistant turn must emit N parallel `sessara_spawn_agent`
+calls (one per piece, all in the SAME turn) followed by ONE
+`sessara_check_workers` call with `wait_secs: 90`. Do not write a
+plan first. Do not ask for permission. Spawn now, narrate after.
+If the request truly has only 1 piece, do it yourself — singl…
+
+**Outcome:**
+
+## YouTube Shorts vs TikTok
+
+Much friendlier API than TikTok. Three things to know before committing:
+
+1. **No "Direct Post" audit gate.** YouTube Data API v3 `videos.insert` uploads publish immediately. No content-posting approval queue — works the day you set up OAuth.
+2. **Shorts are just vertical short videos.** No separate Shorts API. Upload a ≤60s MP4 at 9:16 and YouTube classifies it as a Short. Same `videos.insert` endpoint as long-form.
+3. **Quota is the real ceiling.** Free tier = 10,000 units/day per Google Cloud project, and each upload costs **1,600 units → ~6 uploads/day total** (project-wide, not per user). Need to file a quota-increase request to go beyond that; takes 1-3 weeks and Google asks for use-case justification.
+
+## Same blocker as TikTok
+
+Still need a video pipeli…
