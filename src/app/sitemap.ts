@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { db, newsArticles, clubs, competitions, whatIfScenarios, matches } from '@/lib/db';
 import { desc, isNotNull, and, gte, inArray, sql } from 'drizzle-orm';
 import { SITE_CONFIG } from '@/lib/seo';
+import { isWorldCupActive } from '@/lib/worldcup';
 import { LOCALES, DEFAULT_LOCALE, LOCALE_BCP47, type Locale } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +26,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_CONFIG.url;
   const now = new Date();
 
+  const wcActive = isWorldCupActive();
+
   const STATIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['changeFrequency']; priority: number }> = [
     { path: '',            changeFrequency: 'hourly',  priority: 1.0  },
+    // World Cup hub — boosted to near-top priority while the tournament is on.
+    { path: '/world-cup',  changeFrequency: wcActive ? 'hourly' : 'monthly', priority: wcActive ? 0.95 : 0.4 },
     { path: '/news',       changeFrequency: 'hourly',  priority: 0.9  },
     { path: '/live',       changeFrequency: 'always',  priority: 0.95 },
     { path: '/fixtures',   changeFrequency: 'hourly',  priority: 0.9  },

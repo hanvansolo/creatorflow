@@ -4,8 +4,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isWorldCupActive, WORLD_CUP_LINKS } from '@/lib/worldcup';
 
 // ===== DATA =====
 
@@ -258,6 +259,7 @@ const MENU_ITEMS: Array<{ label: string; href?: string; panel?: string }> = [
 
 export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean; onItemClick?: () => void }) {
   const pathname = usePathname();
+  const wcActive = isWorldCupActive();
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -290,17 +292,27 @@ export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean
     return (
       <nav className="flex flex-col gap-1">
         {[
+          ...(wcActive ? [{ href: WORLD_CUP_LINKS.hub, label: 'World Cup 2026', wc: true }] : []),
           { href: '/', label: 'Home' }, { href: '/live', label: 'Live Scores' },
           { href: '/news', label: 'News' }, { href: '/fixtures', label: 'Fixtures' },
           { href: '/tables', label: 'Tables' }, { href: '/transfers', label: 'Transfers' },
           { href: '/match-reports', label: 'Reports' }, { href: '/predictions', label: 'Predictions' },
           { href: '/videos', label: 'Videos' }, { href: '/rules', label: 'Rules' },
-        ].map(item => (
-          <Link key={item.href} href={item.href} onClick={onItemClick}
-            className={cn('px-3 py-2 text-sm font-medium rounded-md', pathname === item.href ? 'text-emerald-400 bg-zinc-800' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/50')}>
-            {item.label}
-          </Link>
-        ))}
+        ].map(item => {
+          const active = pathname === item.href || ('wc' in item && pathname.startsWith('/world-cup'));
+          return (
+            <Link key={item.href} href={item.href} onClick={onItemClick}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md',
+                'wc' in item
+                  ? 'font-bold text-amber-300 hover:bg-amber-400/10'
+                  : active ? 'text-emerald-400 bg-zinc-800' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/50',
+              )}>
+              {'wc' in item && <Trophy className="h-3.5 w-3.5" />}
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     );
   }
@@ -316,6 +328,21 @@ export function MegaMenu({ vertical = false, onItemClick }: { vertical?: boolean
   return (
     <div ref={menuRef} className="relative flex items-center">
       <nav className="flex items-center">
+        {wcActive && (
+          <Link
+            href={WORLD_CUP_LINKS.hub}
+            onMouseEnter={() => setOpenPanel(null)}
+            className={cn(
+              'mr-1.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ring-1 transition-colors',
+              pathname.startsWith('/world-cup')
+                ? 'bg-amber-400 text-zinc-950 ring-amber-400'
+                : 'bg-amber-400/10 text-amber-300 ring-amber-300/30 hover:bg-amber-400/20',
+            )}
+          >
+            <Trophy className="h-3.5 w-3.5" />
+            World Cup
+          </Link>
+        )}
         {MENU_ITEMS.map(item => {
           const isOpen = openPanel === item.panel;
           const isActive = item.href ? pathname === item.href

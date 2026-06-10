@@ -13,6 +13,8 @@ import Image from 'next/image';
 import { desc, eq, gte, asc, isNotNull, and, sql } from 'drizzle-orm';
 import type { NewsArticle, CredibilityRating } from '@/types';
 import { SITE_CONFIG, DEFAULT_KEYWORDS, generateFAQStructuredData, HOMEPAGE_FAQ, jsonLd, JsonLdScript } from '@/lib/seo';
+import { isWorldCupActive, worldCupSportsEvent, WORLD_CUP_SEO } from '@/lib/worldcup';
+import { WorldCupHero } from '@/components/worldcup/WorldCupHero';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
 import { LiveTicker } from '@/components/live/LiveTicker';
 import { AdSlot } from '@/components/ads/AdSlot';
@@ -25,10 +27,23 @@ import { DEFAULT_LOCALE } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Footy Feed - Football News Without the Waffle',
-  description: 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories from 12+ sources, live scores, match predictions, and player stats.',
-  keywords: [
+// Metadata is computed per-request so the homepage leads with the World Cup
+// while the tournament is on, then reverts to the default football-news framing
+// automatically once it's over (see isWorldCupActive / WORLD_CUP window).
+export async function generateMetadata(): Promise<Metadata> {
+  const wc = isWorldCupActive();
+
+  const title = wc
+    ? WORLD_CUP_SEO.title
+    : 'Footy Feed - Football News Without the Waffle';
+  const description = wc
+    ? WORLD_CUP_SEO.description
+    : 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories from 12+ sources, live scores, match predictions, and player stats.';
+
+  // During the World Cup, lead the keyword list with World Cup terms so the
+  // most-searched queries of the moment sit first.
+  const keywords = [
+    ...(wc ? WORLD_CUP_SEO.keywords : []),
     ...DEFAULT_KEYWORDS,
     'live scores',
     'match predictions',
@@ -39,34 +54,40 @@ export const metadata: Metadata = {
     'tactical analysis',
     'match previews',
     'transfer news',
-  ],
-  openGraph: {
-    title: 'Footy Feed - Football News Without the Waffle',
-    description: 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories from 12+ sources, live scores, match predictions, and player stats.',
-    type: 'website',
-    siteName: SITE_CONFIG.name,
-    locale: SITE_CONFIG.locale,
-    images: [
-      {
-        // TODO: Create /public/images/og-home.png (1200x630px) — branded homepage OG image for social sharing
-      url: '/images/og-home.png',
-        width: 1200,
-        height: 630,
-        alt: 'Footy Feed - Football News and Analysis',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Footy Feed - Football News Without the Waffle',
-    description: 'Football news that gets straight to the point. No clickbait, no filler. Breaking stories, live scores, and match predictions.',
-    images: ['/images/og-home.png'],
-    site: SITE_CONFIG.twitterHandle,
-  },
-  alternates: {
-    canonical: SITE_CONFIG.url,
-  },
-};
+  ];
+
+  return {
+    title,
+    description,
+    keywords,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      siteName: SITE_CONFIG.name,
+      locale: SITE_CONFIG.locale,
+      images: [
+        {
+          // TODO: Create /public/images/og-home.png (1200x630px) — branded homepage OG image for social sharing
+          url: '/images/og-home.png',
+          width: 1200,
+          height: 630,
+          alt: wc ? '2026 FIFA World Cup on Footy Feed' : 'Footy Feed - Football News and Analysis',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/images/og-home.png'],
+      site: SITE_CONFIG.twitterHandle,
+    },
+    alternates: {
+      canonical: SITE_CONFIG.url,
+    },
+  };
+}
 
 async function getLatestNews(): Promise<NewsArticle[]> {
   const [articles, articleImagesPool] = await Promise.all([
@@ -298,14 +319,18 @@ export default async function HomePage() {
   const latestArticles = news.filter(a => !featuredIds.has(a.id));
 
   const faqStructuredData = jsonLd(generateFAQStructuredData(HOMEPAGE_FAQ));
+  const wcActive = isWorldCupActive();
 
   return (
     <>
       <JsonLdScript data={faqStructuredData} />
+      {wcActive && <JsonLdScript data={jsonLd(worldCupSportsEvent())} />}
 
       <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900">
       {/* Live scores ticker */}
       <LiveTicker />
+      {/* World Cup takeover — front and centre while the tournament is on */}
+      <WorldCupHero />
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="sr-only">Football News, Live Scores & Match Updates</h1>
 
