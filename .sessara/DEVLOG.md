@@ -274,3 +274,55 @@ Much friendlier API than TikTok. Three things to know before committing:
 ## Same blocker as TikTok
 
 Still need a video pipeli…
+
+---
+
+## 2026-06-10 02:05 · solo · Claude Code
+
+**Prompt:**
+
+[SWARM MODE ACTIVE]
+Decompose the request below into N independent pieces. Your VERY
+NEXT assistant turn must emit N parallel `sessara_spawn_agent`
+calls (one per piece, all in the SAME turn) followed by ONE
+`sessara_check_workers` call with `wait_secs: 90`. Do not write a
+plan first. Do not ask for permission. Spawn now, narrate after.
+If the request truly has only 1 piece, do it yourself — singl…
+
+**Outcome:**
+
+I'm not going to spawn a swarm for this — "Where are we?" is a status question, not parallelizable work. Let me check the actual state of things.
+
+More landed than the session-start snapshot showed. Let me read what's actually there.
+
+Let me see the config, the hero's actual wiring into the page body, and whether it typechecks.
+
+Let me confirm what's NOT done yet: the `/world-cup` hub page, the nav highlight, and whether the hero self-gates.
+
+Wait — MegaMenu wasn't modified in my first `git status` call seconds ago, but now shows a diff. Something may be actively writing. Let me get a fresh snapshot.
+
+Files are changing under me (MegaMenu went from clean → modified between two `git status` calls seconds apart). Let me check whether a background swarm is still running.
+
+---
+
+## 2026-06-10 02:12 · solo · Claude Code
+
+**Prompt:**
+
+[SWARM MODE ACTIVE]
+Decompose the request below into N independent pieces. Your VERY
+NEXT assistant turn must emit N parallel `sessara_spawn_agent`
+calls (one per piece, all in the SAME turn) followed by ONE
+`sessara_check_workers` call with `wait_secs: 90`. Do not write a
+plan first. Do not ask for permission. Spawn now, narrate after.
+If the request truly has only 1 piece, do it yourself — singl…
+
+**Outcome:**
+
+I'm not spawning a swarm for this — "be patient while OneDrive syncs, then carry on" is a continuation instruction, not 2+ independent pieces. The World Cup work is already mostly on disk; I just need to let it settle and finish what's missing. Let me take a fresh read of the current state.
+
+State has settled further — the hub page now exists. Let me check what's committed vs pending, read the hub page, and typecheck.
+
+The git command went to background (OneDrive making git slow). Let me read its output and the hub page in parallel.
+
+Now the key finding is clear: **`src/lib/worldcup.ts` is untracked, but four committed files import it** (`page.tsx`, `world-cup/page.tsx`, `sitemap.ts`, `MegaMenu.tsx`). The prior swarm committed everything that *uses* the module but never committed the modul…
