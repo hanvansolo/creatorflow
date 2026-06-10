@@ -96,7 +96,7 @@ export default async function WorldCupPage() {
           <div className="relative mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/15 ring-1 ring-amber-300/30">
-                <Trophy className="h-4.5 w-4.5 text-amber-300" />
+                <Trophy className="h-5 w-5 text-amber-300" />
               </span>
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300/90">
                 {statusLine(phase, isLiveNow)}
