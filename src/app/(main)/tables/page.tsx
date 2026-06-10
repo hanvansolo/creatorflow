@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Trophy, ArrowRight, LayoutGrid } from 'lucide-react';
 import { CompetitionSelector } from '@/components/competitions';
+import CompetitionSidebar from '@/components/competitions/CompetitionSidebar';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { HorizontalAd } from '@/components/ads/ProfitableAds';
 import { getLocale } from '@/lib/i18n/locale';
@@ -122,7 +123,7 @@ export default async function TablesPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-h-screen bg-zinc-900">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -136,12 +137,25 @@ export default async function TablesPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Competition selector */}
-        <CompetitionSelector
-          competitions={activeCompetitions}
-          selectedSlug={selectedSlug}
-          basePath="/tables"
-        />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Sidebar — desktop only (mobile uses the pill selector below) */}
+          <aside className="hidden lg:block lg:sticky lg:top-20 lg:self-start">
+            <CompetitionSidebar
+              competitions={activeCompetitions}
+              selectedSlug={selectedSlug}
+              basePath="/tables"
+            />
+          </aside>
+
+          <div>
+            {/* Competition selector — visible on mobile + medium; sidebar takes over on lg */}
+            <div className="lg:hidden">
+              <CompetitionSelector
+                competitions={activeCompetitions}
+                selectedSlug={selectedSlug}
+                basePath="/tables"
+              />
+            </div>
 
         {/* Selected competition info */}
         <div className="mb-6 flex items-center justify-between rounded-lg bg-zinc-800/60 border border-zinc-700/40 px-5 py-3">
@@ -282,6 +296,8 @@ export default async function TablesPage({ searchParams }: PageProps) {
             </span>
             <ArrowRight className="h-4 w-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
           </Link>
+        </div>
+          </div>
         </div>
       </div>
     </div>

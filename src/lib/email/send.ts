@@ -3,7 +3,8 @@ import { db, newsletterSubscribers } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 
 /**
- * Get the current hour (0-23) in a given IANA timezone.
+ * Get the current hour (0-23) in a given IANA timezone. Returns -1 on
+ * invalid tz strings (Intl will throw, we swallow).
  */
 function getCurrentHourInTimezone(tz: string): number {
   try {
@@ -11,50 +12,8 @@ function getCurrentHourInTimezone(tz: string): number {
     const timeStr = now.toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
     return parseInt(timeStr, 10);
   } catch {
-    return -1; // Invalid timezone
+    return -1;
   }
-}
-
-/**
- * Group IANA timezones by UTC offset bucket so we can send
- * at ~8am local time for daily emails. Returns the set of
- * timezone strings where it's currently the target hour.
- */
-export function getTimezonesAtHour(targetHour: number): Set<string> {
-  const commonTimezones = [
-    'Pacific/Auckland', 'Australia/Sydney', 'Australia/Perth',
-    'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
-    'Europe/Moscow', 'Europe/Istanbul', 'Europe/Helsinki',
-    'Europe/Berlin', 'Europe/Paris', 'Europe/London',
-    'Atlantic/Azores', 'America/Sao_Paulo', 'America/New_York',
-    'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-    'America/Anchorage', 'Pacific/Honolulu', 'UTC',
-  ];
-
-  const matching = new Set<string>();
-  for (const tz of commonTimezones) {
-    if (getCurrentHourInTimezone(tz) === targetHour) {
-      matching.add(tz);
-    }
-  }
-  return matching;
-}
-
-/**
- * Map a subscriber's timezone to the nearest common timezone bucket.
- */
-function matchesTimezoneSet(subscriberTz: string, activeTimezones: Set<string>): boolean {
-  // Direct match
-  if (activeTimezones.has(subscriberTz)) return true;
-
-  // Check if subscriber's current hour matches any of the active timezone hours
-  const subscriberHour = getCurrentHourInTimezone(subscriberTz);
-  if (subscriberHour === -1) return false;
-
-  for (const tz of activeTimezones) {
-    if (getCurrentHourInTimezone(tz) === subscriberHour) return true;
-  }
-  return false;
 }
 
 interface SendOptions {
@@ -79,19 +38,28 @@ export async function sendToAllSubscribers(
     return { sent: 0, failed: 0, skipped: 0 };
   }
 
-  // Filter by timezone if targetLocalHour is set
+  // Filter by timezone if targetLocalHour is set. Per-subscriber check:
+  // get THEIR current local hour and compare to the target. This works
+  // for half-hour-offset zones (India, Newfoundland) which the old
+  // bucket-of-common-zones approach silently dropped.
   let toSend = subscribers;
   let skipped = 0;
 
   if (options?.targetLocalHour !== undefined) {
-    const activeTimezones = getTimezonesAtHour(options.targetLocalHour);
-
-    toSend = subscribers.filter(s => matchesTimezoneSet(s.timezone, activeTimezones));
+    const target = options.targetLocalHour;
+    toSend = subscribers.filter(s => getCurrentHourInTimezone(s.timezone) === target);
     skipped = subscribers.length - toSend.length;
 
     if (toSend.length === 0) {
       return { sent: 0, failed: 0, skipped };
     }
+  }
+
+  // Guard: if SMTP isn't configured, fail fast with a clear message
+  // instead of nodemailer silently sending with bogus credentials.
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
+    console.warn('[email] SMTP_HOST/SMTP_USER not set — skipping sends');
+    return { sent: 0, failed: toSend.length, skipped };
   }
 
   const transport = getTransport();

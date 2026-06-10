@@ -15,6 +15,7 @@ import {
 } from '@/lib/seo';
 import { NewsletterPopup } from '@/components/newsletter/NewsletterPopup';
 import { CookieConsent } from '@/components/layout/CookieConsent';
+import { PushOptIn } from '@/components/push/PushOptIn';
 import EzoicRouteHandler from '@/components/ads/EzoicRouteHandler';
 import Script from 'next/script';
 import { getLocale } from '@/lib/i18n/locale';
@@ -110,6 +111,33 @@ export default async function RootLayout({
           src="//ezoicanalytics.com/analytics.js"
           strategy="afterInteractive"
         />
+        {/* Nitopulse analytics — hardcoded here (not in admin/scripts) to
+            guarantee it loads on every page regardless of Suspense timing or
+            DB fetch latency. Analytics reliability > flexibility. If you
+            change the site token, update the data-site attribute below. */}
+        <Script
+          id="nitopulse"
+          src="https://app.nitopulse.com/t.js"
+          strategy="afterInteractive"
+          data-site="F40sAHLqNt5BRSnG9rZnR"
+          data-track-clicks="true"
+          data-track-scroll="true"
+          data-track-forms="true"
+          data-track-media="true"
+          data-track-performance="true"
+          data-track-errors="true"
+          data-track-popups="true"
+        />
+        {/* Microsoft Clarity — session recordings, heatmaps, rage clicks.
+            Project ID: wgbe67hyvk. Same hardcoded-in-layout rationale as
+            Nitopulse above — analytics reliability > admin-panel flexibility. */}
+        <Script id="ms-clarity" strategy="afterInteractive">
+          {`(function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "wgbe67hyvk");`}
+        </Script>
         {/* HeadScripts injects scripts from admin/scripts (AdSense, GA, etc.)
             directly into <head> as raw <script> tags so SSR crawlers see them */}
         <Suspense fallback={null}>
@@ -132,6 +160,7 @@ export default async function RootLayout({
             <Suspense fallback={null}>
               <CookieConsent />
             </Suspense>
+            <PushOptIn />
           </div>
         </LocationProvider>
         <Suspense fallback={null}>

@@ -27,9 +27,10 @@ function isLiveStatus(status: string) {
 
 interface MatchDetailClientProps {
   data: MatchPageData;
+  sidebar?: React.ReactNode;
 }
 
-export function MatchDetailClient({ data }: MatchDetailClientProps) {
+export function MatchDetailClient({ data, sidebar }: MatchDetailClientProps) {
   const [match, setMatch] = useState(data.match);
   const [events, setEvents] = useState(data.events);
   const [homeStats, setHomeStats] = useState(data.homeStats);
@@ -268,9 +269,17 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
         </div>
       </div>
 
-      {/* Tabbed Content */}
-      <div className="mx-auto max-w-5xl px-4 py-4">
-        <Tabs defaultValue="summary" className="w-full">
+      {/* Main content + live-games sidebar (sidebar only on lg:+) */}
+      <div className="mx-auto max-w-7xl px-4 py-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
+        <div>
+          {/* Top-of-page display ad — between hero and tabs.
+              High-visibility spot on live match pages. */}
+          <div className="mb-4">
+            <HorizontalAd />
+          </div>
+
+          {/* Tabbed Content */}
+          <Tabs defaultValue="summary" className="w-full">
           <TabsList className="w-full flex overflow-x-auto border-b border-zinc-800 bg-transparent gap-0 rounded-none p-0 scrollbar-hide">
             {[
               { value: 'summary', label: 'Summary' },
@@ -356,13 +365,13 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
           </div>
         </Tabs>
 
-        {/* Ad */}
-        <div className="my-6">
-          <HorizontalAd />
-        </div>
+          {/* Ad — existing display network */}
+          <div className="my-6">
+            <HorizontalAd />
+          </div>
 
-        {/* Footer links */}
-        <section className="grid gap-3 sm:grid-cols-3 mt-4">
+          {/* Footer links */}
+          <section className="grid gap-3 sm:grid-cols-3 mt-4">
           <Link
             className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-800/40 px-5 py-4 text-sm font-medium text-zinc-300 hover:border-yellow-400/30 hover:text-yellow-400 transition-all group"
             href={`/teams/${match.home_slug}`}
@@ -386,13 +395,30 @@ export function MatchDetailClient({ data }: MatchDetailClientProps) {
           </Link>
         </section>
 
-        <div className="text-center mt-6 mb-8">
-          <Link className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-yellow-400 transition-colors" href="/fixtures">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Fixtures
-          </Link>
+          <div className="text-center mt-6 mb-8">
+            <Link className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-yellow-400 transition-colors" href="/fixtures">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Fixtures
+            </Link>
+          </div>
         </div>
+
+        {/* Live-games rail (only visible on lg+ screens) */}
+        {sidebar && (
+          <div className="hidden lg:block">
+            <div className="sticky top-20">
+              {sidebar}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* On small screens, surface the sidebar below the main content */}
+      {sidebar && (
+        <div className="mx-auto max-w-5xl px-4 pb-8 lg:hidden">
+          {sidebar}
+        </div>
+      )}
     </div>
   );
 }

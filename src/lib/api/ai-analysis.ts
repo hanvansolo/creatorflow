@@ -1,20 +1,5 @@
 // @ts-nocheck
-import OpenAI from 'openai';
-
-// Lazy initialization of OpenAI client to avoid build-time errors
-let openaiClient: OpenAI | null = null;
-
-function getOpenAI(): OpenAI {
-  if (!openaiClient) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is not set');
-    }
-    openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-  return openaiClient;
-}
+import { getOpenAIClient as getOpenAI, AI_MODEL } from './openai-client';
 
 export interface TestingUpdate {
   team: string;
@@ -94,7 +79,7 @@ If the content doesn't contain football performance information, return empty ar
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Analyze this football content:\n\n${content}` },
@@ -193,7 +178,7 @@ Keep it concise and insightful.`;
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: 'You are a football analyst providing brief, insightful match predictions.' },
         { role: 'user', content: prompt },
@@ -275,7 +260,7 @@ Only grade the top 15 finishers plus any notable DNFs.`;
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: 'You are an expert football analyst writing a post-match debrief. Be specific, insightful, and engaging. Focus on what the data reveals about each player\'s performance.' },
         { role: 'user', content: prompt },

@@ -160,6 +160,13 @@ export const matches = pgTable('matches', {
   // spamming new posts.
   fbKickoffPostId: varchar('fb_kickoff_post_id', { length: 250 }),
   slug: varchar('slug', { length: 200 }).notNull(),
+  // Cache for the per-page-render API-Football secondary calls
+  // (lineups, predictions, injuries, odds, player ratings) so we don't
+  // burn the API quota every time someone views a match page. Keyed by
+  // status — once a match is finished the cache is locked.
+  secondaryDataCache: jsonb('secondary_data_cache'),
+  secondaryDataFetchedAt: timestamp('secondary_data_fetched_at', { withTimezone: true }),
+  secondaryDataStatus: varchar('secondary_data_status', { length: 20 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
@@ -344,12 +351,38 @@ export const newsArticles = pgTable('news_articles', {
   credibilityRating: varchar('credibility_rating', { length: 20 }),
   voteScore: integer('vote_score').default(0),
   socialPosted: boolean('social_posted').default(false),
+  // Spin tracking — prevents the respin cron from re-spinning articles that
+  // have already been processed successfully, and caps retries on articles
+  // that keep failing so we don't burn budget on hopeless thin RSS stubs.
+  spunAt: timestamp('spun_at', { withTimezone: true }),
+  spinAttempts: integer('spin_attempts').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => [
   index('idx_news_articles_published_at').on(table.publishedAt),
   index('idx_news_articles_source_id').on(table.sourceId),
   index('idx_news_articles_story_group').on(table.storyGroupId),
   uniqueIndex('idx_news_articles_source_external').on(table.sourceId, table.externalId),
+]);
+
+// ===== ARTICLE SOURCES =====
+// Additional sources covering the same story. Rather than create N
+// near-duplicate news_articles rows (one per feed that covered the story
+// and N separate AI spin calls), the aggregate cron detects similar-title
+// inserts and records them here pointing at the single primary article.
+// Rendered as "More coverage: BBC · Sky Sports · …" at the bottom of the
+// primary article's page and FB captions.
+export const articleSources = pgTable('article_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  articleId: uuid('article_id').references(() => newsArticles.id, { onDelete: 'cascade' }).notNull(),
+  sourceId: uuid('source_id').references(() => newsSources.id),
+  sourceName: varchar('source_name', { length: 200 }),
+  originalUrl: text('original_url').notNull(),
+  originalTitle: text('original_title'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_article_sources_article').on(table.articleId),
+  uniqueIndex('idx_article_sources_url').on(table.articleId, table.originalUrl),
 ]);
 
 // ===== ARTICLE VOTES =====
@@ -907,6 +940,24 @@ export const translations = pgTable('translations', {
   uniq: uniqueIndex('translations_unique_idx').on(t.contentType, t.contentId, t.locale, t.field),
   lookup: index('translations_lookup_idx').on(t.contentType, t.contentId, t.locale),
 }));
+
+// ===== PUSH SUBSCRIPTIONS =====
+// Web Push subscriptions captured via the browser PushManager. One row per
+// (browser, device) pair — `endpoint` is the unique identifier provided by
+// the browser. Sends are best-effort and 410 Gone responses flip `active`
+// to FALSE so dead subs are filtered out cheaply.
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
+  active: boolean('active').default(true).notNull(),
+}, (t) => [
+  index('idx_push_subscriptions_active').on(t.active),
+]);
 
 // ===== RELATIONS =====
 

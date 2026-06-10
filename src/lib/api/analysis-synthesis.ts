@@ -1,17 +1,9 @@
 // @ts-nocheck
-import Anthropic from '@anthropic-ai/sdk';
 import { db, newsArticles } from '@/lib/db';
 import { desc, gte, and, isNotNull, sql } from 'drizzle-orm';
 import { generateNewsSlug } from '@/lib/utils';
 import { pickAuthor } from '@/lib/constants/authors';
-
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-  return _anthropic;
-}
+import { chatComplete } from './openai-client';
 
 interface ArticleSource {
   id: string;
@@ -178,18 +170,12 @@ Your full analysis (400-800 words, markdown formatted)
 ---END---`;
 
   try {
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const text = await chatComplete({ maxTokens: 4000, prompt });
+    if (!text) return null;
 
-    const text = response.content[0];
-    if (text.type !== 'text') return null;
-
-    const titleMatch = text.text.match(/---TITLE---\s*([\s\S]*?)\s*---SUMMARY---/);
-    const summaryMatch = text.text.match(/---SUMMARY---\s*([\s\S]*?)\s*---CONTENT---/);
-    const contentMatch = text.text.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);
+    const titleMatch = text.match(/---TITLE---\s*([\s\S]*?)\s*---SUMMARY---/);
+    const summaryMatch = text.match(/---SUMMARY---\s*([\s\S]*?)\s*---CONTENT---/);
+    const contentMatch = text.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);
 
     if (!titleMatch || !summaryMatch || !contentMatch) return null;
 
@@ -200,8 +186,8 @@ Your full analysis (400-800 words, markdown formatted)
     };
   } catch (e) {
     const msg = (e as Error).message;
-    console.error('[synthesis] Claude call failed:', msg);
-    throw new Error(`Claude: ${msg}`);
+    console.error('[synthesis] OpenAI call failed:', msg);
+    throw new Error(`OpenAI: ${msg}`);
   }
 }
 

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, newsArticles, aggregationJobs } from '@/lib/db';
-import { eq, isNotNull, sql } from 'drizzle-orm';
-import { extractAndSpin } from '@/lib/api/article-spinner';
+import { eq, and, isNull, lt, sql } from 'drizzle-orm';
+import { extractAndSpin, SpinError } from '@/lib/api/article-spinner';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const CRON_KEY = process.env.CRON_KEY || process.env.ADMIN_API_KEY || 'dev-key';
+
+// Give up on an article after this many failed spin attempts. Aggregate's
+// initial attempt counts as 1, so this allows 2 respin retries before we
+// declare the article un-spinnable and stop burning tokens on it.
+const MAX_SPIN_ATTEMPTS = 3;
 
 export async function GET(
   request: NextRequest,
@@ -18,8 +23,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 });
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OPENAI_API_KEY not set' }, { status: 500 });
     }
 
     const url = new URL(request.url);
@@ -34,11 +39,10 @@ export async function GET(
       status: 'running',
     }).returning();
 
-    // Fetch articles that have original content to work with.
-    // Prefer articles that still have their originalTitle set (meaning they were
-    // processed by the aggregator but may still contain fluff).
-    // We use the original title + current content as source material.
-    // Only respin articles with short content (< 300 chars = RSS excerpt, not spun)
+    // Only pick articles that have NEVER been successfully spun AND haven't
+    // burned through their retry budget. This prevents re-spinning articles
+    // that are already long-form and wastefully re-spinning articles that
+    // will never succeed (thin wire copy, paywalled sources, etc.).
     const articles = await db
       .select({
         id: newsArticles.id,
@@ -47,9 +51,16 @@ export async function GET(
         content: newsArticles.content,
         summary: newsArticles.summary,
         originalUrl: newsArticles.originalUrl,
+        spinAttempts: newsArticles.spinAttempts,
       })
       .from(newsArticles)
-      .where(sql`LENGTH(${newsArticles.content}) < 300`)
+      .where(
+        and(
+          isNull(newsArticles.spunAt),
+          lt(newsArticles.spinAttempts, MAX_SPIN_ATTEMPTS),
+          sql`LENGTH(${newsArticles.content}) < 1500`,
+        ),
+      )
       .orderBy(sql`${newsArticles.publishedAt} DESC`)
       .limit(limit);
 
@@ -110,26 +121,40 @@ export async function GET(
 
         console.log(`[Respin] Processing (${sourceContent.length} chars): ${sourceTitle.slice(0, 60)}...`);
 
-        const result = await extractAndSpin(sourceTitle, sourceContent, article.summary || undefined);
+        try {
+          const result = await extractAndSpin(sourceTitle, sourceContent, article.summary || undefined);
 
-        // Update the article with the cleaned-up version
-        await db
-          .update(newsArticles)
-          .set({
-            title: result.title,
-            summary: result.summary,
-            content: result.content,
-          })
-          .where(eq(newsArticles.id, article.id));
+          // Success — update content and mark as spun so we never re-spin it.
+          await db
+            .update(newsArticles)
+            .set({
+              title: result.title,
+              summary: result.summary,
+              content: result.content,
+              spunAt: new Date(),
+              spinAttempts: sql`${newsArticles.spinAttempts} + 1`,
+            })
+            .where(eq(newsArticles.id, article.id));
 
-        processed++;
-        console.log(`[Respin] Done (${processed}/${articles.length})`);
+          processed++;
+          console.log(`[Respin] Done (${processed}/${articles.length})`);
+        } catch (spinErr) {
+          // Failure — just bump the attempt counter so this article gets
+          // a couple more chances before we give up on it permanently.
+          await db
+            .update(newsArticles)
+            .set({ spinAttempts: sql`${newsArticles.spinAttempts} + 1` })
+            .where(eq(newsArticles.id, article.id));
+          failed++;
+          const reason = spinErr instanceof SpinError ? spinErr.reason : (spinErr as Error).message;
+          console.warn(`[Respin] Spin failed for ${article.id} (attempt ${(article.spinAttempts ?? 0) + 1}/${MAX_SPIN_ATTEMPTS}): ${reason}`);
+        }
 
         // Small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
         failed++;
-        console.error(`[Respin] Failed article ${article.id}:`, error);
+        console.error(`[Respin] Outer error article ${article.id}:`, error);
       }
     }
 

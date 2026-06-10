@@ -1,11 +1,12 @@
 import type { MetadataRoute } from 'next';
 import { db, newsArticles, clubs, competitions, whatIfScenarios, matches } from '@/lib/db';
-import { desc, isNotNull, and, gte, inArray, sql } from 'drizzle-orm';
+import { desc, isNotNull, and, gte, sql } from 'drizzle-orm';
 import { SITE_CONFIG } from '@/lib/seo';
 import { isWorldCupActive } from '@/lib/worldcup';
 import { LOCALES, DEFAULT_LOCALE, LOCALE_BCP47, type Locale } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 
@@ -22,6 +23,25 @@ function buildAlternates(path: string): Record<string, string> {
   return languages;
 }
 
+/** Coerce to Date; fall back to `fallback` on null/invalid/undefined. */
+function safeDate(v: unknown, fallback: Date): Date {
+  if (v == null) return fallback;
+  const d = v instanceof Date ? v : new Date(v as string | number);
+  return isNaN(d.getTime()) ? fallback : d;
+}
+
+/**
+ * Single sitemap — no generateSitemaps().
+ *
+ * We tried splitting into chunks via generateSitemaps but Next.js 16 has a
+ * conflict: sitemap.ts + generateSitemaps reserves /sitemap.xml for an
+ * auto-index that wasn't emitting, while a custom route at
+ * app/sitemap.xml/route.ts got shadowed by the convention. End result was
+ * a 404 on the canonical URL. Back to one sitemap — kept the null-safety
+ * and per-query try/catch so a single bad row can't 500 the whole thing,
+ * and trimmed the news × locale multiplication to stay well under Google's
+ * 50k-URL limit with headroom.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_CONFIG.url;
   const now = new Date();
@@ -49,11 +69,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: '/terms',      changeFrequency: 'monthly', priority: 0.3  },
   ];
 
-  // Emit one entry per (path, locale) with hreflang alternates linking siblings.
-  const staticPages: SitemapEntry[] = [];
+  const out: SitemapEntry[] = [];
+
+  // Static pages × locales with hreflang alternates
   for (const s of STATIC_PATHS) {
     for (const loc of LOCALES) {
-      staticPages.push({
+      out.push({
         url: `${base}${prefix(loc)}${s.path}`,
         lastModified: now,
         changeFrequency: s.changeFrequency,
@@ -63,66 +84,118 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // Match window: from 14 days ago to 14 days ahead — covers recent finishes,
-  // live matches now, and upcoming fixtures crawlers should index asap.
-  const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - 14);
-  const windowEnd = new Date();
-  windowEnd.setDate(windowEnd.getDate() + 14);
-
-  const [articles, allClubs, allCompetitions, scenarios, recentMatches] = await Promise.all([
-    db.select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
-      .from(newsArticles).orderBy(desc(newsArticles.publishedAt)).limit(2000),
-    db.select({ slug: clubs.slug }).from(clubs).where(isNotNull(clubs.slug)).limit(5000),
-    db.select({ slug: competitions.slug }).from(competitions).where(isNotNull(competitions.slug)),
-    db.select({ slug: whatIfScenarios.slug, updatedAt: whatIfScenarios.updatedAt }).from(whatIfScenarios).limit(500),
-    db.select({
-      slug: matches.slug,
-      status: matches.status,
-      kickoff: matches.kickoff,
-      updatedAt: matches.updatedAt,
-    })
-      .from(matches)
-      .where(and(isNotNull(matches.slug), gte(matches.kickoff, windowStart), sql`${matches.kickoff} <= ${windowEnd}`))
-      .orderBy(desc(matches.kickoff))
-      .limit(3000),
-  ]);
-
-  const newsUrls: SitemapEntry[] = [];
-  for (const a of articles) {
-    const path = `/news/${a.slug}`;
-    const lastModified = a.publishedAt ? new Date(a.publishedAt) : now;
-    for (const loc of LOCALES) {
-      newsUrls.push({
-        url: `${base}${prefix(loc)}${path}`,
-        lastModified,
+  // News articles — canonical URL only (default locale). Hreflang alternates
+  // tell Google about the translations, so we don't need a separate URL per
+  // locale × article. This was the primary source of bloat before.
+  try {
+    const articles = await db
+      .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
+      .from(newsArticles)
+      .orderBy(desc(newsArticles.publishedAt))
+      .limit(5000);
+    for (const a of articles) {
+      if (!a.slug) continue;
+      const path = `/news/${a.slug}`;
+      out.push({
+        url: `${base}${path}`,
+        lastModified: safeDate(a.publishedAt, now),
         changeFrequency: 'weekly',
         priority: 0.7,
         alternates: { languages: buildAlternates(path) },
       });
     }
+  } catch (e) {
+    console.error('[sitemap] news query failed:', e instanceof Error ? e.message : e);
   }
 
-  const teamUrls: SitemapEntry[] = allClubs.map((c) => ({
-    url: `${base}/teams/${c.slug}`,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: 0.6,
-  }));
+  // Matches — ±14 day window
+  try {
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - 14);
+    const windowEnd = new Date();
+    windowEnd.setDate(windowEnd.getDate() + 14);
 
-  const tableUrls: SitemapEntry[] = allCompetitions.map((c) => ({
-    url: `${base}/tables?competition=${c.slug}`,
-    lastModified: now,
-    changeFrequency: 'daily',
-    priority: 0.7,
-  }));
+    const recentMatches = await db
+      .select({
+        slug: matches.slug,
+        status: matches.status,
+        kickoff: matches.kickoff,
+        updatedAt: matches.updatedAt,
+      })
+      .from(matches)
+      .where(
+        and(
+          isNotNull(matches.slug),
+          gte(matches.kickoff, windowStart),
+          sql`${matches.kickoff} <= ${windowEnd}`,
+        ),
+      )
+      .orderBy(desc(matches.kickoff))
+      .limit(3000);
 
-  const fixtureUrls: SitemapEntry[] = [];
+    for (const m of recentMatches) {
+      if (!m.slug) continue;
+      const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status ?? '');
+      const kickoff = safeDate(m.kickoff, now);
+      const hoursUntil = (kickoff.getTime() - now.getTime()) / 3_600_000;
+      const isUpcomingSoon = hoursUntil > 0 && hoursUntil < 24;
+      const isFinished = m.status === 'finished';
+      out.push({
+        url: `${base}/matches/${m.slug}`,
+        lastModified: safeDate(m.updatedAt, kickoff),
+        changeFrequency: (isLive ? 'always' : isUpcomingSoon ? 'hourly' : isFinished ? 'weekly' : 'daily') as SitemapEntry['changeFrequency'],
+        priority: isLive ? 0.95 : isUpcomingSoon ? 0.85 : isFinished ? 0.6 : 0.75,
+      });
+    }
+  } catch (e) {
+    console.error('[sitemap] matches query failed:', e instanceof Error ? e.message : e);
+  }
+
+  // Clubs
+  try {
+    const allClubs = await db
+      .select({ slug: clubs.slug })
+      .from(clubs)
+      .where(isNotNull(clubs.slug))
+      .limit(5000);
+    for (const c of allClubs) {
+      if (!c.slug) continue;
+      out.push({
+        url: `${base}/teams/${c.slug}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      });
+    }
+  } catch (e) {
+    console.error('[sitemap] clubs query failed:', e instanceof Error ? e.message : e);
+  }
+
+  // Competition table pages
+  try {
+    const allCompetitions = await db
+      .select({ slug: competitions.slug })
+      .from(competitions)
+      .where(isNotNull(competitions.slug));
+    for (const c of allCompetitions) {
+      if (!c.slug) continue;
+      out.push({
+        url: `${base}/tables?competition=${c.slug}`,
+        lastModified: now,
+        changeFrequency: 'daily',
+        priority: 0.7,
+      });
+    }
+  } catch (e) {
+    console.error('[sitemap] competitions query failed:', e instanceof Error ? e.message : e);
+  }
+
+  // Fixture date buckets (rolling 10-day window)
   for (let i = -3; i <= 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
-    fixtureUrls.push({
+    out.push({
       url: `${base}/fixtures?date=${dateStr}`,
       lastModified: now,
       changeFrequency: i === 0 ? 'hourly' : 'daily',
@@ -130,38 +203,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  const whatIfUrls: SitemapEntry[] = scenarios.map((s) => ({
-    url: `${base}/what-if/${s.slug}`,
-    lastModified: s.updatedAt ? new Date(s.updatedAt) : now,
-    changeFrequency: 'monthly',
-    priority: 0.5,
-  }));
+  // What-if scenarios
+  try {
+    const scenarios = await db
+      .select({ slug: whatIfScenarios.slug, updatedAt: whatIfScenarios.updatedAt })
+      .from(whatIfScenarios)
+      .limit(500);
+    for (const s of scenarios) {
+      if (!s.slug) continue;
+      out.push({
+        url: `${base}/what-if/${s.slug}`,
+        lastModified: safeDate(s.updatedAt, now),
+        changeFrequency: 'monthly',
+        priority: 0.5,
+      });
+    }
+  } catch (e) {
+    console.error('[sitemap] what-if query failed:', e instanceof Error ? e.message : e);
+  }
 
-  // Match detail URLs — live/upcoming get hourly crawl priority so crawlers
-  // catch them while games are in progress.
-  const matchUrls: SitemapEntry[] = recentMatches
-    .filter(m => m.slug)
-    .map((m) => {
-      const isLive = ['live', 'halftime', 'extra_time', 'penalties'].includes(m.status ?? '');
-      const kickoff = m.kickoff ? new Date(m.kickoff) : now;
-      const hoursUntil = (kickoff.getTime() - now.getTime()) / 3_600_000;
-      const isUpcomingSoon = hoursUntil > 0 && hoursUntil < 24;
-      const isFinished = m.status === 'finished';
-      return {
-        url: `${base}/matches/${m.slug}`,
-        lastModified: m.updatedAt ? new Date(m.updatedAt) : kickoff,
-        changeFrequency: (isLive ? 'always' : isUpcomingSoon ? 'hourly' : isFinished ? 'weekly' : 'daily') as SitemapEntry['changeFrequency'],
-        priority: isLive ? 0.95 : isUpcomingSoon ? 0.85 : isFinished ? 0.6 : 0.75,
-      };
-    });
-
-  return [
-    ...staticPages,
-    ...newsUrls,
-    ...matchUrls,
-    ...teamUrls,
-    ...tableUrls,
-    ...fixtureUrls,
-    ...whatIfUrls,
-  ];
+  return out;
 }

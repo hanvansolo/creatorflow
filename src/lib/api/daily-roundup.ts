@@ -1,17 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { db, newsArticles, newsSources, dailyRoundups } from '@/lib/db';
 import { eq, and, gte, lt, sql } from 'drizzle-orm';
-
-// Lazy-load Anthropic client to avoid initialization issues
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    _anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-  }
-  return _anthropic;
-}
+import { chatComplete } from './openai-client';
 
 interface ArticleSummary {
   title: string;
@@ -46,8 +35,8 @@ async function generateSectionSummary(
   }
 
   // Check if API key is available
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn(`[Roundup] ANTHROPIC_API_KEY not set, generating fallback summary for ${category}`);
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn(`[Roundup] OPENAI_API_KEY not set, generating fallback summary for ${category}`);
     // Generate a simple fallback summary
     const topTitles = articles.slice(0, 3).map(a => a.title).join('; ');
     return `Today's top ${category} stories: ${topTitles}...`;
@@ -67,13 +56,9 @@ async function generateSectionSummary(
   console.log(`[Roundup] Generating AI summary for ${category} (${articles.length} articles)`);
 
   try {
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      messages: [
-        {
-          role: 'user',
-          content: `You are an football journalist writing a daily news roundup for fans.
+    const text = await chatComplete({
+      maxTokens: 300,
+      prompt: `You are an football journalist writing a daily news roundup for fans.
 Write a concise 2-4 sentence summary of today's ${categoryDescriptions[category]} football news stories.
 Highlight the most significant stories and keep it engaging.
 
@@ -81,18 +66,15 @@ Today's ${category} stories:
 ${articleList}
 
 Write the summary now (2-4 sentences, no preamble):`,
-        },
-      ],
     });
 
-    const textContent = response.content[0];
-    if (textContent.type !== 'text') {
-      console.error(`[Roundup] Unexpected response type for ${category}:`, textContent.type);
+    if (!text) {
+      console.error(`[Roundup] Empty response for ${category}`);
       return null;
     }
 
-    console.log(`[Roundup] Generated summary for ${category}: ${textContent.text.slice(0, 50)}...`);
-    return textContent.text.trim();
+    console.log(`[Roundup] Generated summary for ${category}: ${text.slice(0, 50)}...`);
+    return text.trim();
   } catch (error) {
     console.error(`[Roundup] Failed to generate ${category} summary:`, error);
     // Return a fallback instead of null
@@ -116,8 +98,8 @@ async function generateRoundupArticle(
     return null;
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[Roundup] ANTHROPIC_API_KEY not set, skipping roundup article generation');
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('[Roundup] OPENAI_API_KEY not set, skipping roundup article generation');
     return null;
   }
 
@@ -146,13 +128,9 @@ async function generateRoundupArticle(
   console.log(`[Roundup] Generating full roundup article for ${dateStr} (${allArticles.length} total articles)`);
 
   try {
-    const response = await getAnthropic().messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 6000,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a senior football journalist writing the daily news roundup for FootyFeed. Write a comprehensive, engaging article summarising all of today's important football news.
+    const text = await chatComplete({
+      maxTokens: 6000,
+      prompt: `You are a senior football journalist writing the daily news roundup for FootyFeed. Write a comprehensive, engaging article summarising all of today's important football news.
 
 DATE: ${formattedDate}
 
@@ -181,17 +159,12 @@ Your 3-4 sentence summary here
 ---CONTENT---
 Your full article here (800+ words, with ## subheadings)
 ---END---`,
-        },
-      ],
     });
 
-    const textContent = response.content[0];
-    if (textContent.type !== 'text') {
-      console.error('[Roundup] Unexpected response type:', textContent.type);
+    if (!text) {
+      console.error('[Roundup] Empty response generating roundup article');
       return null;
     }
-
-    const text = textContent.text;
     const titleMatch = text.match(/---TITLE---\s*([\s\S]*?)\s*---SUMMARY---/);
     const summaryMatch = text.match(/---SUMMARY---\s*([\s\S]*?)\s*---CONTENT---/);
     const contentMatch = text.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);

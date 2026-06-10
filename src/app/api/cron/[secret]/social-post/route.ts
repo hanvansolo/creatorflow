@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, desc, eq, gte, inArray, isNull, or } from 'drizzle-orm';
-import { db, newsArticles, newsSources, socialPosts } from '@/lib/db';
+import { db, newsArticles, newsSources, socialPosts, articleSources } from '@/lib/db';
 import { postArticleWithTracking, type RelatedCoverage } from '@/lib/social/post';
 
 export const dynamic = 'force-dynamic';
@@ -205,6 +205,22 @@ export async function GET(
         await db.update(newsArticles).set({ socialPosted: true }).where(eq(newsArticles.id, c.id));
         summary.breaking.posted++;
         recentTitles.push(c.title);
+
+        // Web push: breaking-news bulletin to all subscribers. Capped by
+        // breakingBudget (2/hr default), so this can't spam phones.
+        try {
+          const { sendPushToAll } = await import('@/lib/push/send');
+          sendPushToAll({
+            title: `🚨 ${c.title.slice(0, 80)}`,
+            body: c.summary?.slice(0, 140) || 'Tap to read the full story →',
+            url: `/news/${c.slug}`,
+            image: c.imageUrl || undefined,
+            tag: `article-${c.id}`,
+            requireInteraction: true,
+          }).catch(err => console.error('[social-post] breaking push failed:', err));
+        } catch (err) {
+          console.error('[social-post] push send module load failed:', err);
+        }
       } else {
         summary.breaking.errors++;
       }
@@ -300,36 +316,28 @@ async function loadCandidates(opts: { breakingOnly: boolean; limit: number }): P
 }
 
 /**
- * Find up to 3 companion articles covering the same story from other sources
- * in the last 24h. Used for the "More coverage:" block.
+ * Find up to 3 companion articles covering the same story from other sources.
+ * Reads from article_sources which the aggregate cron populates at ingest
+ * when it detects title-similar RSS items — much cheaper than scanning
+ * news_articles by title similarity at post time.
  */
-async function findRelated(picked: Candidate, since: Date): Promise<RelatedCoverage[]> {
+async function findRelated(picked: Candidate, _since: Date): Promise<RelatedCoverage[]> {
   const rows = await db
     .select({
-      id: newsArticles.id,
-      title: newsArticles.title,
-      originalUrl: newsArticles.originalUrl,
-      sourceName: newsSources.name,
+      sourceName: articleSources.sourceName,
+      originalUrl: articleSources.originalUrl,
     })
-    .from(newsArticles)
-    .leftJoin(newsSources, eq(newsArticles.sourceId, newsSources.id))
-    .where(
-      and(
-        gte(newsArticles.publishedAt, since),
-        // Don't include our own pick.
-      ),
-    )
-    .orderBy(desc(newsArticles.publishedAt))
-    .limit(200);
+    .from(articleSources)
+    .where(eq(articleSources.articleId, picked.id))
+    .orderBy(desc(articleSources.publishedAt))
+    .limit(20);
 
   const out: RelatedCoverage[] = [];
   const seenSources = new Set<string>();
   if (picked.sourceName) seenSources.add(picked.sourceName);
 
   for (const r of rows) {
-    if (r.id === picked.id) continue;
-    if (!r.title || !r.originalUrl) continue;
-    if (titleSimilarity(picked.title, r.title) < 0.35) continue;
+    if (!r.originalUrl) continue;
     const src = r.sourceName || 'source';
     if (seenSources.has(src)) continue; // one link per source
     seenSources.add(src);

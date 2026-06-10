@@ -84,8 +84,17 @@ function extractSubject(title: string): { subject: string; isDriver: boolean; te
   return { subject: 'modern football match action shot', isDriver: false };
 }
 
-// Generate a football-themed image for an article
+// Generate a football-themed image for an article via DALL-E.
+// DISABLED BY DEFAULT — DALL-E 3 at 1792×1024 is $0.08/image and the
+// existing prompt template was inherited from the F1Feed sister project
+// (it pattern-matches on driver names like "Verstappen" and team
+// colors like "papaya orange") so the output is rarely on-topic for
+// football. Set ENABLE_AI_IMAGES=true on Railway to re-enable; better
+// to swap to a cheaper model + rewrite the prompt before turning back on.
 export async function generateArticleImage(title: string, summary?: string): Promise<string | null> {
+  if (process.env.ENABLE_AI_IMAGES !== 'true') {
+    return null;
+  }
   try {
     const openai = getOpenAIClient();
     const { subject, isDriver, teamColor } = extractSubject(title);

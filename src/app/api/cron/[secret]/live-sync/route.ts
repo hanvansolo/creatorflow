@@ -23,9 +23,52 @@ import {
 } from '@/lib/api/football-api';
 import { generateMatchAnalysis } from '@/lib/api/match-analysis';
 import { generateMatchReport, isReportworthy, isSocialPostworthy } from '@/lib/api/match-reports';
-import { postCustomTweet } from '@/lib/social/twitter';
+import { postCustomTweet, buildHashtags, checkTwitterDailyLimit } from '@/lib/social/twitter';
 import { postCustomFacebook, postCustomInstagram, postFacebookComment } from '@/lib/social/facebook';
 import { isValidApiFootballLogo } from '@/lib/utils/api-football-logo';
+import { sendPushToAll } from '@/lib/push/send';
+
+// Push notifications fire only for notable matches — we don't want to
+// wake users up for a Latvian Liga 2 goal. Compositions: top leagues,
+// major continental cups, and any match with a BIG_CLUB.
+const PUSH_NOTABLE_COMPS = new Set([
+  'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+  'Championship', 'Eredivisie', 'Primeira Liga',
+  'UEFA Champions League', 'UEFA Europa League', 'UEFA Conference League',
+  'FA Cup', 'EFL Cup', 'Copa del Rey', 'Coppa Italia', 'DFB Pokal',
+  'Copa Libertadores', 'Copa America', 'World Cup', 'European Championship',
+]);
+const PUSH_BIG_CLUBS = new Set([
+  'Manchester United', 'Manchester City', 'Liverpool', 'Arsenal',
+  'Chelsea', 'Tottenham', 'Real Madrid', 'Barcelona', 'Bayern Munich',
+  'Paris Saint Germain', 'Juventus', 'Inter', 'AC Milan', 'Napoli',
+  'Borussia Dortmund', 'Atletico Madrid',
+]);
+
+function isPushNotable(compName: string, home: string, away: string): boolean {
+  return PUSH_NOTABLE_COMPS.has(compName)
+    || PUSH_BIG_CLUBS.has(home)
+    || PUSH_BIG_CLUBS.has(away);
+}
+
+// API-Football budget throttle for weekends. Saturday + Sunday UTC are
+// when ~80% of weekly fixtures kick off, blowing through the daily quota.
+// We treat the same set as "notable" for the API: those matches keep full
+// event/stats fetching; everything else just gets the live score from the
+// single getLiveFixtures() call (free per match).
+//
+// Disable by setting API_BUDGET_WEEKEND_THROTTLE=false on Railway if a
+// big league is missing from the notable set.
+function isWeekendUtc(): boolean {
+  const day = new Date().getUTCDay(); // 0=Sun, 6=Sat
+  return day === 0 || day === 6;
+}
+const WEEKEND_THROTTLE_ENABLED = process.env.API_BUDGET_WEEKEND_THROTTLE !== 'false';
+function isApiThrottled(compName: string, home: string, away: string): boolean {
+  if (!WEEKEND_THROTTLE_ENABLED) return false;
+  if (!isWeekendUtc()) return false;
+  return !isPushNotable(compName, home, away);
+}
 
 /**
  * Post a FB comment on a match's kickoff post, deduped via social_posts.
@@ -38,12 +81,23 @@ import { isValidApiFootballLogo } from '@/lib/utils/api-football-logo';
  * per match. A 10-goal thriller tops out around ~12 comments — below FB's
  * comment-rate threshold.
  */
+// Kill switch for FB comment posting. Defaults to disabled because our
+// current page token is missing `pages_manage_engagement` — every comment
+// attempt fails with "(#200) The permission(s) …pages_manage_engagement
+// are not available. It could be because either they are deprecated or
+// need to be approved by App Review". Leaving it enabled burns 5–10 failed
+// Graph API calls per minute and adds log noise. Re-enable by setting
+// FB_COMMENTS_ENABLED=true once Meta approves the permission.
+const FB_COMMENTS_ENABLED = process.env.FB_COMMENTS_ENABLED === 'true';
+
 async function postMatchComment(args: {
   postId: string;
   contentType: 'match_comment' | 'match_ht' | 'match_ft';
   contentId: string;
   message: string;
 }) {
+  if (!FB_COMMENTS_ENABLED) return;
+
   const [existing] = await db
     .select({ id: socialPosts.id })
     .from(socialPosts)
@@ -126,6 +180,24 @@ export async function GET(
 
   try {
     console.log('[live-sync] Starting live match sync...');
+
+    // Pre-check: skip the API entirely if no match in our DB is anywhere
+    // near a live window. Saves a paid-API call every cron tick during the
+    // overnight / between-matchdays gaps.
+    // (Status list is hardcoded — Drizzle's sql template inlines JS arrays
+    // as a tuple, not a Postgres array, so ANY($1) breaks.)
+    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const fiveMinFromNow = new Date(Date.now() + 5 * 60 * 1000);
+    const couldBeLive = await db.execute(sql`
+      SELECT 1 FROM matches
+      WHERE status IN ('live', 'halftime', 'extra_time', 'penalties')
+         OR (kickoff BETWEEN ${fourHoursAgo.toISOString()} AND ${fiveMinFromNow.toISOString()})
+      LIMIT 1
+    `);
+    if ((couldBeLive as any[]).length === 0) {
+      console.log('[live-sync] No matches in live window — skipping API call');
+      return NextResponse.json({ message: 'No matches in live window', skipped: true });
+    }
 
     // 1. Get all currently live matches from API-Football
     const liveResponse = await getLiveFixtures();
@@ -237,13 +309,20 @@ export async function GET(
               referee: fixture.fixture.referee,
               slug,
               round: fixture.league.round,
-              socialPosted: false, // Will be set to true only after successful social post
+              // CLAIM the post slot at insert time. If every platform fails
+              // later, the release-on-failure block near the end of the run
+              // flips this back to FALSE so the next cron run retries. Do
+              // NOT change this to false — the existing-match path below only
+              // queues matches where social_posted is FALSE, so a new match
+              // left as FALSE would be re-queued (and re-posted) on every
+              // subsequent run.
+              socialPosted: true,
             }).returning({ id: matches.id });
 
             matchId = inserted.id;
             console.log(`[live-sync] Created new match: ${homeClub.name} vs ${awayClub.name} (${apiFixtureId})`);
 
-            // New match — queue for posting (socialPosted=true on INSERT prevents duplicate on next cron run)
+            // New match — queue for posting. The insert above claimed the lock.
             kickoffTweets.push({
               home: homeClub.name,
               away: awayClub.name,
@@ -331,6 +410,35 @@ export async function GET(
           ? (existingMatch.homeScore !== fixture.goals.home || existingMatch.awayScore !== fixture.goals.away)
           : true;
 
+        // Web push: fire on score change OR full-time, but only for
+        // notable matches. Same tag = browser replaces the previous
+        // notification, so a 4-goal thriller doesn't stack 4 banners.
+        const homeName = fixture.teams.home.name;
+        const awayName = fixture.teams.away.name;
+        const compName = fixture.league.name || '';
+        const justFinished = newStatus === 'finished'
+          && existingMatch
+          && ['live', 'halftime', 'extra_time', 'penalties'].includes(existingMatch.status);
+        if ((scoreChanged || justFinished) && isPushNotable(compName, homeName, awayName)) {
+          const score = `${fixture.goals.home ?? 0}-${fixture.goals.away ?? 0}`;
+          const minute = fixture.fixture.status.elapsed;
+          const slug = existingMatch?.slug || matchId;
+          const title = justFinished
+            ? `FT: ${homeName} ${score} ${awayName}`
+            : `⚽ GOAL — ${homeName} ${score} ${awayName}`;
+          const body = justFinished
+            ? `Full time at ${compName}. Read the report →`
+            : `${compName}${minute != null ? ` · ${minute}'` : ''}`;
+          // Fire-and-forget; don't slow down the cron loop on a slow push.
+          sendPushToAll({
+            title,
+            body,
+            url: `/matches/${slug}`,
+            tag: `match-${matchId}`,
+            renotify: true,
+          }).catch(err => console.error('[live-sync] push failed:', err));
+        }
+
         const existingEvents = await db
           .select()
           .from(matchEvents)
@@ -341,9 +449,14 @@ export async function GET(
           (e) => SIGNIFICANT_EVENTS.has(e.eventType)
         ).length;
 
+        // Weekend API-budget gate — non-notable matches get score-only
+        // updates from getLiveFixtures, no per-fixture event/stats burns.
+        const apiThrottled = isApiThrottled(compName, homeName, awayName);
+
         // Only call API for events if score changed or at HT/FT
         let apiEvents: any[] = [];
-        const shouldFetchEvents = scoreChanged || (fixture.fixture.status.elapsed && fixture.fixture.status.elapsed % 15 === 0);
+        const shouldFetchEvents = !apiThrottled
+          && (scoreChanged || (fixture.fixture.status.elapsed && fixture.fixture.status.elapsed % 15 === 0));
         if (shouldFetchEvents) {
           const eventsResponse = await getFixtureEvents(apiFixtureId);
           apiEvents = eventsResponse.response || [];
@@ -428,7 +541,7 @@ export async function GET(
         // 2c. Get and upsert match statistics (only if score changed or halftime/fulltime)
         let apiStats: any[] = [];
         const isBreak = fixture.fixture.status.short === 'HT' || fixture.fixture.status.short === 'FT';
-        if (shouldFetchEvents || isBreak) {
+        if (shouldFetchEvents || (isBreak && !apiThrottled)) {
           const statsResponse = await getFixtureStatistics(apiFixtureId);
           apiStats = statsResponse.response || [];
         }
@@ -667,30 +780,56 @@ export async function GET(
       return score;
     }
 
-    // Score and sort — post all matches scoring 4+ (real traffic potential)
-    // During quiet periods (no high-value matches), post the best available
+    // Score and sort. Two tiers:
+    //  - FB target: every non-youth/non-reserve kickoff posts to FB.
+    //  - Other platforms (TW/IG/Threads/Bluesky/Telegram) stay on the
+    //    high-value selection (top leagues, big clubs, finals) to keep
+    //    those feeds curated.
     const scoredMatches = kickoffTweets
       .map(kick => ({ ...kick, score: scoreMatch(kick) }))
       .sort((a, b) => b.score - a.score);
 
     const highValue = scoredMatches.filter(k => k.score >= 4);
-    // During quiet periods (no top-flight games), post the top 2 available — but
-    // only filter out the youth/reserve penalty (score < 0). Anything else is fair game.
     const bestAvailable = highValue.length > 0 ? highValue : scoredMatches.slice(0, 2);
-    const toPost = bestAvailable.filter(k => k.score >= 0);
+    const highValueIds = new Set(bestAvailable.filter(k => k.score >= 0).map(k => k.matchId));
 
-    console.log(`[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} selected for posting (scores: ${toPost.map(m => `${m.home} vs ${m.away}=${m.score}`).join(', ')})`);
+    // FB gets every non-youth kickoff. score < 0 = youth/reserve penalty.
+    const toPost = scoredMatches.filter(k => k.score >= 0);
 
-    // Additional per-platform caps — on top of scoreMatch filtering, hard-cap
-    // FB/Twitter posts per run so a 10+ big-match Saturday can't flood the feed.
-    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 4);
-    const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 3);
+    console.log(
+      `[live-sync] ${kickoffTweets.length} kickoffs queued, ${toPost.length} for FB, ` +
+      `${highValueIds.size} for other platforms`
+    );
+
+    // Log only matches we're fully dropping (youth/reserve) — the others
+    // are at least getting FB, so they shouldn't show up as "missing".
+    const dropped = scoredMatches.filter(k => k.score < 0);
+    if (dropped.length > 0) {
+      console.log(
+        `[live-sync] Dropped ${dropped.length} youth/reserve kickoffs: ` +
+        dropped.map(m => `${m.home} vs ${m.away} [${m.competition || 'no comp'}] score=${m.score}`).join(' | '),
+      );
+    }
+
+    // Per-platform caps. FB pulled back to 3/run after FB temp-blocked
+    // the page for posting too aggressively (12/run × 60s cron interval =
+    // up to 720/hr peak, well above FB's organic page tolerance). 3/run +
+    // 15s inter-match delay = max 3 posts spread over 30s of the 60s
+    // window, ~180/hr peak. Cap-skipped matches release their lock and
+    // retry on the next tick, so a busy 3pm Saturday still gets every
+    // game posted — just over 10-15 minutes instead of all at once.
+    const MAX_KICKOFF_FB_PER_RUN = Number(process.env.MAX_KICKOFF_FB_PER_RUN || 3);
+    // Twitter Free tier = 17 posts/day. With kickoffs alone (high-value
+    // matches Sat-Sun) we can blow that fast, so cap to 1 kickoff tweet
+    // per cron run AND check the rolling 24h daily cap inside the loop.
+    const MAX_KICKOFF_TW_PER_RUN = Number(process.env.MAX_KICKOFF_TW_PER_RUN || 1);
+    const KICKOFF_INTER_POST_DELAY_MS = Number(process.env.KICKOFF_INTER_POST_DELAY_MS || 15_000);
 
     let tweetsSent = 0;
     let fbSent = 0;
     for (const kick of toPost) {
       const comp = kick.competition;
-      if (tweetsSent >= MAX_KICKOFF_TW_PER_RUN && fbSent >= MAX_KICKOFF_FB_PER_RUN) break;
+      const isHighValue = highValueIds.has(kick.matchId);
 
       try {
         const homeTag = kick.home.replace(/[^a-zA-Z0-9]/g, '');
@@ -774,15 +913,22 @@ export async function GET(
         const tweetTemplate = TWEET_TEMPLATES[seed % TWEET_TEMPLATES.length];
         const fbTemplate = FB_TEMPLATES[seed % FB_TEMPLATES.length];
 
-        const tags = `#${homeTag} #${awayTag} #${compTag} #Football`;
-        const tweetText = tweetTemplate(kick.home, kick.away, kick.competition, matchUrl, tags);
-        const fbText = fbTemplate(kick.home, kick.away, kick.competition, tags);
+        // Hashtags: buildHashtags maps to canonical tags (#ManCity not
+        // #ManchesterCity, #UCL not #ChampionsLeague) using the curated
+        // dictionaries in twitter.ts. Limit to 2-3 for Twitter best
+        // practice; FB tolerates more so use the full set there.
+        const allTags = buildHashtags(`${kick.home} vs ${kick.away}`, [kick.home, kick.away, kick.competition]);
+        const fbTagStr = allTags;
+        const tweetTagStr = allTags.split(' ').slice(0, 3).join(' ');
+        const tweetText = tweetTemplate(kick.home, kick.away, kick.competition, matchUrl, tweetTagStr);
+        const fbText = fbTemplate(kick.home, kick.away, kick.competition, fbTagStr);
 
         if (isBigMatch) console.log(`[live-sync] BIG MATCH detected: ${kick.home} vs ${kick.away} (${comp})`);
 
-        // Delay between posts to avoid rate limits (3 seconds between each)
+        // Delay between matches to avoid FB rate limits / temp blocks.
+        // Configurable via KICKOFF_INTER_POST_DELAY_MS (default 15s).
         if (tweetsSent > 0 || fbSent > 0) {
-          await new Promise(r => setTimeout(r, 3000));
+          await new Promise(r => setTimeout(r, KICKOFF_INTER_POST_DELAY_MS));
         }
 
         // Post to platforms — track if ANY platform succeeded.
@@ -812,77 +958,99 @@ export async function GET(
           }
         }
 
-        // Instagram — needs a public image URL (ogImageUrl fits). URL is
-        // appended to the caption (IG doesn't hyperlink it, but at least it's
-        // visible to readers).
-        try {
-          const igRes = await postCustomInstagram(fbText, ogImageUrl, matchUrl);
-          if (igRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Instagram kickoff posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Instagram kickoff failed: ${igRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Instagram kickoff threw:`, e);
-        }
-
-        // Threads — title-with-hashtags branch keeps our pre-built caption intact.
-        try {
-          const { postToThreads } = await import('@/lib/social/threads');
-          const thRes = await postToThreads(`${fbText}\n\n${matchUrl}`, matchUrl, ogImageUrl);
-          if (thRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Threads kickoff posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Threads kickoff failed: ${thRes.error}`);
-          }
-        } catch (e) {
-          console.error(`[live-sync] Threads kickoff threw:`, e);
-        }
-
-        // Twitter — kept here so it resumes automatically when TWITTER_PAUSED
-        // flips to false. Returns { success: false, error: 'paused' } today.
-        if (tweetsSent < MAX_KICKOFF_TW_PER_RUN) {
+        // Non-FB platforms (IG/Threads/Twitter/Bluesky/Telegram) only
+        // run for high-value matches — keeps those feeds curated. FB
+        // already posted above for every non-youth kickoff.
+        if (isHighValue) {
+          // Instagram — needs a public image URL (ogImageUrl fits). URL is
+          // appended to the caption (IG doesn't hyperlink it, but at least it's
+          // visible to readers).
           try {
-            const twRes = await postCustomTweet(tweetText, ogImageUrl);
-            if (twRes.success) {
+            const igRes = await postCustomInstagram(fbText, ogImageUrl, matchUrl);
+            if (igRes.success) {
               anySuccess = true;
-              tweetsSent++;
-              console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away}`);
+              console.log(`[live-sync] Instagram kickoff posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Instagram kickoff failed: ${igRes.error}`);
             }
           } catch (e) {
-            console.error(`[live-sync] Twitter kickoff threw:`, e);
+            console.error(`[live-sync] Instagram kickoff threw:`, e);
           }
-        }
 
-        try {
-          const { postToBluesky } = await import('@/lib/social/bluesky');
-          const bsRes = await postToBluesky(tweetText.slice(0, 280), matchUrl, [], ogImageUrl);
-          if (bsRes.success) {
-            anySuccess = true;
-            console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`);
-          } else {
-            console.error(`[live-sync] Bluesky failed: ${bsRes.error}`);
+          // Threads — title-with-hashtags branch keeps our pre-built caption intact.
+          try {
+            const { postToThreads } = await import('@/lib/social/threads');
+            const thRes = await postToThreads(`${fbText}\n\n${matchUrl}`, matchUrl, ogImageUrl);
+            if (thRes.success) {
+              anySuccess = true;
+              console.log(`[live-sync] Threads kickoff posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Threads kickoff failed: ${thRes.error}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Threads kickoff threw:`, e);
           }
-        } catch (e) {
-          console.error(`[live-sync] Bluesky threw:`, e);
-        }
 
-        try {
-          const { postToTelegram } = await import('@/lib/social/telegram');
-          const tgText = `${fbText}\n\n${matchUrl}`;
-          const tgRes = await postToTelegram(tgText, ogImageUrl);
-          if (tgRes.anySuccess) {
-            anySuccess = true;
-            console.log(`[live-sync] Telegram: ${tgRes.sent} sent, ${tgRes.failed} failed for ${kick.home} vs ${kick.away}`);
-          } else if (tgRes.sent === 0 && tgRes.failed === 0) {
-            // not configured — skip quietly
-          } else {
-            console.error(`[live-sync] Telegram all failed: ${tgRes.errors.join('; ')}`);
+          // Twitter — only the single best kickoff per run gets a tweet,
+          // and only if we're under the rolling 24h daily cap (Free tier
+          // = 17/day, we cap at 12). Live games are the priority. Score
+          // gate >= 4 means top-flight only (Top 5 European leagues,
+          // major cups, finals, big-club derbies); on quiet days the
+          // tweet quota goes to breaking news / transfer articles via
+          // the social-post cron instead of a Segunda División kickoff.
+          const TW_MIN_SCORE = 4;
+          if (tweetsSent < MAX_KICKOFF_TW_PER_RUN && (kick as any).score >= TW_MIN_SCORE) {
+            try {
+              const limit = await checkTwitterDailyLimit();
+              if (!limit.ok) {
+                console.log(`[live-sync] Twitter skipped (${kick.home} vs ${kick.away}): ${limit.reason}`);
+              } else {
+                const twRes = await postCustomTweet(
+                  tweetText,
+                  ogImageUrl,
+                  { contentType: 'match_kickoff', contentId: kick.matchId },
+                );
+                if (twRes.success) {
+                  anySuccess = true;
+                  tweetsSent++;
+                  console.log(`[live-sync] Twitter kickoff posted: ${kick.home} vs ${kick.away} (${(limit.recent ?? 0) + 1}/12 today)`);
+                } else {
+                  console.error(`[live-sync] Twitter kickoff failed: ${twRes.error}`);
+                }
+              }
+            } catch (e) {
+              console.error(`[live-sync] Twitter kickoff threw:`, e);
+            }
           }
-        } catch (e) {
-          console.error(`[live-sync] Telegram threw:`, e);
+
+          try {
+            const { postToBluesky } = await import('@/lib/social/bluesky');
+            const bsRes = await postToBluesky(tweetText.slice(0, 280), matchUrl, [], ogImageUrl);
+            if (bsRes.success) {
+              anySuccess = true;
+              console.log(`[live-sync] Bluesky posted: ${kick.home} vs ${kick.away}`);
+            } else {
+              console.error(`[live-sync] Bluesky failed: ${bsRes.error}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Bluesky threw:`, e);
+          }
+
+          try {
+            const { postToTelegram } = await import('@/lib/social/telegram');
+            const tgText = `${fbText}\n\n${matchUrl}`;
+            const tgRes = await postToTelegram(tgText, ogImageUrl);
+            if (tgRes.anySuccess) {
+              anySuccess = true;
+              console.log(`[live-sync] Telegram: ${tgRes.sent} sent, ${tgRes.failed} failed for ${kick.home} vs ${kick.away}`);
+            } else if (tgRes.sent === 0 && tgRes.failed === 0) {
+              // not configured — skip quietly
+            } else {
+              console.error(`[live-sync] Telegram all failed: ${tgRes.errors.join('; ')}`);
+            }
+          } catch (e) {
+            console.error(`[live-sync] Telegram threw:`, e);
+          }
         }
 
         // The atomic lock at line ~198 / new-insert flow already claimed this match

@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 
 import { CommentSection } from '@/components/comments/CommentSection';
 import { AnnotatedParagraphs } from '@/components/deep-dives/AnnotatedContent';
-import { db, newsArticles, newsSources, comments, leagueStandings, clubs, competitionSeasons, competitions } from '@/lib/db';
+import { db, newsArticles, newsSources, articleSources, comments, leagueStandings, clubs, competitionSeasons, competitions } from '@/lib/db';
 import { LiveTicker } from '@/components/live/LiveTicker';
 import { NewsletterCTA } from '@/components/newsletter/NewsletterCTA';
 import { TrendingUp, Trophy, Calendar, Zap, Table, BarChart3, ArrowUpRight, Newspaper, ArrowRight } from 'lucide-react';
@@ -23,6 +23,7 @@ import { prepareAnnotatedContent } from '@/lib/utils/prepare-annotated-content';
 import type { CredibilityRating } from '@/types';
 import { AdSlot, InArticleAd } from '@/components/ads/AdSlot';
 import { NativeAd, SidebarAd } from '@/components/ads/ProfitableAds';
+import { AffiliateBannerRotator } from '@/components/ads/AffiliateBanner';
 import {
   generateArticleMetadata,
   generateAlternates,
@@ -150,11 +151,23 @@ export default async function NewsArticlePage({ params }: PageProps) {
   }
 
   // Fetch trending articles, image pool, annotated content, comment count, and sidebar data
-  const [trendingArticles, imagePool, annotatedContent, commentCountResult, latestArticles, topStandings] = await Promise.all([
+  const [trendingArticles, imagePool, annotatedContent, commentCountResult, moreCoverage, latestArticles, topStandings] = await Promise.all([
     getTrendingArticles(article.id),
     getArticleImagePool(),
     article.content ? prepareAnnotatedContent(article.content) : null,
     db.select({ count: sql<number>`count(*)` }).from(comments).where(and(eq(comments.contentType, 'article'), eq(comments.contentId, slug), eq(comments.status, 'active'))),
+    // Other sources that covered this same story — populated by the aggregate cron at ingest.
+    db
+      .select({
+        sourceName: articleSources.sourceName,
+        originalUrl: articleSources.originalUrl,
+        originalTitle: articleSources.originalTitle,
+        publishedAt: articleSources.publishedAt,
+      })
+      .from(articleSources)
+      .where(eq(articleSources.articleId, article.id))
+      .orderBy(desc(articleSources.publishedAt))
+      .limit(8),
     // Latest 5 articles for sidebar
     db.select({
       id: newsArticles.id,
@@ -374,43 +387,75 @@ export default async function NewsArticlePage({ params }: PageProps) {
         )}
 
         {/* Content */}
-        {article.content && (
-          <div className="prose prose-invert mt-8 max-w-none space-y-4">
-            {article.content.split('\n\n').filter(p => p.trim()).map((paragraph, i) => {
-              const trimmed = paragraph.trim();
-              // Lines wrapped in **bold** → render as H2 subheading
-              const headingMatch = trimmed.match(/^\*\*(.+)\*\*$/);
-              if (headingMatch) {
-                return (
-                  <h2 key={i} className="text-xl font-bold text-white mt-8 mb-3">
-                    {headingMatch[1]}
-                  </h2>
-                );
-              }
-              // Lines starting with ## → render as H2
-              if (trimmed.startsWith('## ')) {
-                return (
-                  <h2 key={i} className="text-xl font-bold text-white mt-8 mb-3">
-                    {trimmed.replace(/^##\s*/, '')}
-                  </h2>
-                );
-              }
-              // Lines starting with ### → render as H3
-              if (trimmed.startsWith('### ')) {
-                return (
-                  <h3 key={i} className="text-lg font-semibold text-zinc-200 mt-6 mb-2">
-                    {trimmed.replace(/^###\s*/, '')}
-                  </h3>
-                );
-              }
-              // Regular paragraph — also handle inline **bold** and *italic*
-              const html = trimmed
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>');
-              return (
-                <p key={i} className="text-zinc-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
-              );
-            })}
+        {article.content && (() => {
+          const paragraphs = article.content.split('\n\n').filter(p => p.trim());
+          // Drop in-article ads after the 2nd and 5th paragraphs — but
+          // only if the article is at least 6 paragraphs long (avoid
+          // ads-on-thin-content which AdSense penalises).
+          const adAfter = paragraphs.length >= 6 ? new Set([1, 4]) : new Set<number>();
+          return (
+            <div className="prose prose-invert mt-8 max-w-none space-y-4">
+              {paragraphs.flatMap((paragraph, i) => {
+                const trimmed = paragraph.trim();
+                let block: React.ReactNode;
+                const headingMatch = trimmed.match(/^\*\*(.+)\*\*$/);
+                if (headingMatch) {
+                  block = <h2 key={`p-${i}`} className="text-xl font-bold text-white mt-8 mb-3">{headingMatch[1]}</h2>;
+                } else if (trimmed.startsWith('## ')) {
+                  block = <h2 key={`p-${i}`} className="text-xl font-bold text-white mt-8 mb-3">{trimmed.replace(/^##\s*/, '')}</h2>;
+                } else if (trimmed.startsWith('### ')) {
+                  block = <h3 key={`p-${i}`} className="text-lg font-semibold text-zinc-200 mt-6 mb-2">{trimmed.replace(/^###\s*/, '')}</h3>;
+                } else {
+                  const html = trimmed
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+                  block = <p key={`p-${i}`} className="text-zinc-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+                }
+                return adAfter.has(i)
+                  ? [block, <InArticleAd key={`ad-${i}`} />]
+                  : [block];
+              })}
+            </div>
+          );
+        })()}
+
+        {/* More coverage — other sources that covered the same story */}
+        {moreCoverage.length > 0 && (
+          <div className="mt-10 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-white tracking-tight">MORE COVERAGE</h3>
+            </div>
+            <p className="mb-3 text-xs text-zinc-500">
+              Other sources reporting on this story.
+            </p>
+            <ul className="space-y-2">
+              {moreCoverage.map((src, i) => (
+                <li key={i}>
+                  <a
+                    href={src.originalUrl}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    className="group flex items-start gap-3 rounded-lg border border-transparent p-2 hover:border-zinc-700 hover:bg-zinc-800/50 transition"
+                  >
+                    <div className="flex-shrink-0 w-16 text-[11px] font-semibold uppercase tracking-wide text-emerald-400 mt-0.5">
+                      {src.sourceName || 'Source'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-zinc-200 group-hover:text-white line-clamp-2">
+                        {src.originalTitle || src.originalUrl}
+                      </p>
+                      {src.publishedAt && (
+                        <p className="mt-0.5 text-[11px] text-zinc-500">
+                          {formatRelativeTime(src.publishedAt)}
+                        </p>
+                      )}
+                    </div>
+                    <ExternalLink className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-zinc-600 group-hover:text-emerald-400" />
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -418,6 +463,9 @@ export default async function NewsArticlePage({ params }: PageProps) {
         <div className="my-6">
           <NativeAd className="my-8" />
         </div>
+
+        {/* Affiliate banner — rotates between creatives based on article slug */}
+        <AffiliateBannerRotator seed={slug} />
 
         {/* Comments */}
         <div id="comments">
@@ -544,6 +592,12 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
         )}
 
+        {/* Sidebar display ad — moved up from the bottom of the aside.
+            Below LATEST NEWS, above LEAGUE TABLE: high-visibility spot
+            on long-form article pages where users scroll past two or
+            three sidebar widgets before bouncing. */}
+        <SidebarAd className="!my-0" />
+
         {/* League Table */}
         {topStandings.length > 0 && (
           <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800">
@@ -597,10 +651,6 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Sidebar Ad */}
-        <div className="my-4">
-          <SidebarAd />
-        </div>
       </aside>
       </div>
       </div>
